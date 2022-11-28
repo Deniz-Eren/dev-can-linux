@@ -14,7 +14,7 @@ TARGET = $(OUTPUT_DIR)/$(ARTIFACT)
 
 CC = qcc -Vgcc_nto$(PLATFORM)
 CXX = q++ -Vgcc_nto$(PLATFORM)_cxx
-LD = $(CC)
+LD = $(CXX)
 
 #User defined include/preprocessor flags and libraries
 
@@ -23,7 +23,7 @@ LD = $(CC)
 
 #LIBS += -L/path/to/my/lib/$(PLATFORM)/usr/lib -lmylib
 #LIBS += -L../mylib/$(OUTPUT_DIR) -lmylib
-LIBS += -lpci -lc++
+LIBS += -lpci
 
 #Compiler flags for build profiles
 CCFLAGS_release += -O2
@@ -46,15 +46,18 @@ DEPS = -Wp,-MMD,$(@:%.o=%.d),-MT,$@
 rwildcard = $(wildcard $(addprefix $1/*.,$2)) $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2))
 
 #Source list
-SRCS = $(call rwildcard, src, cc)
+SRCS = $(call rwildcard, src, c cpp)
 
 #Object files list
 OBJS = $(addprefix $(OUTPUT_DIR)/,$(addsuffix .o, $(basename $(SRCS))))
 
 #Compiling rule
-$(OUTPUT_DIR)/%.o: %.cc
+$(OUTPUT_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) -c $(DEPS) -o $@ $(INCLUDES) $(CCFLAGS_all) $(CCFLAGS) $<
+$(OUTPUT_DIR)/%.o: %.cpp
+	@mkdir -p $(dir $@)
+	$(CXX) -c $(DEPS) -o $@ $(INCLUDES) $(CCFLAGS_all) $(CCFLAGS) $<
 
 #Linking rule
 $(TARGET):$(OBJS)
