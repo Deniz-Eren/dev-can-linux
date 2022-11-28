@@ -1,5 +1,7 @@
 #include <iostream>
 #include <sys/neutrino.h>
+#include <sys/mman.h>
+#include <hw/inout.h>
 
 extern "C" {
 #include <pci/pci.h>
@@ -109,6 +111,7 @@ int main(void) {
 	                }
 
 	                pci_ba_t ba[7];    // the maximum number of entries that can be returned
+	                uintptr_t mmap_base[7];
 	                int_t nba = NELEMENTS(ba);
 
 	                /* read the address space information */
@@ -121,6 +124,29 @@ int main(void) {
 	                    	std::cout << "ba[" << i << "] { addr: " << std::hex << ba[i].addr;
 	                    	std::cout << ", size: " << std::hex << ba[i].size;
 	                    	std::cout << ", bar_num: " << std::hex << ba[i].bar_num << " }" << std::endl;
+
+	                    	if ((mmap_base[i] = mmap_device_io(ba[i].size, ba[i].addr)) == MAP_DEVICE_FAILED) {
+	                    		switch (errno) {
+	                    		case EINVAL:
+	                    			std::cout << "Invalid flags type, or len is 0." << std::endl;
+	                    			break;
+	                    		case ENOMEM:
+	                    			std::cout << "The address range requested is outside of the allowed process address range, or there wasn't enough memory to satisfy the request." << std::endl;
+	                    			break;
+	                    		case ENXIO:
+	                    			std::cout << "The address from io for len bytes is invalid." << std::endl;
+	                    			break;
+	                    		case EPERM:
+	                    			std::cout << "The calling process doesn't have the required permission; see procmgr_ability()." << std::endl;
+	                    			break;
+	        	    			default:
+	        	    				std::cout << "Unknown error: " << r << std::endl;
+	        	    				break;
+								}
+	                    	}
+
+	                    	uint8_t x = in8(mmap_base[i]);
+	                    	std::cout << "x: " << std::hex << x << std::endl;
 	                    }
 	                }
 
