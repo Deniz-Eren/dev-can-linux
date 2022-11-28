@@ -1,0 +1,153 @@
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/neutrino.h>
+
+extern "C" {
+#include <pci/pci.h>
+}
+
+using namespace std;
+
+/**
+ * Command:
+ *
+ * 		pci-tool -vvvvv
+ *
+ * Output:
+ *
+ * B000:D05:F00 @ idx 7
+ *         vid/did: 13fe/c302
+ *                 <vendor id - unknown>, <device id - unknown>
+ *         class/subclass/reg: 0c/09/00
+ *                 CANbus Serial Bus Controller
+ *         revid: 0
+ *         cmd/status registers: 103/0
+ *         Capabilities list (0):
+ * 
+ *         Address Space list - 2 assigned
+ *             [0] I/O, addr=c000, size=400, align: 400, attr: 32bit CONTIG ENABLED
+ *             [1] I/O, addr=c400, size=400, align: 400, attr: 32bit CONTIG ENABLED
+ *         Interrupt list - 0 assigned
+ *         hdrType: 0
+ *                 ssvid: 13fe  ?
+ *                 ssid:  c302
+ * 
+ *         Device Dependent Registers
+ *                 [40] 00000000  00000000  00000000  00000000
+ *                   :
+ *                 [f0] 00000000  00000000  00000000  00000000
+ *
+ */
+
+int main(void) {
+	std::cout << "Running" << std::endl;
+
+	ThreadCtl(_NTO_TCTL_IO, 0);
+
+	pci_vid_t PCI_VID_xxx = 0x13fe;
+
+	uint_t idx = 0;
+	pci_bdf_t bdf = 0;
+
+	while ((bdf = pci_device_find(idx, PCI_VID_xxx, PCI_DID_ANY, PCI_CCODE_ANY)) != PCI_BDF_NONE)
+	{
+	    pci_did_t did;
+	    pci_err_t r = pci_device_read_did(bdf, &did);
+
+	    if (r == PCI_ERR_OK)
+	    {
+	    	std::cout << "DID: " << std::hex << did << std::endl;
+
+	    	/* does this driver handle this device ? */
+	    	if (did == 0xc302) {
+	    		pci_devhdl_t hdl = pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
+
+	            if (hdl == NULL) {
+	    			switch (r) {
+	    			case PCI_ERR_EINVAL:
+	    				std::cout << "Invalid flags." << std::endl;
+	    				break;
+	    			case PCI_ERR_ENODEV:
+	    				std::cout << "The bdf argument doesn't refer to a valid device." << std::endl;
+	    				break;
+	    			case PCI_ERR_ATTACH_EXCLUSIVE:
+	    				std::cout << "The device identified by bdf is already exclusively owned." << std::endl;
+	    				break;
+	    			case PCI_ERR_ATTACH_SHARED:
+	    				std::cout << "The request was for exclusive attachment, but the device identified by bdf has already been successfully attached to." << std::endl;
+	    				break;
+	    			case PCI_ERR_ATTACH_OWNED:
+	    				std::cout << "The request was for ownership of the device, but the device is already owned." << std::endl;
+	    				break;
+	    			case PCI_ERR_ENOMEM:
+	    				std::cout << "Memory for internal resources couldn't be obtained. This may be a temporary condition." << std::endl;
+	    				break;
+	    			case PCI_ERR_LOCK_FAILURE:
+	    				std::cout << "There was an error related to the creation, acquisition, or use of a synchronization object." << std::endl;
+	    				break;
+	    			case PCI_ERR_ATTACH_LIMIT:
+	    				std::cout << "There have been too many attachments to the device identified by bdf." << std::endl;
+	    				break;
+	    			default:
+	    				std::cout << "Unknown error: " << r << std::endl;
+	    				break;
+	    			}
+	            }
+	            else {
+	            	std::cout << "PCI attach successful" << std::endl;
+
+	                /* optionally determine capabilities of device */
+	                uint_t capid_idx = 0;
+	                pci_capid_t capid;
+
+	                /* instead of looping could use pci_device_find_capid() to select which capabilities to use */
+	                while ((r = pci_device_read_capid(bdf, &capid, capid_idx)) == PCI_ERR_OK)
+	                {
+	                	std::cout << "CAPID: " << std::hex << capid << std::endl;
+
+	                    /* get next capability ID */
+	                    ++capid_idx;
+	                }
+
+	                pci_ba_t ba[7];    // the maximum number of entries that can be returned
+	                int_t nba = NELEMENTS(ba);
+
+	                /* read the address space information */
+	                r = pci_device_read_ba(hdl, &nba, ba, pci_reqType_e_UNSPECIFIED);
+	                if ((r == PCI_ERR_OK) && (nba > 0))
+	                {
+	                    for (int_t i=0; i<nba; i++)
+	                    {
+	                        /* mmap() the address space(s) */
+	                    	std::cout << "ba[" << i << "] { addr: " << std::hex << ba[i].addr;
+	                    	std::cout << ", size: " << std::hex << ba[i].size;
+	                    	std::cout << ", bar_num: " << std::hex << ba[i].bar_num << " }" << std::endl;
+	                    }
+	                }
+
+	                pci_irq_t irq[10];    // the maximum number of expected entries based on capabilities
+	                int_t nirq = NELEMENTS(irq);
+
+	                /* read the irq information */
+                    r = pci_device_read_irq(hdl, &nirq, irq);
+                    if ((r == PCI_ERR_OK) && (nirq > 0))
+                    {
+                        for (int_t i=0; i<nirq; i++)
+                        {
+                            //int_t iid = InterruptAttach(irq[i], my_isr, NULL, 0, 0);
+                        	std::cout << "irq[" << i << "]: " << std::dec << irq[i] << std::endl;
+                        }
+                    }
+	            }
+
+	            pci_device_detach(hdl);
+	    	}
+	    }
+
+	    /* get next device instance */
+	    ++idx;
+	}
+
+	return EXIT_SUCCESS;
+}
