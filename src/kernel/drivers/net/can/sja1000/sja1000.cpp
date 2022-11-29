@@ -63,6 +63,7 @@
 //#include <linux/can/led.h>
 
 #include <stdlib.h>
+#include <string.h>
 #include "sja1000.h"
 
 #define DRV_NAME "sja1000"
@@ -132,7 +133,15 @@ void can_change_state(struct net_device *dev, struct can_frame *cf,
 {
 //  struct can_priv *priv = netdev_priv(dev);
     struct can_priv *priv = &netdev_priv(dev)->can;
-    enum can_state new_state = max(tx_state, rx_state);
+
+//  enum can_state new_state = max(tx_state, rx_state);
+    can_state new_state;
+    if (tx_state >= rx_state) {
+    	new_state = tx_state;
+    }
+    else {
+    	new_state = rx_state;
+    }
 
     if (unlikely(new_state == priv->state)) {
 //      netdev_warn(dev, "%s: oops, state did not change", __func__);
@@ -158,19 +167,41 @@ void can_change_state(struct net_device *dev, struct can_frame *cf,
                can_rx_state_to_frame(dev, rx_state) : 0;
 }
 
+/*
+ * CAN bus-off
+ *
+ * This functions should be called when the device goes bus-off to
+ * tell the netif layer that no more packets can be sent or received.
+ * If enabled, a timer is started to trigger bus-off recovery.
+ */
+void can_bus_off(struct net_device *dev)
+{
+//  struct can_priv *priv = netdev_priv(dev);
+//    struct can_priv *priv = &netdev_priv(dev)->can;
+
+//  netdev_dbg(dev, "bus-off\n");
+	syslog(LOG_ERR, "bus-off\n");
+
+    netif_carrier_off(dev);
+
+// TODO: Check if we need this somehow
+//    if (priv->restart_ms)
+//        mod_timer(&priv->restart_timer,
+//              jiffies + (priv->restart_ms * HZ) / 1000);
+}
+
 // New DE
 
-
 static const struct can_bittiming_const sja1000_bittiming_const = {
-	.name = DRV_NAME,
-	.tseg1_min = 1,
-	.tseg1_max = 16,
-	.tseg2_min = 1,
-	.tseg2_max = 8,
-	.sjw_max = 4,
-	.brp_min = 1,
-	.brp_max = 64,
-	.brp_inc = 1,
+	/* .name = */ DRV_NAME,
+	/* .tseg1_min = */ 1,
+	/* .tseg1_max = */ 16,
+	/* .tseg2_min = */ 1,
+	/* .tseg2_max = */ 8,
+	/* .sjw_max = */ 4,
+	/* .brp_min = */ 1,
+	/* .brp_max = */ 64,
+	/* .brp_inc = */ 1,
 };
 
 static void sja1000_write_cmdreg(struct sja1000_priv *priv, u8 val)
@@ -417,7 +448,8 @@ static netdev_tx_t sja1000_start_xmit(struct sk_buff *skb,
 	for (i = 0; i < dlc; i++)
 		priv->write_reg(priv, dreg++, cf->data[i]);
 
-	can_put_echo_skb(skb, dev, 0);
+	// TODO: echo
+//	can_put_echo_skb(skb, dev, 0);
 
 	if (priv->can.ctrlmode & CAN_CTRLMODE_ONE_SHOT)
 		cmd_reg_val |= CMD_AT;
@@ -578,8 +610,8 @@ static int sja1000_err(struct net_device *dev, uint8_t isrc, uint8_t status)
 	}
 
 	if (state != priv->can.state) {
-		tx_state = txerr >= rxerr ? state : 0;
-		rx_state = txerr <= rxerr ? state : 0;
+		tx_state = txerr >= rxerr ? state : CAN_STATE_ERROR_ACTIVE;
+		rx_state = txerr <= rxerr ? state : CAN_STATE_ERROR_ACTIVE;
 
 		can_change_state(dev, cf, tx_state, rx_state);
 
@@ -624,16 +656,18 @@ irqreturn_t sja1000_interrupt(int irq, void *dev_id)
 
 		if (isrc & IRQ_TI) {
 			/* transmission buffer released */
-			if (priv->can.ctrlmode & CAN_CTRLMODE_ONE_SHOT &&
+			if ((priv->can.ctrlmode & CAN_CTRLMODE_ONE_SHOT) &&
 			    !(status & SR_TCS)) {
 				stats->tx_errors++;
-				can_free_echo_skb(dev, 0);
+				// TODO: echo
+//				can_free_echo_skb(dev, 0);
 			} else {
 				/* transmission complete */
 				stats->tx_bytes +=
 					priv->read_reg(priv, SJA1000_FI) & 0xf;
 				stats->tx_packets++;
-				can_get_echo_skb(dev, 0);
+				// TODO: echo
+//				can_get_echo_skb(dev, 0);
 			}
 			netif_wake_queue(dev);
 //			can_led_event(dev, CAN_LED_EVENT_TX);
@@ -666,7 +700,7 @@ out:
 
 	return (n) ? IRQ_HANDLED : IRQ_NONE;
 }
-EXPORT_SYMBOL_GPL(sja1000_interrupt);
+//EXPORT_SYMBOL_GPL(sja1000_interrupt);
 
 static int sja1000_open(struct net_device *dev)
 {
@@ -745,29 +779,29 @@ struct net_device *alloc_sja1000dev(int sizeof_priv)
 //	spin_lock_init(&priv->cmdreg_lock);
 	memset(&priv->cmdreg_lock, 0, sizeof(intrspin_t));
 
-	if (sizeof_priv)
-		priv->priv = (void *)priv + sizeof(struct sja1000_priv);
+//	if (sizeof_priv)
+//		priv->priv = (void *)priv + sizeof(struct sja1000_priv);
 
 	return dev;
 }
-EXPORT_SYMBOL_GPL(alloc_sja1000dev);
+//EXPORT_SYMBOL_GPL(alloc_sja1000dev);
 
 void free_sja1000dev(struct net_device *dev)
 {
 	free_candev(dev);
 }
-EXPORT_SYMBOL_GPL(free_sja1000dev);
+//EXPORT_SYMBOL_GPL(free_sja1000dev);
 
 static const struct net_device_ops sja1000_netdev_ops = {
-	.ndo_open	= sja1000_open,
-	.ndo_stop	= sja1000_close,
-	.ndo_start_xmit	= sja1000_start_xmit,
-	.ndo_change_mtu	= can_change_mtu,
+	/* .ndo_open	= */ sja1000_open,
+	/* .ndo_stop	= */ sja1000_close,
+	/* .ndo_start_xmit	= */ sja1000_start_xmit,
+	/* .ndo_change_mtu	= */ can_change_mtu,
 };
 
 int register_sja1000dev(struct net_device *dev)
 {
-	int ret;
+	int ret = 0;
 
 	if (!sja1000_probe_chip(dev))
 		return -ENODEV;
@@ -778,34 +812,34 @@ int register_sja1000dev(struct net_device *dev)
 	set_reset_mode(dev);
 	chipset_init(dev);
 
-	ret =  register_candev(dev);
+//	ret =  register_candev(dev);
 
-	if (!ret)
-		devm_can_led_init(dev);
+//	if (!ret)
+//		devm_can_led_init(dev);
 
 	return ret;
 }
-EXPORT_SYMBOL_GPL(register_sja1000dev);
+//EXPORT_SYMBOL_GPL(register_sja1000dev);
 
-void unregister_sja1000dev(struct net_device *dev)
-{
-	set_reset_mode(dev);
-	unregister_candev(dev);
-}
-EXPORT_SYMBOL_GPL(unregister_sja1000dev);
+//void unregister_sja1000dev(struct net_device *dev)
+//{
+//	set_reset_mode(dev);
+//	unregister_candev(dev);
+//}
+//EXPORT_SYMBOL_GPL(unregister_sja1000dev);
 
-static __init int sja1000_init(void)
-{
-	printk(KERN_INFO "%s CAN netdevice driver\n", DRV_NAME);
+//static __init int sja1000_init(void)
+//{
+//	printk(KERN_INFO "%s CAN netdevice driver\n", DRV_NAME);
+//
+//	return 0;
+//}
 
-	return 0;
-}
+//module_init(sja1000_init);
 
-module_init(sja1000_init);
+//static __exit void sja1000_exit(void)
+//{
+//	printk(KERN_INFO "%s: driver removed\n", DRV_NAME);
+//}
 
-static __exit void sja1000_exit(void)
-{
-	printk(KERN_INFO "%s: driver removed\n", DRV_NAME);
-}
-
-module_exit(sja1000_exit);
+//module_exit(sja1000_exit);
