@@ -7,7 +7,74 @@ extern "C" {
 #include <pci/pci.h>
 }
 
+#include "kernel/drivers/net/can/sja1000/sja1000.h"
+
 using namespace std;
+
+// NETDEVICE
+#include "linux/netdevice.h"
+
+void netif_wake_queue(struct net_device *dev)
+{
+}
+
+int netif_rx(struct sk_buff *skb)
+{
+	return 0;
+}
+
+void netif_start_queue(struct net_device *dev)
+{
+}
+
+void netif_carrier_on(struct net_device *dev)
+{
+	// Not called from SJA1000 driver
+}
+
+void netif_carrier_off(struct net_device *dev)
+{
+}
+
+bool netif_queue_stopped(const struct net_device *dev)
+{
+	return false;
+}
+
+void netif_stop_queue(struct net_device *dev)
+{
+}
+// NETDEVICE
+
+// DEV
+#include "linux/can/dev.h"
+
+int open_candev(struct net_device *dev)
+{
+	return 0;
+}
+
+void close_candev(struct net_device *dev)
+{
+}
+// DEV
+
+// INTERRUPT
+#include "linux/interrupt.h"
+
+extern int
+request_threaded_irq(unsigned int irq, irq_handler_t handler,
+             irq_handler_t thread_fn,
+             unsigned long flags, const char *name, void *dev)
+{
+	// TODO: install IRQ handler
+	return 0;
+}
+
+void free_irq(unsigned int irq, void *dev_id)
+{
+}
+// INTERRUPT
 
 /**
  * Command:

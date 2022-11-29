@@ -42,23 +42,26 @@
  *
  */
 
+#include <errno.h>
+#include <unistd.h>
+#include "linux/compiler.h"
 //#include <linux/module.h>
 //#include <linux/init.h>
 //#include <linux/kernel.h>
 //#include <linux/sched.h>
 //#include <linux/types.h>
 //#include <linux/fcntl.h>
-//#include <linux/interrupt.h>
+#include "linux/interrupt.h"
 //#include <linux/ptrace.h>
 //#include <linux/string.h>
 //#include <linux/errno.h>
-//#include <linux/netdevice.h>
+#include "linux/netdevice.h"
 //#include <linux/if_arp.h>
 //#include <linux/if_ether.h>
 //#include <linux/skbuff.h>
 //#include <linux/delay.h>
 
-//#include <linux/can/dev.h>
+#include "linux/can/dev.h"
 //#include <linux/can/error.h>
 //#include <linux/can/led.h>
 
@@ -73,14 +76,13 @@
 //MODULE_DESCRIPTION(DRV_NAME "CAN netdevice driver");
 
 // New DE
-# define likely(x)  __builtin_expect(!!(x), 1)
-# define unlikely(x)    __builtin_expect(!!(x), 0)
 
 static void can_update_state_error_stats(struct net_device *dev,
                      enum can_state new_state)
 {
 //  struct can_priv *priv = netdev_priv(dev);
-    struct can_priv *priv = &netdev_priv(dev)->can;
+	sja1000_priv* s = (sja1000_priv*)netdev_priv(dev);
+    can_priv *priv = (can_priv *)&s->can;
 
     if (new_state <= priv->state)
         return;
@@ -132,7 +134,8 @@ void can_change_state(struct net_device *dev, struct can_frame *cf,
               enum can_state tx_state, enum can_state rx_state)
 {
 //  struct can_priv *priv = netdev_priv(dev);
-    struct can_priv *priv = &netdev_priv(dev)->can;
+	sja1000_priv* s = (sja1000_priv*)netdev_priv(dev);
+    can_priv *priv = (can_priv *)&s->can;
 
 //  enum can_state new_state = max(tx_state, rx_state);
     can_state new_state;
@@ -227,7 +230,7 @@ static int sja1000_is_absent(struct sja1000_priv *priv)
 
 static int sja1000_probe_chip(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 
 	if (priv->reg_base && sja1000_is_absent(priv)) {
 		//netdev_err(dev, "probing failed\n");
@@ -239,7 +242,7 @@ static int sja1000_probe_chip(struct net_device *dev)
 
 static void set_reset_mode(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 	unsigned char status = priv->read_reg(priv, SJA1000_MOD);
 	int i;
 
@@ -266,7 +269,7 @@ static void set_reset_mode(struct net_device *dev)
 
 static void set_normal_mode(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 	unsigned char status = priv->read_reg(priv, SJA1000_MOD);
 	u8 mod_reg_val = 0x00;
 	int i;
@@ -311,7 +314,7 @@ static void set_normal_mode(struct net_device *dev)
  */
 static void chipset_init(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 
 	/* set clock divider and output control register */
 	priv->write_reg(priv, SJA1000_CDR, priv->cdr | CDR_PELICAN);
@@ -332,7 +335,7 @@ static void chipset_init(struct net_device *dev)
 
 static void sja1000_start(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 
 	/* leave reset mode */
 	if (priv->can.state != CAN_STATE_STOPPED)
@@ -372,7 +375,7 @@ static int sja1000_set_mode(struct net_device *dev, enum can_mode mode)
 
 static int sja1000_set_bittiming(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 	struct can_bittiming *bt = &priv->can.bittiming;
 	u8 btr0, btr1;
 
@@ -390,10 +393,10 @@ static int sja1000_set_bittiming(struct net_device *dev)
 	return 0;
 }
 
-static int sja1000_get_berr_counter(struct net_device *dev,
+static int sja1000_get_berr_counter(const struct net_device *dev,
 				    struct can_berr_counter *bec)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 
 	bec->txerr = priv->read_reg(priv, SJA1000_TXERR);
 	bec->rxerr = priv->read_reg(priv, SJA1000_RXERR);
@@ -410,7 +413,7 @@ static int sja1000_get_berr_counter(struct net_device *dev,
 static netdev_tx_t sja1000_start_xmit(struct sk_buff *skb,
 					    struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 	struct can_frame *cf = (struct can_frame *)skb->data;
 	uint8_t fi;
 	uint8_t dlc;
@@ -466,7 +469,7 @@ static netdev_tx_t sja1000_start_xmit(struct sk_buff *skb,
 
 static void sja1000_rx(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 	struct net_device_stats *stats = &dev->stats;
 	struct can_frame *cf;
 	struct sk_buff *skb;
@@ -519,7 +522,7 @@ static void sja1000_rx(struct net_device *dev)
 
 static int sja1000_err(struct net_device *dev, uint8_t isrc, uint8_t status)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 	struct net_device_stats *stats = &dev->stats;
 	struct can_frame *cf;
 	struct sk_buff *skb;
@@ -629,7 +632,7 @@ static int sja1000_err(struct net_device *dev, uint8_t isrc, uint8_t status)
 irqreturn_t sja1000_interrupt(int irq, void *dev_id)
 {
 	struct net_device *dev = (struct net_device *)dev_id;
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 	struct net_device_stats *stats = &dev->stats;
 	uint8_t isrc, status;
 	int n = 0;
@@ -704,7 +707,7 @@ out:
 
 static int sja1000_open(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 	int err;
 
 	/* set chip into reset mode */
@@ -737,7 +740,7 @@ static int sja1000_open(struct net_device *dev)
 
 static int sja1000_close(struct net_device *dev)
 {
-	struct sja1000_priv *priv = netdev_priv(dev);
+	sja1000_priv* priv = (sja1000_priv*)netdev_priv(dev);
 
 	netif_stop_queue(dev);
 	set_reset_mode(dev);
@@ -762,7 +765,7 @@ struct net_device *alloc_sja1000dev(int sizeof_priv)
 	if (!dev)
 		return NULL;
 
-	priv = netdev_priv(dev);
+	priv = (sja1000_priv*)netdev_priv(dev);
 
 	priv->dev = dev;
 	priv->can.bittiming_const = &sja1000_bittiming_const;

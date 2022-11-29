@@ -45,8 +45,7 @@
 #ifndef _UAPI_CAN_H
 #define _UAPI_CAN_H
 
-#include "types.h"
-//#include <linux/types.h>
+#include "linux/types.h"
 //#include <linux/socket.h>
 
 /* controller area network (CAN) kernel definitions */
