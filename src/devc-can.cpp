@@ -8,6 +8,10 @@ extern "C" {
 }
 
 #include "kernel/drivers/net/can/sja1000/sja1000.h"
+#include "kernel/include/linux/pci.h"
+
+extern struct pci_driver adv_pci_driver;
+extern struct pci_driver kvaser_pci_driver;
 
 using namespace std;
 
@@ -121,12 +125,50 @@ int pci_enable_device(struct pci_dev *dev) {
 void pci_disable_device(struct pci_dev *dev) {
 }
 
+uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
+	return dev->mmap_base;
+}
+
 void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
+}
+
+int pci_request_regions(struct pci_dev *, const char *) {
+	return 0;
+}
+
+void pci_release_regions(struct pci_dev *) {
 }
 // PCI
 
+void print_card (const pci_driver& driver) {
+	std::cout << "  Name of driver: " << driver.name << std::endl;
+	std::cout << "  Supported cards:" << std::endl;
+
+	if (driver.id_table != nullptr) {
+		const pci_device_id *id_table = driver.id_table;
+
+		while (id_table->vendor != 0) {
+			std::cout << std::hex << "    { "
+					<< "vendor: " << id_table->vendor
+					<< ", devide: " << id_table->device
+					<< ", subvendor: " << id_table->subvendor
+					<< ", subdevice: " << id_table->subdevice
+					<< ", class: " << id_table->class_
+					<< ", class_mask: " << id_table->class_mask
+					<< " }" << std::endl;
+			++id_table;
+		}
+	}
+}
+
 int main(void) {
 	std::cout << "Running" << std::endl;
+
+	std::cout << "Advantech CAN cards:" << std::endl;
+	print_card(adv_pci_driver);
+
+	std::cout << "Kvaser CAN cards:" << std::endl;
+	print_card(kvaser_pci_driver);
 
 	ThreadCtl(_NTO_TCTL_IO, 0);
 

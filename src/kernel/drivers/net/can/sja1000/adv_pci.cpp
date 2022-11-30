@@ -320,8 +320,7 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int channel, int bar_no)
 
 	board_data->reg_shift = reg_shift;
 
-//	priv->reg_base = pci_iomap(pdev, bar_no, 128) + bar_offset * channel;
-	priv->reg_base = pdev->mmap_base + bar_offset * channel;
+	priv->reg_base = pci_iomap(pdev, bar_no, 128) + bar_offset * channel;
 
 	priv->read_reg = adv_pci_read_reg;
 	priv->write_reg = adv_pci_write_reg;
@@ -440,7 +439,7 @@ failure:
 	return err;
 }
 
-static struct pci_driver adv_pci_driver = {
+struct pci_driver adv_pci_driver = {
 	.name = DRV_NAME,
 	.id_table = adv_pci_tbl,
 	.probe = adv_pci_init_one,

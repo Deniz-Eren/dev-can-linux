@@ -29,6 +29,7 @@
 //#include <linux/atomic.h>
 #include "linux/device.h"
 //#include <linux/io.h>
+extern uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max);
 extern void pci_iounmap(struct pci_dev *dev, uintptr_t p);
 
 //#include <linux/resource_ext.h>
@@ -1118,9 +1119,9 @@ extern void pci_disable_device(struct pci_dev *dev);
 //void pci_fixup_irqs(u8 (*)(struct pci_dev *, u8 *),
 //		    int (*)(const struct pci_dev *, u8, u8));
 //#define HAVE_PCI_REQ_REGIONS	2
-//int __must_check pci_request_regions(struct pci_dev *, const char *);
+int pci_request_regions(struct pci_dev *, const char *);
 //int __must_check pci_request_regions_exclusive(struct pci_dev *, const char *);
-//void pci_release_regions(struct pci_dev *);
+void pci_release_regions(struct pci_dev *);
 //int __must_check pci_request_region(struct pci_dev *, int, const char *);
 //int __must_check pci_request_region_exclusive(struct pci_dev *, int, const char *);
 //void pci_release_region(struct pci_dev *, int);
