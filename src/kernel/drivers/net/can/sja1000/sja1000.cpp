@@ -42,6 +42,7 @@
  *
  */
 
+#include <cstdlib>
 #include <errno.h>
 #include <unistd.h>
 #include "linux/compiler.h"
@@ -760,7 +761,9 @@ struct net_device *alloc_sja1000dev(int sizeof_priv)
 	struct net_device *dev;
 	struct sja1000_priv *priv;
 
-	dev = alloc_candev(sizeof(struct sja1000_priv) + sizeof_priv,
+//	dev = alloc_candev(sizeof(struct sja1000_priv) + sizeof_priv,
+//		SJA1000_ECHO_SKB_MAX);
+	dev = alloc_candev(sizeof(struct sja1000_priv),
 		SJA1000_ECHO_SKB_MAX);
 	if (!dev)
 		return NULL;
@@ -784,6 +787,8 @@ struct net_device *alloc_sja1000dev(int sizeof_priv)
 
 //	if (sizeof_priv)
 //		priv->priv = (void *)priv + sizeof(struct sja1000_priv);
+	if (sizeof_priv)
+		priv->priv = (void *)std::malloc(sizeof_priv);
 
 	return dev;
 }

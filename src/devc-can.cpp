@@ -170,6 +170,15 @@ int main(void) {
 	std::cout << "Kvaser CAN cards:" << std::endl;
 	print_card(kvaser_pci_driver);
 
+	pci_dev pdev = {
+			.vendor = 0x13fe,
+			.device = 0xc302,
+			.dev = { .driver_data = nullptr },
+			.irq = 10
+	};
+
+	adv_pci_driver.probe(&pdev, nullptr);
+
 	ThreadCtl(_NTO_TCTL_IO, 0);
 
 	pci_vid_t PCI_VID_xxx = 0x13fe;
