@@ -419,7 +419,7 @@ static void kvaser_pci_remove_one(struct pci_dev *pdev)
 	pci_disable_device(pdev);
 }
 
-struct pci_driver kvaser_pci_driver = {
+pci_driver kvaser_pci_driver = {
 	.name = DRV_NAME,
 	.id_table = kvaser_pci_tbl,
 	.probe = kvaser_pci_init_one,

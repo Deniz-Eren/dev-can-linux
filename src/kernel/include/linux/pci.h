@@ -29,6 +29,11 @@
 //#include <linux/atomic.h>
 #include "linux/device.h"
 //#include <linux/io.h>
+
+extern "C" {
+#include <pci/pci.h>
+}
+
 extern uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max);
 extern void pci_iounmap(struct pci_dev *dev, uintptr_t p);
 
@@ -259,7 +264,9 @@ extern void pci_iounmap(struct pci_dev *dev, uintptr_t p);
  * The pci_dev structure is used to describe PCI devices.
  */
 struct pci_dev {
-	uintptr_t mmap_base;
+	pci_devhdl_t hdl;
+	pci_ba_t *ba;
+	int_t nba;
 //	struct list_head bus_list;	/* node in per-bus list */
 //	struct pci_bus	*bus;		/* bus this device is on */
 //	struct pci_bus	*subordinate;	/* bus this device bridges to */

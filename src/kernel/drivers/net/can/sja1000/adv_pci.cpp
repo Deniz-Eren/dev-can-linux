@@ -67,43 +67,13 @@ struct adv_board_data {
 /*
 * The PCI device and vendor IDs
 */
-#define ADV_PCI_VENDOR_ID         0x13fe
+#define ADV_PCI_VENDOR_ID    	0x13fe
 
 /* 2-port CAN UniversalPCI Communication Card with Isolation */
-#define ADV_PCI_DEVICE_ID01       0x1680
-#define ADV_PCI_DEVICE_ID02       0x3680
-#define ADV_PCI_DEVICE_ID03       0x2052
-#define ADV_PCI_DEVICE_ID04       0x1681
-#define ADV_PCI_DEVICE_ID05       0xc001
-#define ADV_PCI_DEVICE_ID06       0xc002
-#define ADV_PCI_DEVICE_ID07       0xc004
-#define ADV_PCI_DEVICE_ID08       0xc101
-#define ADV_PCI_DEVICE_ID09       0xc102
-#define ADV_PCI_DEVICE_ID10       0xc104
-#define ADV_PCI_DEVICE_ID11       0xc201
-#define ADV_PCI_DEVICE_ID12       0xc202
-#define ADV_PCI_DEVICE_ID13       0xc204
-#define ADV_PCI_DEVICE_ID14       0xc301
-#define ADV_PCI_DEVICE_ID15       0xc302
-#define ADV_PCI_DEVICE_ID16       0xc304
+#define ADV_PCI_DEVICE_ID1    	0xc302
 
 static const struct pci_device_id adv_pci_tbl[] = {
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID01, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID02, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID03, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID04, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID05, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID06, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID07, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID08, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID09, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID10, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID11, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID12, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID13, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID14, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID15, PCI_ANY_ID, PCI_ANY_ID,},
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID16, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID1, PCI_ANY_ID, PCI_ANY_ID,},
 	{0,}
 };
 
@@ -149,81 +119,7 @@ static int adv_pci_device_support_check(const struct pci_dev *pdev)
 
 static int number_of_sja1000_chips(const struct pci_dev *pdev)
 {
-	int no_of_chips = 0;
-
-	switch (pdev->device) {
-	case ADV_PCI_DEVICE_ID01:
-	case ADV_PCI_DEVICE_ID03:
-		no_of_chips = 2;
-		break;
-	case ADV_PCI_DEVICE_ID04:
-		no_of_chips = 1;
-		break;
-	default:
-		no_of_chips = pdev->device & 0x7;
-		break;
-	}
-
-	return no_of_chips;
-}
-
-static int adv_pci_bar_no(const struct pci_dev *pdev)
-{
-	int bar_no = 0;
-
-	switch (pdev->device) {
-	case ADV_PCI_DEVICE_ID01:
-	case ADV_PCI_DEVICE_ID03:
-	case ADV_PCI_DEVICE_ID04:
-		bar_no = 2;
-		break;
-	default:
-		break;
-	}
-
-	return bar_no;
-}
-
-static int adv_pci_bar_offset(const struct pci_dev *pdev)
-{
-	int bar_offset = 0x100;
-
-	switch (pdev->device) {
-	case ADV_PCI_DEVICE_ID11:
-	case ADV_PCI_DEVICE_ID12:
-	case ADV_PCI_DEVICE_ID13:
-	case ADV_PCI_DEVICE_ID14:
-	case ADV_PCI_DEVICE_ID15:
-	case ADV_PCI_DEVICE_ID16:
-		bar_offset = 0x400;
-		break;
-	case ADV_PCI_DEVICE_ID01:
-	case ADV_PCI_DEVICE_ID03:
-	case ADV_PCI_DEVICE_ID04:
-		bar_offset = 0x0;
-		break;
-	default:
-		break;
-	}
-
-	return bar_offset;
-}
-
-static int adv_pci_is_multi_bar(struct pci_dev *pdev)
-{
-	int is_multi_bar = 0;
-
-	switch (pdev->device) {
-	case ADV_PCI_DEVICE_ID01:
-	case ADV_PCI_DEVICE_ID03:
-	case ADV_PCI_DEVICE_ID04:
-		is_multi_bar = 1;
-		break;
-	default:
-		break;
-	}
-
-	return is_multi_bar;
+	return pdev->device & 0x7;
 }
 
 static int adv_pci_reg_shift(struct pci_dev *pdev)
@@ -231,12 +127,7 @@ static int adv_pci_reg_shift(struct pci_dev *pdev)
 	int reg_shift = 0;
 
 	switch (pdev->device) {
-	case ADV_PCI_DEVICE_ID11:
-	case ADV_PCI_DEVICE_ID12:
-	case ADV_PCI_DEVICE_ID13:
-	case ADV_PCI_DEVICE_ID14:
-	case ADV_PCI_DEVICE_ID15:
-	case ADV_PCI_DEVICE_ID16:
+	case ADV_PCI_DEVICE_ID1:
 		reg_shift = 2;
 		break;
 	default:
@@ -298,17 +189,16 @@ static void adv_pci_del_all_channels(struct pci_dev *pdev)
 	}
 }
 
-static int adv_pci_add_chan(struct pci_dev *pdev, int channel, int bar_no)
+static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
 {
 	struct net_device *dev;
 	struct sja1000_priv *priv;
 	struct adv_pci *board;
 	struct adv_board_data *board_data;
 	int err;
-	int bar_offset, reg_shift;
+	int reg_shift;
 
 	/* The following function calls assume device is supported */
-	bar_offset = adv_pci_bar_offset(pdev);
 	reg_shift = adv_pci_reg_shift(pdev);
 
 	dev = alloc_sja1000dev(sizeof(struct adv_board_data));
@@ -320,7 +210,7 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int channel, int bar_no)
 
 	board_data->reg_shift = reg_shift;
 
-	priv->reg_base = pci_iomap(pdev, bar_no, 128) + bar_offset * channel;
+	priv->reg_base = pci_iomap(pdev, bar_no, 128);
 
 	priv->read_reg = adv_pci_read_reg;
 	priv->write_reg = adv_pci_write_reg;
@@ -335,7 +225,7 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int channel, int bar_no)
 
 	board = (adv_pci*)pci_get_drvdata(pdev);
 	board->pci_dev = pdev;
-	board->slave_dev[channel] = dev;
+	board->slave_dev[bar_no] = dev;
 
 	adv_pci_reset(priv);
 
@@ -344,7 +234,7 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int channel, int bar_no)
 	syslog(LOG_INFO, "reg_base=%p irq=%d\n", priv->reg_base, dev->irq);
 
 //	SET_NETDEV_DEV(dev, &pdev->dev);
-	dev->dev_id = channel;
+	dev->dev_id = bar_no;
 
 	/* Register SJA1000 device */
 	err = register_sja1000dev(dev);
@@ -412,20 +302,14 @@ static int adv_pci_init_one(struct pci_dev *pdev,
 	}
 
 	/* The following function calls assume device is supported */
-	bar_no = adv_pci_bar_no(pdev);
-	is_multi_bar = adv_pci_is_multi_bar(pdev);
-
 	board->no_channels = no_channels;
 
 	pci_set_drvdata(pdev, board);
 
 	for (i = 0; i < no_channels; i++) {
-		err = adv_pci_add_chan(pdev, i, bar_no);
+		err = adv_pci_add_chan(pdev, i);
 		if (err)
 			goto failure_cleanup;
-
-		if (is_multi_bar)
-			bar_no++;
 	}
 	return 0;
 
@@ -439,7 +323,7 @@ failure:
 	return err;
 }
 
-struct pci_driver adv_pci_driver = {
+pci_driver adv_pci_driver = {
 	.name = DRV_NAME,
 	.id_table = adv_pci_tbl,
 	.probe = adv_pci_init_one,

@@ -98,6 +98,6 @@ extern int
 request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 	    const char *name, void *dev);
 
-extern void free_irq(unsigned int, void *);
+extern void free_irq(unsigned int irq, void *dev);
 
 #endif
