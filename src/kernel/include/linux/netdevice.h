@@ -606,6 +606,7 @@ struct net_device {
     unsigned int        flags;
     unsigned int        mtu;
     const struct net_device_ops *netdev_ops;
+    unsigned short          dev_id;
 	void* priv;
 };
 

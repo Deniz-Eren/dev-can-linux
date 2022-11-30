@@ -815,7 +815,7 @@ int register_sja1000dev(struct net_device *dev)
 	set_reset_mode(dev);
 	chipset_init(dev);
 
-//	ret =  register_candev(dev);
+	ret = register_candev(dev);
 
 //	if (!ret)
 //		devm_can_led_init(dev);
@@ -824,11 +824,11 @@ int register_sja1000dev(struct net_device *dev)
 }
 //EXPORT_SYMBOL_GPL(register_sja1000dev);
 
-//void unregister_sja1000dev(struct net_device *dev)
-//{
-//	set_reset_mode(dev);
-//	unregister_candev(dev);
-//}
+void unregister_sja1000dev(struct net_device *dev)
+{
+	set_reset_mode(dev);
+	unregister_candev(dev);
+}
 //EXPORT_SYMBOL_GPL(unregister_sja1000dev);
 
 //static __init int sja1000_init(void)

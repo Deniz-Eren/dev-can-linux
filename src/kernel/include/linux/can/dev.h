@@ -37,7 +37,7 @@ struct can_priv {
 	struct can_bittiming bittiming;//, data_bittiming;
 	const struct can_bittiming_const *bittiming_const;//,
 		//*data_bittiming_const;
-	//struct can_clock clock;
+	struct can_clock clock;
 
 	enum can_state state;
 

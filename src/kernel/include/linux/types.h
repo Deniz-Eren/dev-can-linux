@@ -24,6 +24,7 @@ struct sk_buff {
 	unsigned char* data;
 };
 
+#define __KERNEL__
 #define __UAPI_DEF_IF_IFNAMSIZ
 #define __UAPI_DEF_IF_NET_DEVICE_FLAGS
 #define __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO

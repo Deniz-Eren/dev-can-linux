@@ -11,6 +11,37 @@ extern "C" {
 
 using namespace std;
 
+/**
+ * Command:
+ *
+ * 		pci-tool -vvvvv
+ *
+ * Output:
+ *
+ * B000:D05:F00 @ idx 7
+ *         vid/did: 13fe/c302
+ *                 <vendor id - unknown>, <device id - unknown>
+ *         class/subclass/reg: 0c/09/00
+ *                 CANbus Serial Bus Controller
+ *         revid: 0
+ *         cmd/status registers: 103/0
+ *         Capabilities list (0):
+ *
+ *         Address Space list - 2 assigned
+ *             [0] I/O, addr=c000, size=400, align: 400, attr: 32bit CONTIG ENABLED
+ *             [1] I/O, addr=c400, size=400, align: 400, attr: 32bit CONTIG ENABLED
+ *         Interrupt list - 0 assigned
+ *         hdrType: 0
+ *                 ssvid: 13fe  ?
+ *                 ssid:  c302
+ *
+ *         Device Dependent Registers
+ *                 [40] 00000000  00000000  00000000  00000000
+ *                   :
+ *                 [f0] 00000000  00000000  00000000  00000000
+ *
+ */
+
 // NETDEVICE
 #include "linux/netdevice.h"
 
@@ -49,6 +80,13 @@ void netif_stop_queue(struct net_device *dev)
 // DEV
 #include "linux/can/dev.h"
 
+int register_candev(struct net_device *dev) {
+	return 0;
+}
+
+void unregister_candev(struct net_device *dev) {
+}
+
 int open_candev(struct net_device *dev)
 {
 	return 0;
@@ -75,36 +113,17 @@ void free_irq(unsigned int irq, void *dev_id)
 }
 // INTERRUPT
 
-/**
- * Command:
- *
- * 		pci-tool -vvvvv
- *
- * Output:
- *
- * B000:D05:F00 @ idx 7
- *         vid/did: 13fe/c302
- *                 <vendor id - unknown>, <device id - unknown>
- *         class/subclass/reg: 0c/09/00
- *                 CANbus Serial Bus Controller
- *         revid: 0
- *         cmd/status registers: 103/0
- *         Capabilities list (0):
- * 
- *         Address Space list - 2 assigned
- *             [0] I/O, addr=c000, size=400, align: 400, attr: 32bit CONTIG ENABLED
- *             [1] I/O, addr=c400, size=400, align: 400, attr: 32bit CONTIG ENABLED
- *         Interrupt list - 0 assigned
- *         hdrType: 0
- *                 ssvid: 13fe  ?
- *                 ssid:  c302
- * 
- *         Device Dependent Registers
- *                 [40] 00000000  00000000  00000000  00000000
- *                   :
- *                 [f0] 00000000  00000000  00000000  00000000
- *
- */
+// PCI
+int pci_enable_device(struct pci_dev *dev) {
+	return 0;
+}
+
+void pci_disable_device(struct pci_dev *dev) {
+}
+
+void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
+}
+// PCI
 
 int main(void) {
 	std::cout << "Running" << std::endl;
