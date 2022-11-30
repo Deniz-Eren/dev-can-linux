@@ -22,7 +22,7 @@
 * along with this program; if not, see <http://www.gnu.org/licenses/>.
 */
 
-#include <cstdlib>
+//#include <cstdlib>
 #include <hw/inout.h>
 //#include <linux/kernel.h>
 //#include <linux/module.h>
@@ -81,7 +81,7 @@ static const struct pci_device_id adv_pci_tbl[] = {
 
 static u8 adv_pci_read_reg(const struct sja1000_priv *priv, int port)
 {
-	struct adv_board_data *board_data = (adv_board_data*)priv->priv;
+	struct adv_board_data *board_data = (struct adv_board_data*)priv->priv;
 
 //	return ioread8(priv->reg_base + (port << board_data->reg_shift));
 	return in8(priv->reg_base + (port << board_data->reg_shift));
@@ -90,7 +90,7 @@ static u8 adv_pci_read_reg(const struct sja1000_priv *priv, int port)
 static void adv_pci_write_reg(const struct sja1000_priv *priv,
 				int port, u8 val)
 {
-	struct adv_board_data *board_data = (adv_board_data*)priv->priv;
+	struct adv_board_data *board_data = (struct adv_board_data*)priv->priv;
 
 //	iowrite8(val, priv->reg_base + (port << board_data->reg_shift));
 	out8(priv->reg_base + (port << board_data->reg_shift), val);
@@ -163,7 +163,7 @@ static void adv_pci_del_all_channels(struct pci_dev *pdev)
 	struct adv_pci *board;
 	int i;
 
-	board = (adv_pci*)pci_get_drvdata(pdev);
+	board = (struct adv_pci*)pci_get_drvdata(pdev);
 	if (!board)
 		return;
 
@@ -179,7 +179,7 @@ static void adv_pci_del_all_channels(struct pci_dev *pdev)
 //			dev->name);
 		syslog(LOG_INFO, "Removing device %s\n", dev->name);
 
-		priv = (sja1000_priv*)netdev_priv(dev);
+		priv = (struct sja1000_priv*)netdev_priv(dev);
 
 		unregister_sja1000dev(dev);
 
@@ -205,8 +205,8 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
 	if (dev == NULL)
 		return -ENOMEM;
 
-	priv = (sja1000_priv*)netdev_priv(dev);
-	board_data = (adv_board_data*)priv->priv;
+	priv = (struct sja1000_priv*)netdev_priv(dev);
+	board_data = (struct adv_board_data*)priv->priv;
 
 	board_data->reg_shift = reg_shift;
 
@@ -223,7 +223,7 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
 	priv->irq_flags = IRQF_SHARED;
 	dev->irq = pdev->irq;
 
-	board = (adv_pci*)pci_get_drvdata(pdev);
+	board = (struct adv_pci*)pci_get_drvdata(pdev);
 	board->pci_dev = pdev;
 	board->slave_dev[bar_no] = dev;
 
@@ -254,7 +254,7 @@ failure:
 
 static void adv_pci_remove_one(struct pci_dev *pdev)
 {
-	struct adv_pci *board = (adv_pci*)pci_get_drvdata(pdev);
+	struct adv_pci *board = (struct adv_pci*)pci_get_drvdata(pdev);
 
 //	dev_info(&pdev->dev, "Removing card");
 	syslog(LOG_INFO, "Removing card");
@@ -262,7 +262,7 @@ static void adv_pci_remove_one(struct pci_dev *pdev)
 	adv_pci_del_all_channels(pdev);
 
 //	kfree(board);
-	std::free(board);
+	free(board);
 
 	pci_disable_device(pdev);
 	pci_set_drvdata(pdev, NULL);
@@ -274,7 +274,7 @@ static int adv_pci_init_one(struct pci_dev *pdev,
 	struct adv_pci *board;
 
 	int i, err;
-	int no_channels, bar_no, is_multi_bar;
+	int no_channels;
 
 	err = 0;
 
@@ -283,7 +283,7 @@ static int adv_pci_init_one(struct pci_dev *pdev,
 	syslog(LOG_INFO, "initializing device %04x:%04x\n", pdev->vendor, pdev->device);
 
 //	board = kzalloc(sizeof(struct adv_pci), GFP_KERNEL);
-	board = (adv_pci*)std::malloc(sizeof(struct adv_pci));
+	board = (struct adv_pci*)malloc(sizeof(struct adv_pci));
 	if (board == NULL)
 		goto failure;
 
@@ -323,7 +323,7 @@ failure:
 	return err;
 }
 
-pci_driver adv_pci_driver = {
+struct pci_driver adv_pci_driver = {
 	.name = DRV_NAME,
 	.id_table = adv_pci_tbl,
 	.probe = adv_pci_init_one,

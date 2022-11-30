@@ -81,7 +81,7 @@ struct can_priv {
 #define get_canfd_dlc(i)	(min_t(__u8, (i), CANFD_MAX_DLC))
 
 /* Drop a given socketbuffer if it does not contain a valid CAN frame. */
-static inline bool can_dropped_invalid_skb(struct net_device *dev,
+static inline int can_dropped_invalid_skb(struct net_device *dev,
 					  struct sk_buff *skb)
 {
 	//const struct canfd_frame *cfd = (struct canfd_frame *)skb->data;
@@ -97,7 +97,7 @@ static inline bool can_dropped_invalid_skb(struct net_device *dev,
 	//} else
 	//	goto inval_skb;
 
-	return false;
+	return 0;
 
 //inval_skb:
 //	kfree_skb(skb);

@@ -29,7 +29,6 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cstdlib>
 #include <hw/inout.h>
 //#include <linux/kernel.h>
 //#include <linux/module.h>
@@ -132,8 +131,8 @@ static void kvaser_pci_write_reg(const struct sja1000_priv *priv,
 
 static void kvaser_pci_disable_irq(struct net_device *dev)
 {
-	struct sja1000_priv *priv = (sja1000_priv*)netdev_priv(dev);
-	struct kvaser_pci *board = (kvaser_pci*)priv->priv;
+	struct sja1000_priv *priv = (struct sja1000_priv*)netdev_priv(dev);
+	struct kvaser_pci *board = (struct kvaser_pci*)priv->priv;
 	u32 intcsr;
 
 	/* Disable interrupts from card */
@@ -146,8 +145,8 @@ static void kvaser_pci_disable_irq(struct net_device *dev)
 
 static void kvaser_pci_enable_irq(struct net_device *dev)
 {
-	struct sja1000_priv *priv = (sja1000_priv*)netdev_priv(dev);
-	struct kvaser_pci *board = (kvaser_pci*)priv->priv;
+	struct sja1000_priv *priv = (struct sja1000_priv*)netdev_priv(dev);
+	struct kvaser_pci *board = (struct kvaser_pci*)priv->priv;
 	u32 tmp_en_io;
 
 	/* Enable interrupts from card */
@@ -188,8 +187,8 @@ static void kvaser_pci_del_chan(struct net_device *dev)
 
 	if (!dev)
 		return;
-	priv = (sja1000_priv*)netdev_priv(dev);
-	board = (kvaser_pci*)priv->priv;
+	priv = (struct sja1000_priv*)netdev_priv(dev);
+	board = (struct kvaser_pci*)priv->priv;
 	if (!board)
 		return;
 
@@ -234,8 +233,8 @@ static int kvaser_pci_add_chan(struct pci_dev *pdev, int channel,
 	if (dev == NULL)
 		return -ENOMEM;
 
-	priv = (sja1000_priv*)netdev_priv(dev);
-	board = (kvaser_pci*)priv->priv;
+	priv = (struct sja1000_priv*)netdev_priv(dev);
+	board = (struct kvaser_pci*)priv->priv;
 
 	board->pci_dev = pdev;
 	board->channel = channel;
@@ -260,8 +259,8 @@ static int kvaser_pci_add_chan(struct pci_dev *pdev, int channel,
 		/* Enable interrupts from card */
 		kvaser_pci_enable_irq(dev);
 	} else {
-		struct sja1000_priv *master_priv = (sja1000_priv*)netdev_priv(*master_dev);
-		struct kvaser_pci *master_board = (kvaser_pci*)master_priv->priv;
+		struct sja1000_priv *master_priv = (struct sja1000_priv*)netdev_priv(*master_dev);
+		struct kvaser_pci *master_board = (struct kvaser_pci*)master_priv->priv;
 		master_board->slave_dev[channel - 1] = dev;
 		master_board->no_channels = channel + 1;
 		board->xilinx_ver = master_board->xilinx_ver;
@@ -373,8 +372,8 @@ static int kvaser_pci_init_one(struct pci_dev *pdev,
 			goto failure_cleanup;
 	}
 
-	priv = (sja1000_priv*)netdev_priv(master_dev);
-	board = (kvaser_pci*)priv->priv;
+	priv = (struct sja1000_priv*)netdev_priv(master_dev);
+	board = (struct kvaser_pci*)priv->priv;
 
 //	dev_info(&pdev->dev, "xilinx version=%d number of channels=%d\n",
 //		 board->xilinx_ver, board->no_channels);
@@ -411,7 +410,7 @@ failure:
 
 static void kvaser_pci_remove_one(struct pci_dev *pdev)
 {
-	struct net_device *dev = (net_device*)pci_get_drvdata(pdev);
+	struct net_device *dev = (struct net_device*)pci_get_drvdata(pdev);
 
 	kvaser_pci_del_chan(dev);
 
@@ -419,7 +418,7 @@ static void kvaser_pci_remove_one(struct pci_dev *pdev)
 	pci_disable_device(pdev);
 }
 
-pci_driver kvaser_pci_driver = {
+struct pci_driver kvaser_pci_driver = {
 	.name = DRV_NAME,
 	.id_table = kvaser_pci_tbl,
 	.probe = kvaser_pci_init_one,

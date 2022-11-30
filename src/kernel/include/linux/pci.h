@@ -18,6 +18,7 @@
 
 
 #include <errno.h>
+#include <pci/pci.h>
 #include "linux/mod_devicetable.h"
 #include "linux/types.h"
 //#include <linux/init.h>
@@ -30,9 +31,7 @@
 #include "linux/device.h"
 //#include <linux/io.h>
 
-extern "C" {
-#include <pci/pci.h>
-}
+struct pci_dev;
 
 extern uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max);
 extern void pci_iounmap(struct pci_dev *dev, uintptr_t p);

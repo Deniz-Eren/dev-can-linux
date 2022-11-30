@@ -96,6 +96,8 @@ struct net_device_stats {
 	unsigned long	tx_compressed;
 };
 
+struct net_device;
+
 /*
  * This structure defines the management hooks for network devices.
  * The following hooks can be defined; unless noted otherwise, they are
@@ -601,7 +603,7 @@ struct net_device_ops {
 
 struct net_device {
     char      	name[IFNAMSIZ];
-    int         irq;
+    unsigned int         irq;
 	struct net_device_stats stats;
     unsigned int        flags;
     unsigned int        mtu;
@@ -653,7 +655,7 @@ void netif_stop_queue(struct net_device *dev);
  *
  *	Test if transmit queue on device is currently unable to send.
  */
-bool netif_queue_stopped(const struct net_device *dev);
+int netif_queue_stopped(const struct net_device *dev);
 
 int netif_rx(struct sk_buff *skb);
 

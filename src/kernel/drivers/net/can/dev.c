@@ -17,7 +17,6 @@
  */
 
 #include <errno.h>
-#include <cstdlib>
 #include <string.h>
 #include "linux/types.h"
 //#include <linux/module.h>
@@ -38,7 +37,7 @@ struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
 {
 	struct sk_buff *skb;
 
-	skb = (sk_buff*)std::malloc(sizeof(sk_buff));
+	skb = (struct sk_buff*)malloc(sizeof(struct sk_buff));
 
 //	skb = netdev_alloc_skb(dev, sizeof(struct can_skb_priv) +
 //			       sizeof(struct can_frame));
@@ -58,7 +57,7 @@ struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
 //	can_skb_prv(skb)->skbcnt = 0;
 
 //	*cf = (struct can_frame *)skb_put(skb, sizeof(struct can_frame));
-    *cf = (can_frame*)std::malloc(sizeof(can_frame));
+    *cf = (struct can_frame*)malloc(sizeof(struct can_frame));
 	memset(*cf, 0, sizeof(struct can_frame));
 
     skb->data = (unsigned char*)(*cf);
@@ -97,15 +96,15 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
 //        size = sizeof_priv;
 
 //    dev = alloc_netdev(size, "can%d", NET_NAME_UNKNOWN, can_setup);
-    dev = (net_device*)std::malloc(sizeof(net_device));
+    dev = (struct net_device*)malloc(sizeof(struct net_device));
 	if (!dev)
 		return NULL;
 
-    dev->priv = std::malloc(sizeof_priv);
+    dev->priv = malloc(sizeof_priv);
     if (!dev->priv)
     	return NULL;
 
-    priv = (can_priv*)netdev_priv(dev);
+    priv = (struct can_priv*)netdev_priv(dev);
 
 	// TODO: echo
 //    if (echo_skb_max) {
@@ -127,8 +126,8 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
 void free_candev(struct net_device *dev)
 {
 	//	free_netdev(dev);
-	std::free(netdev_priv(dev));
-	std::free(dev);
+	free(netdev_priv(dev));
+	free(dev);
 }
 
 /*
@@ -136,7 +135,7 @@ void free_candev(struct net_device *dev)
  */
 int can_change_mtu(struct net_device *dev, int new_mtu)
 {
-	struct can_priv *priv = (can_priv *)netdev_priv(dev);
+	struct can_priv *priv = (struct can_priv *)netdev_priv(dev);
 
 	/* Do not allow changing the MTU while running */
 	if (dev->flags & IFF_UP)

@@ -1,21 +1,16 @@
-#include <iostream>
-#include <list>
+#include <stdlib.h>
+#include <stdio.h>
 #include <sys/neutrino.h>
 #include <sys/mman.h>
 #include <hw/inout.h>
 
-extern "C" {
-#include <pci/pci.h>
-}
-
 #include "kernel/drivers/net/can/sja1000/sja1000.h"
 #include "kernel/include/linux/pci.h"
 
-extern pci_driver adv_pci_driver;
-extern pci_driver kvaser_pci_driver;
-extern net_device_ops sja1000_netdev_ops;
+extern struct pci_driver adv_pci_driver;
+extern struct pci_driver kvaser_pci_driver;
+extern struct net_device_ops sja1000_netdev_ops;
 
-using namespace std;
 
 /**
  * Command:
@@ -58,7 +53,7 @@ void netif_wake_queue(struct net_device *dev)
 
 int netif_rx(struct sk_buff *skb)
 {
-	can_frame* msg = (can_frame*)skb->data;
+	struct can_frame* msg = (struct can_frame*)skb->data;
 
 	syslog(LOG_INFO, "netif_rx; can%d: %x#%2x%2x%2x%2x%2x%2x%2x%2x",
 			skb->dev_id,
@@ -91,7 +86,7 @@ void netif_carrier_off(struct net_device *dev)
 	syslog(LOG_INFO, "netif_carrier_off");
 }
 
-bool netif_queue_stopped(const struct net_device *dev)
+int netif_queue_stopped(const struct net_device *dev)
 {
 	syslog(LOG_INFO, "netif_queue_stopped");
 	return false;
@@ -107,7 +102,7 @@ void netif_stop_queue(struct net_device *dev)
 #include "linux/can/dev.h"
 
 int register_candev(struct net_device *dev) {
-	std::snprintf(dev->name, IFNAMSIZ, "can%d", dev->dev_id);
+	snprintf(dev->name, IFNAMSIZ, "can%d", dev->dev_id);
 
 	syslog(LOG_INFO, "register_candev: %s", dev->name);
 
@@ -141,15 +136,16 @@ void close_candev(struct net_device *dev)
 // INTERRUPT
 #include "linux/interrupt.h"
 
-sigevent event;
+struct sigevent event;
 int id = -1;
 
 struct func_t {
 	irq_handler_t handler;
-	net_device *dev;
+	struct net_device *dev;
 	unsigned int irq;
 };
-std::list<func_t> funcs;
+struct func_t funcs[16];
+int funcs_size = 0;
 
 const struct sigevent *irq_handler( void *area, int id ) {
 	return( &event );
@@ -163,12 +159,13 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 
 	struct net_device *ndev = (struct net_device *)dev;
 
-	func_t f = {
+	struct func_t f = {
 			.handler = handler,
 			.dev = ndev,
 			.irq = irq
 	};
-	funcs.push_back(f);
+
+	funcs[funcs_size++] = f;
 
 	if (id == -1) {
 		SIGEV_SET_TYPE(&event, SIGEV_INTR);
@@ -271,7 +268,7 @@ int pci_enable_device(struct pci_dev *dev) {
 	        			syslog(LOG_INFO, "reading device address space");
 
 	        			dev->nba = nba;
-	                	dev->ba = (pci_ba_t*)std::malloc(nba*sizeof(pci_ba_t));
+	                	dev->ba = (pci_ba_t*)malloc(nba*sizeof(pci_ba_t));
 
 	                    for (int_t i=0; i<nba; i++)
 	                    {
@@ -316,8 +313,8 @@ int pci_enable_device(struct pci_dev *dev) {
 void pci_disable_device(struct pci_dev *dev) {
 	syslog(LOG_INFO, "pci_disable_device");
 
-	if (dev != nullptr) {
-		if (dev->hdl != nullptr) {
+	if (dev != NULL) {
+		if (dev->hdl != NULL) {
 			pci_device_detach(dev->hdl);
 		}
 	}
@@ -385,33 +382,32 @@ void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
 	}
 }
 
-int pci_request_regions(struct pci_dev *, const char *) {
+int pci_request_regions(struct pci_dev *dev, const char *res_name) {
 	syslog(LOG_INFO, "pci_request_regions");
 
 	return 0;
 }
 
-void pci_release_regions(struct pci_dev *) {
+void pci_release_regions(struct pci_dev *dev) {
 	syslog(LOG_INFO, "pci_release_regions");
 }
 // PCI
 
-void print_card (const pci_driver& driver) {
-	std::cout << "  Name of driver: " << driver.name << std::endl;
-	std::cout << "  Supported cards:" << std::endl;
+void print_card (const struct pci_driver* driver) {
+	printf("  Name of driver: %s\n", driver->name);
+	printf("  Supported cards:\n");
 
-	if (driver.id_table != nullptr) {
-		const pci_device_id *id_table = driver.id_table;
+	if (driver->id_table != NULL) {
+		const struct pci_device_id *id_table = driver->id_table;
 
 		while (id_table->vendor != 0) {
-			std::cout << std::hex << "    { "
-					<< "vendor: " << id_table->vendor
-					<< ", devide: " << id_table->device
-					<< ", subvendor: " << id_table->subvendor
-					<< ", subdevice: " << id_table->subdevice
-					<< ", class: " << id_table->class_
-					<< ", class_mask: " << id_table->class_mask
-					<< " }" << std::endl;
+			printf("    { vendor: %x, device: %x, subvendor: %x, subdevice: %x, class: %x, class_mask: %x\n",
+				id_table->vendor,
+				id_table->device,
+				id_table->subvendor,
+				id_table->subdevice,
+				id_table->class,
+				id_table->class_mask);
 			++id_table;
 		}
 	}
@@ -422,29 +418,30 @@ int main(void) {
 
 	ThreadCtl(_NTO_TCTL_IO, 0);
 
-	std::cout << "Advantech CAN cards:" << std::endl;
-	print_card(adv_pci_driver);
+	printf("Advantech CAN cards:\n");
+	print_card(&adv_pci_driver);
 
-	std::cout << "Kvaser CAN cards:" << std::endl;
-	print_card(kvaser_pci_driver);
+	printf("Kvaser CAN cards:\n");
+	print_card(&kvaser_pci_driver);
 
-	pci_dev pdev = {
-			.ba = nullptr,
+	struct pci_dev pdev = {
+			.ba = NULL,
 			.vendor = 0x13fe,
 			.device = 0xc302,
-			.dev = { .driver_data = nullptr },
+			.dev = { .driver_data = NULL },
 			.irq = 10
 	};
 
-	if (adv_pci_driver.probe(&pdev, nullptr)) {
+	if (adv_pci_driver.probe(&pdev, NULL)) {
 		return -1;
 	}
 
 	while (1) {
+		int i;
 		InterruptWait( 0, NULL );
 
-		for (auto it = funcs.begin(); it != funcs.end(); ++it) {
-			it->handler(it->irq, it->dev);
+		for (i = 0; i < funcs_size; ++i) {
+			funcs[i].handler(funcs[i].irq, funcs[i].dev);
 		}
 	}
 
