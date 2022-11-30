@@ -161,23 +161,6 @@ struct canfd_frame {
 #define SOL_CAN_BASE 100
 
 /**
- * struct sockaddr_can - the sockaddr structure for CAN sockets
- * @can_family:  address family number AF_CAN.
- * @can_ifindex: CAN network interface index.
- * @can_addr:    protocol specific address information
- */
-//struct sockaddr_can {
-//	__kernel_sa_family_t can_family;
-//	int         can_ifindex;
-//	union {
-//		/* transport protocol class address information (e.g. ISOTP) */
-//		struct { canid_t rx_id, tx_id; } tp;
-//
-//		/* reserved for future CAN protocols address information */
-//	} can_addr;
-//};
-
-/**
  * struct can_filter - CAN ID based filter in can_register().
  * @can_id:   relevant bits of CAN ID which are not masked out.
  * @can_mask: CAN mask (see description)

@@ -63,9 +63,8 @@ void close_candev(struct net_device *dev)
 #include "linux/interrupt.h"
 
 extern int
-request_threaded_irq(unsigned int irq, irq_handler_t handler,
-             irq_handler_t thread_fn,
-             unsigned long flags, const char *name, void *dev)
+request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
+	    const char *name, void *dev)
 {
 	// TODO: install IRQ handler
 	return 0;
