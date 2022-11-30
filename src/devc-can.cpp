@@ -60,7 +60,8 @@ int netif_rx(struct sk_buff *skb)
 {
 	can_frame* msg = (can_frame*)skb->data;
 
-	syslog(LOG_INFO, "netif_rx: %x#%2x%2x%2x%2x%2x%2x%2x%2x",
+	syslog(LOG_INFO, "netif_rx; can%d: %x#%2x%2x%2x%2x%2x%2x%2x%2x",
+			skb->dev_id,
 			msg->can_id,
 			msg->data[0],
 			msg->data[1],
@@ -439,13 +440,10 @@ int main(void) {
 		return -1;
 	}
 
-	int i = 0;
 	while (1) {
 		InterruptWait( 0, NULL );
 
-		std::cout << "Got a message: " << i++ << std::endl;
-
-		for (std::list<func_t>::iterator it = funcs.begin(); it != funcs.end(); ++it) {
+		for (auto it = funcs.begin(); it != funcs.end(); ++it) {
 			it->handler(it->irq, it->dev);
 		}
 	}

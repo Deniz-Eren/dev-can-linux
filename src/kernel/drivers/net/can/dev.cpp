@@ -62,6 +62,7 @@ struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
 	memset(*cf, 0, sizeof(struct can_frame));
 
     skb->data = (unsigned char*)(*cf);
+    skb->dev_id = dev->dev_id;
 
 	return skb;
 }

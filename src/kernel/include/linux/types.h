@@ -22,6 +22,7 @@ typedef __u32 u32;
 
 struct sk_buff {
 	unsigned char* data;
+    unsigned short dev_id;
 };
 
 #define __KERNEL__
