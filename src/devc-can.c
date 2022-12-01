@@ -13,6 +13,9 @@ extern struct net_device_ops sja1000_netdev_ops;
 
 struct pci_driver *detected_driver = NULL;
 
+struct net_device* device[16];
+netdev_tx_t (*dev_xmit[16]) (struct sk_buff *skb, struct net_device *dev);
+
 /**
  * Command:
  *
@@ -104,6 +107,13 @@ void netif_stop_queue(struct net_device *dev)
 
 int register_candev(struct net_device *dev) {
 	snprintf(dev->name, IFNAMSIZ, "can%d", dev->dev_id);
+
+	if (dev->dev_id >= 16) {
+		syslog(LOG_ERR, "device id (%d) exceeds max (%d)", dev->dev_id, 16);
+	}
+
+	dev_xmit[dev->dev_id] = dev->netdev_ops->ndo_start_xmit;
+	device[dev->dev_id] = dev;
 
 	syslog(LOG_INFO, "register_candev: %s", dev->name);
 
@@ -483,6 +493,19 @@ int main(void) {
 		return -1;
 	}
 
+	struct sk_buff *skb;
+	struct can_frame *cf;
+
+	/* create zero'ed CAN frame buffer */
+	skb = alloc_can_skb(device[1], &cf);
+
+	if (skb == NULL) {
+		adv_pci_driver.remove(&pdev);
+
+		return -1;
+	}
+
+	int g = 0;
 	while (1) {
 		int i;
 		InterruptWait( 0, NULL );
@@ -490,6 +513,9 @@ int main(void) {
 		for (i = 0; i < funcs_size; ++i) {
 			funcs[i].handler(funcs[i].irq, funcs[i].dev);
 		}
+
+		if (++g % 5 == 0)
+		dev_xmit[1](skb, device[1]);
 	}
 
 	adv_pci_driver.remove(&pdev);
