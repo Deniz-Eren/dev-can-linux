@@ -11,6 +11,7 @@ extern struct pci_driver adv_pci_driver;
 extern struct pci_driver kvaser_pci_driver;
 extern struct net_device_ops sja1000_netdev_ops;
 
+struct pci_driver *detected_driver = NULL;
 
 /**
  * Command:
@@ -117,7 +118,7 @@ void unregister_candev(struct net_device *dev) {
 	syslog(LOG_INFO, "unregister_candev: %s", dev->name);
 
 	if (sja1000_netdev_ops.ndo_stop(dev)) {
-		syslog(LOG_ERR, "Internal error; ndo_stop failure");
+		syslog(LOG_ERR, "internal error; ndo_stop failure");
 	}
 }
 
@@ -170,12 +171,9 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 	if (id == -1) {
 		SIGEV_SET_TYPE(&event, SIGEV_INTR);
 
-	    id=InterruptAttach( irq, &irq_handler,
-	                        NULL, 0, 0 );
-
-//		if ((id = InterruptAttachEvent(irq, &event, _NTO_INTR_FLAGS_TRK_MSK)) == -1) {
-//			syslog(LOG_ERR, "Internal error; interrupt attach event failure");
-//		}
+	    if ((id = InterruptAttach(irq, &irq_handler, NULL, 0, 0)) == -1) {
+	    	syslog(LOG_ERR, "internal error; interrupt attach failure");
+	    }
 	}
 
 	return 0;
@@ -192,116 +190,104 @@ void free_irq(unsigned int irq, void *dev)
 
 // PCI
 int pci_enable_device(struct pci_dev *dev) {
-	syslog(LOG_INFO, "pci_enable_device");
+	syslog(LOG_INFO, "pci_enable_device: %x:%x",
+			dev->vendor, dev->device);
 
 	uint_t idx = 0;
 	pci_bdf_t bdf = 0;
 
-	while ((bdf = pci_device_find(idx, dev->vendor, PCI_DID_ANY, PCI_CCODE_ANY)) != PCI_BDF_NONE)
+	while ((bdf = pci_device_find(idx, dev->vendor, dev->device, PCI_CCODE_ANY)) != PCI_BDF_NONE)
 	{
-	    pci_did_t did;
-	    pci_err_t r = pci_device_read_did(bdf, &did);
+	    pci_err_t r;
 
-	    if (r == PCI_ERR_OK)
-	    {
-			syslog(LOG_INFO, "found device: %x:%x", dev->vendor, did);
+		pci_devhdl_t hdl = pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
+		dev->hdl = hdl;
 
-	    	/* does this driver handle this device ? */
-	    	if (did == dev->device) {
-	    		pci_devhdl_t hdl = pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
-	    		dev->hdl = hdl;
+        if (hdl == NULL) {
+			switch (r) {
+			case PCI_ERR_EINVAL:
+				syslog(LOG_ERR, "pci device attach failed; Invalid flags.");
+				break;
+			case PCI_ERR_ENODEV:
+				syslog(LOG_ERR, "pci device attach failed; The bdf argument doesn't refer to a valid device.");
+				break;
+			case PCI_ERR_ATTACH_EXCLUSIVE:
+				syslog(LOG_ERR, "pci device attach failed; The device identified by bdf is already exclusively owned.");
+				break;
+			case PCI_ERR_ATTACH_SHARED:
+				syslog(LOG_ERR, "pci device attach failed; The request was for exclusive attachment, but the device identified by bdf has already been successfully attached to.");
+				break;
+			case PCI_ERR_ATTACH_OWNED:
+				syslog(LOG_ERR, "pci device attach failed; The request was for ownership of the device, but the device is already owned.");
+				break;
+			case PCI_ERR_ENOMEM:
+				syslog(LOG_ERR, "pci device attach failed; Memory for internal resources couldn't be obtained. This may be a temporary condition.");
+				break;
+			case PCI_ERR_LOCK_FAILURE:
+				syslog(LOG_ERR, "pci device attach failed; There was an error related to the creation, acquisition, or use of a synchronization object.");
+				break;
+			case PCI_ERR_ATTACH_LIMIT:
+				syslog(LOG_ERR, "pci device attach failed; There have been too many attachments to the device identified by bdf.");
+				break;
+			default:
+				syslog(LOG_ERR, "pci device attach failed; Unknown error: %d", (int)r);
+				break;
+			}
 
-	            if (hdl == NULL) {
-	    			switch (r) {
-	    			case PCI_ERR_EINVAL:
-	    				syslog(LOG_ERR, "PCI device attach failed; Invalid flags.");
-	    				break;
-	    			case PCI_ERR_ENODEV:
-	    				syslog(LOG_ERR, "PCI device attach failed; The bdf argument doesn't refer to a valid device.");
-	    				break;
-	    			case PCI_ERR_ATTACH_EXCLUSIVE:
-	    				syslog(LOG_ERR, "PCI device attach failed; The device identified by bdf is already exclusively owned.");
-	    				break;
-	    			case PCI_ERR_ATTACH_SHARED:
-	    				syslog(LOG_ERR, "PCI device attach failed; The request was for exclusive attachment, but the device identified by bdf has already been successfully attached to.");
-	    				break;
-	    			case PCI_ERR_ATTACH_OWNED:
-	    				syslog(LOG_ERR, "PCI device attach failed; The request was for ownership of the device, but the device is already owned.");
-	    				break;
-	    			case PCI_ERR_ENOMEM:
-	    				syslog(LOG_ERR, "PCI device attach failed; Memory for internal resources couldn't be obtained. This may be a temporary condition.");
-	    				break;
-	    			case PCI_ERR_LOCK_FAILURE:
-	    				syslog(LOG_ERR, "PCI device attach failed; There was an error related to the creation, acquisition, or use of a synchronization object.");
-	    				break;
-	    			case PCI_ERR_ATTACH_LIMIT:
-	    				syslog(LOG_ERR, "PCI device attach failed; There have been too many attachments to the device identified by bdf.");
-	    				break;
-	    			default:
-	    				syslog(LOG_ERR, "PCI device attach failed; Unknown error: %d", (int)r);
-	    				break;
-	    			}
-	            }
-	            else {
-	    			syslog(LOG_INFO, "PCI attach successful");
+			return -1;
+        }
 
-	                /* optionally determine capabilities of device */
-	                uint_t capid_idx = 0;
-	                pci_capid_t capid;
+        /* optionally determine capabilities of device */
+        uint_t capid_idx = 0;
+        pci_capid_t capid;
 
-	                /* instead of looping could use pci_device_find_capid() to select which capabilities to use */
-	                while ((r = pci_device_read_capid(bdf, &capid, capid_idx)) == PCI_ERR_OK)
-	                {
-	        			syslog(LOG_INFO, "found device capability: %x", capid);
+        /* instead of looping could use pci_device_find_capid() to select which capabilities to use */
+        while ((r = pci_device_read_capid(bdf, &capid, capid_idx)) == PCI_ERR_OK)
+        {
+			syslog(LOG_INFO, "read capability[%d]: %x", capid_idx, capid);
 
-	                    /* get next capability ID */
-	                    ++capid_idx;
-	                }
+            /* get next capability ID */
+            ++capid_idx;
+        }
 
-	                pci_ba_t ba[7];    // the maximum number of entries that can be returned
-	                int_t nba = NELEMENTS(ba);
+        pci_ba_t ba[7];    // the maximum number of entries that can be returned
+        int_t nba = NELEMENTS(ba);
 
-	                /* read the address space information */
-	                r = pci_device_read_ba(hdl, &nba, ba, pci_reqType_e_UNSPECIFIED);
-	                if ((r == PCI_ERR_OK) && (nba > 0))
-	                {
-	        			syslog(LOG_INFO, "reading device address space");
+        /* read the address space information */
+        r = pci_device_read_ba(hdl, &nba, ba, pci_reqType_e_UNSPECIFIED);
+        if ((r == PCI_ERR_OK) && (nba > 0))
+        {
+			dev->nba = nba;
+        	dev->ba = (pci_ba_t*)malloc(nba*sizeof(pci_ba_t));
 
-	        			dev->nba = nba;
-	                	dev->ba = (pci_ba_t*)malloc(nba*sizeof(pci_ba_t));
+            for (int_t i=0; i<nba; i++)
+            {
+            	dev->ba[i] = ba[i];
 
-	                    for (int_t i=0; i<nba; i++)
-	                    {
-	                    	dev->ba[i] = ba[i];
+    			syslog(LOG_INFO, "read ba[%d] { addr: %x, size: %x }",
+    					i, ba[i].addr, ba[i].size);
+            }
+        }
 
-		        			syslog(LOG_INFO, "detected ba[%d] { addr: %x, size: %x }",
-		        					i, ba[i].addr, ba[i].size);
-	                    }
-	                }
+        pci_irq_t irq[10];
+        int_t nirq = NELEMENTS(irq);
 
-	                pci_irq_t irq[10];    // the maximum number of expected entries based on capabilities
-	                int_t nirq = NELEMENTS(irq);
+        /* read the irq information */
+        r = pci_device_read_irq(hdl, &nirq, irq);
+        if ((r == PCI_ERR_OK) && (nirq > 0))
+        {
+        	dev->irq = irq[0];
 
-	                /* read the irq information */
-                    r = pci_device_read_irq(hdl, &nirq, irq);
-                    if ((r == PCI_ERR_OK) && (nirq > 0))
-                    {
-                    	dev->irq = irq[0];
+            for (int_t i=0; i<nirq; i++) {
+    			syslog(LOG_INFO, "read irq[%d]: %d", i, irq[i]);
+            }
 
-                    	if (nirq > 1) {
-                    		syslog(LOG_ERR, "detected multiple (%d) IRQs", nirq);
+        	if (nirq > 1) {
+        		syslog(LOG_ERR, "read multiple (%d) IRQs", nirq);
 
-                    		return -1;
-                    	}
-
-                        for (int_t i=0; i<nirq; i++) {
-                            //int_t iid = InterruptAttach(irq[i], my_isr, NULL, 0, 0);
-        	    			syslog(LOG_INFO, "detected IRQ - irq[%d]: %d", i, irq[i]);
-                        }
-                    }
-	            }
-	    	}
-	    }
+        		return -1;
+        	}
+        }
 
 	    /* get next device instance */
 	    ++idx;
@@ -324,7 +310,7 @@ uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
 	syslog(LOG_INFO, "pci_iomap; bar: %d, max: %d", bar, max);
 
 	if (bar >= dev->nba) {
-		syslog(LOG_ERR, "Internal error; bar: %d, nba: %d", bar, dev->nba);
+		syslog(LOG_ERR, "internal error; bar: %d, nba: %d", bar, dev->nba);
 	}
 
 	if (dev->ba[bar].size > max) {
@@ -336,19 +322,19 @@ uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
 	if (mmap_device_io(dev->ba[bar].size, dev->ba[bar].addr) == MAP_DEVICE_FAILED) {
 		switch (errno) {
 		case EINVAL:
-			syslog(LOG_ERR, "PCI device address mapping failed; Invalid flags type, or len is 0.");
+			syslog(LOG_ERR, "pci device address mapping failed; Invalid flags type, or len is 0.");
 			break;
 		case ENOMEM:
-			syslog(LOG_ERR, "PCI device address mapping failed; The address range requested is outside of the allowed process address range, or there wasn't enough memory to satisfy the request.");
+			syslog(LOG_ERR, "pci device address mapping failed; The address range requested is outside of the allowed process address range, or there wasn't enough memory to satisfy the request.");
 			break;
 		case ENXIO:
-			syslog(LOG_ERR, "PCI device address mapping failed; The address from io for len bytes is invalid.");
+			syslog(LOG_ERR, "pci device address mapping failed; The address from io for len bytes is invalid.");
 			break;
 		case EPERM:
-			syslog(LOG_ERR, "PCI device address mapping failed; The calling process doesn't have the required permission; see procmgr_ability().");
+			syslog(LOG_ERR, "pci device address mapping failed; The calling process doesn't have the required permission; see procmgr_ability().");
 			break;
 		default:
-			syslog(LOG_ERR, "PCI device address mapping failed; Unknown error: %d", errno);
+			syslog(LOG_ERR, "pci device address mapping failed; Unknown error: %d", errno);
 			break;
 		}
 	}
@@ -374,11 +360,11 @@ void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
 	syslog(LOG_INFO, "pci_iounmap; bar: %d, size: %d", bar, size);
 
 	if (bar == -1 || !size) {
-		syslog(LOG_ERR, "Internal error; bar size failure during pci_iounmap");
+		syslog(LOG_ERR, "internal error; bar size failure during pci_iounmap");
 	}
 
 	if (munmap_device_io(p, size) == -1) {
-		syslog(LOG_ERR, "Internal error; munmap_device_io failure");
+		syslog(LOG_ERR, "internal error; munmap_device_io failure");
 	}
 }
 
@@ -392,6 +378,24 @@ void pci_release_regions(struct pci_dev *dev) {
 	syslog(LOG_INFO, "pci_release_regions");
 }
 // PCI
+
+int check_driver_support (const struct pci_driver* driver, pci_vid_t vid, pci_did_t did) {
+	if (driver->id_table != NULL) {
+		const struct pci_device_id *id_table = driver->id_table;
+
+		while (id_table->vendor != 0) {
+			if (id_table->vendor == vid &&
+				id_table->device == did)
+			{
+				return 1;
+			}
+
+			++id_table;
+		}
+	}
+
+	return 0;
+}
 
 void print_card (const struct pci_driver* driver) {
 	printf("  Name of driver: %s\n", driver->name);
@@ -414,6 +418,12 @@ void print_card (const struct pci_driver* driver) {
 }
 
 int main(void) {
+	pci_vid_t vid;
+    pci_did_t did;
+
+	uint_t idx = 0;
+	pci_bdf_t bdf = 0;
+
 	syslog(LOG_INFO, "start");
 
 	ThreadCtl(_NTO_TCTL_IO, 0);
@@ -424,15 +434,52 @@ int main(void) {
 	printf("Kvaser CAN cards:\n");
 	print_card(&kvaser_pci_driver);
 
+	while ((bdf = pci_device_find(idx, PCI_VID_ANY, PCI_DID_ANY, PCI_CCODE_ANY)) != PCI_BDF_NONE)
+	{
+	    pci_err_t r = pci_device_read_vid(bdf, &vid);
+
+	    if (r != PCI_ERR_OK) {
+	    	continue;
+	    }
+
+	    r = pci_device_read_did(bdf, &did);
+
+	    if (r == PCI_ERR_OK)
+	    {
+	    	/* does this driver handle this device ? */
+
+		    if (check_driver_support(&adv_pci_driver, vid, did)) {
+		    	detected_driver = &adv_pci_driver;
+		    }
+		    else if (check_driver_support(&kvaser_pci_driver, vid, did)) {
+		    	detected_driver = &kvaser_pci_driver;
+		    }
+
+		    if (detected_driver) {
+		    	syslog(LOG_INFO, "checking device: %x:%x <- detected", vid, did);
+		    }
+		    else {
+		    	syslog(LOG_INFO, "checking device: %x:%x", vid, did);
+		    }
+	    }
+
+	    /* get next device instance */
+	    ++idx;
+	}
+
+	if (!detected_driver) {
+		return -1;
+	}
+
 	struct pci_dev pdev = {
 			.ba = NULL,
-			.vendor = 0x13fe,
-			.device = 0xc302,
+			.vendor = vid,
+			.device = did,
 			.dev = { .driver_data = NULL },
 			.irq = 10
 	};
 
-	if (adv_pci_driver.probe(&pdev, NULL)) {
+	if (detected_driver->probe(&pdev, NULL)) {
 		return -1;
 	}
 
