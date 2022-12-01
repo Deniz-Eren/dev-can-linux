@@ -45,60 +45,10 @@
 #ifndef SJA1000_DEV_H
 #define SJA1000_DEV_H
 
-#include <syslog.h>
-#include <sys/neutrino.h>
-#include "linux/irqreturn.h"
-#include "linux/can/dev.h"
-#include "linux/can/platform/sja1000.h"
-#include "uapi/linux/can.h"
-#include "uapi/linux/can/error.h"
-
-// New DE
-enum can_led_event {
-    CAN_LED_EVENT_OPEN,
-    CAN_LED_EVENT_STOP,
-    CAN_LED_EVENT_TX,
-    CAN_LED_EVENT_RX,
-};
-
-#define CAN_CTRLMODE_LOOPBACK       0x01    /* Loopback mode */
-#define CAN_CTRLMODE_LISTENONLY     0x02    /* Listen-only mode */
-#define CAN_CTRLMODE_3_SAMPLES      0x04    /* Triple sampling mode */
-#define CAN_CTRLMODE_ONE_SHOT       0x08    /* One-Shot mode */
-#define CAN_CTRLMODE_BERR_REPORTING 0x10    /* Bus-error reporting */
-#define CAN_CTRLMODE_FD         0x20    /* CAN FD mode */
-#define CAN_CTRLMODE_PRESUME_ACK    0x40    /* Ignore missing CAN ACKs */
-#define CAN_CTRLMODE_FD_NON_ISO     0x80    /* CAN FD in non-ISO mode */
-
-/*
- * ..and if you can't take the strict
- * types, you can specify one yourself.
- *
- * Or not use min/max/clamp at all, of course.
- */
-#define min_t(type, x, y) ({            \
-    type __min1 = (x);          \
-    type __min2 = (y);          \
-    __min1 < __min2 ? __min1: __min2; })
-
-#define max_t(type, x, y) ({            \
-    type __max1 = (x);          \
-    type __max2 = (y);          \
-    __max1 > __max2 ? __max1: __max2; })
-
-struct sja1000_priv;
-
-//sja1000_priv* netdev_priv (struct net_device * dev) {
-//	return (sja1000_priv*)dev->priv;
-//}
-//
-//const sja1000_priv* netdev_priv (const struct net_device * dev) {
-//	return (const sja1000_priv*)dev->priv;
-//}
-
-// NETIF interface
-// New DE
-
+#include <linux/types.h>
+#include <linux/irqreturn.h>
+#include <linux/can/dev.h>
+#include <linux/can/platform/sja1000.h>
 
 #define SJA1000_ECHO_SKB_MAX	1 /* the SJA1000 has one TX buffer object */
 
@@ -214,11 +164,9 @@ struct sja1000_priv {
 	void *priv;		/* for board-specific data */
 	struct net_device *dev;
 
-//	void __iomem *reg_base;	 /* ioremap'ed address to registers */
 	uintptr_t reg_base;	 /* ioremap'ed address to registers */
 	unsigned long irq_flags; /* for request_irq() */
-//	spinlock_t cmdreg_lock;  /* lock for concurrent cmd register writes */
-	intrspin_t cmdreg_lock;  /* lock for concurrent cmd register writes */
+	spinlock_t cmdreg_lock;  /* lock for concurrent cmd register writes */
 
 	u16 flags;		/* custom mode flags */
 	u8 ocr;			/* output control register */
@@ -231,16 +179,5 @@ int register_sja1000dev(struct net_device *dev);
 void unregister_sja1000dev(struct net_device *dev);
 
 irqreturn_t sja1000_interrupt(int irq, void *dev_id);
-
-// New DE
-
-/*
- * Free space of the CAN network device
- */
-
-#define __UAPI_DEF_IF_NET_DEVICE_FLAGS
-#define __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO
-
-// New DE
 
 #endif /* SJA1000_DEV_H */

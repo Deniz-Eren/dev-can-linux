@@ -4,9 +4,10 @@
 #include <sys/neutrino.h>
 #include <sys/mman.h>
 #include <hw/inout.h>
+#include <pthread.h>
 
-#include "kernel/drivers/net/can/sja1000/sja1000.h"
-#include "kernel/include/linux/pci.h"
+#include <kernel/drivers/net/can/sja1000/sja1000.h>
+#include <kernel/include/linux/pci.h>
 
 #define program_version "1.0.0"
 
@@ -54,7 +55,7 @@ netdev_tx_t (*dev_xmit[16]) (struct sk_buff *skb, struct net_device *dev);
  */
 
 // NETDEVICE
-#include "linux/netdevice.h"
+#include <linux/netdevice.h>
 
 void netif_wake_queue(struct net_device *dev)
 {
@@ -108,8 +109,36 @@ void netif_stop_queue(struct net_device *dev)
 }
 // NETDEVICE
 
+// CAN
+void can_bus_off(struct net_device *dev) {
+	syslog(LOG_INFO, "can_bus_off");
+}
+
+unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx) {
+	syslog(LOG_INFO, "can_get_echo_skb");
+
+	return 0;
+}
+
+void can_put_echo_skb(struct sk_buff *skb, struct net_device *dev,
+		      unsigned int idx)
+{
+	syslog(LOG_INFO, "can_put_echo_skb");
+}
+
+void can_free_echo_skb(struct net_device *dev, unsigned int idx) {
+	syslog(LOG_INFO, "can_free_echo_skb");
+}
+
+void can_change_state(struct net_device *dev, struct can_frame *cf,
+		      enum can_state tx_state, enum can_state rx_state)
+{
+	syslog(LOG_INFO, "can_change_state");
+}
+// CAN
+
 // DEV
-#include "linux/can/dev.h"
+#include <linux/can/dev.h>
 
 int register_candev(struct net_device *dev) {
 	snprintf(dev->name, IFNAMSIZ, "can%d", dev->dev_id);
@@ -151,7 +180,7 @@ void close_candev(struct net_device *dev)
 // DEV
 
 // INTERRUPT
-#include "linux/interrupt.h"
+#include <linux/interrupt.h>
 
 struct sigevent event;
 int id = -1;
@@ -473,6 +502,25 @@ void print_card (const struct pci_driver* driver) {
 	}
 }
 
+void* test_tx (void*  arg) {
+	struct sk_buff *skb;
+	struct can_frame *cf;
+
+	/* create zero'ed CAN frame buffer */
+	skb = alloc_can_skb(device[1], &cf);
+
+	if (skb == NULL) {
+		return (0);
+	}
+
+	while (1) {
+		sleep(5);
+		dev_xmit[1](skb, device[1]);
+	}
+
+	return (0);
+}
+
 int main (int argc, char* argv[]) {
     syslog(LOG_DEBUG, "driver start (version: %s)", program_version);
 
@@ -642,19 +690,12 @@ int main (int argc, char* argv[]) {
 		return -1;
 	}
 
-	struct sk_buff *skb;
-	struct can_frame *cf;
+	pthread_attr_t attr;
 
-	/* create zero'ed CAN frame buffer */
-	skb = alloc_can_skb(device[1], &cf);
+	pthread_attr_init(&attr);
+	pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
+	pthread_create(NULL, &attr, &test_tx, NULL);
 
-	if (skb == NULL) {
-		adv_pci_driver.remove(&pdev);
-
-		return -1;
-	}
-
-	int g = 0;
 	while (1) {
 		int i;
 		InterruptWait( 0, NULL );
@@ -662,9 +703,6 @@ int main (int argc, char* argv[]) {
 		for (i = 0; i < funcs_size; ++i) {
 			funcs[i].handler(funcs[i].irq, funcs[i].dev);
 		}
-
-		if (++g % 5 == 0)
-		dev_xmit[1](skb, device[1]);
 	}
 
 	adv_pci_driver.remove(&pdev);

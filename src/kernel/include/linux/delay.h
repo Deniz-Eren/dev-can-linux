@@ -8,13 +8,11 @@
  */
 
 #include <unistd.h>
-//#include <linux/kernel.h>
+#include <linux/kernel.h>
 
 #define udelay(useconds) usleep(useconds)
 
 extern unsigned long loops_per_jiffy;
-
-//#include <asm/delay.h>
 
 /*
  * Using udelay() for intervals greater than a few milliseconds can

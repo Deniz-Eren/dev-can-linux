@@ -17,14 +17,14 @@
  */
 
 #include <hw/inout.h>
-//#include <linux/kernel.h>
+#include <linux/kernel.h>
 //#include <linux/module.h>
-#include "linux/interrupt.h"
-#include "linux/netdevice.h"
+#include <linux/interrupt.h>
+#include <linux/netdevice.h>
 //#include <linux/delay.h>
 //#include <linux/slab.h>
-#include "linux/pci.h"
-#include "linux/can/dev.h"
+#include <linux/pci.h>
+#include <linux/can/dev.h>
 //#include <linux/io.h>
 
 #include "sja1000.h"
@@ -198,10 +198,10 @@ static void ems_pci_del_card(struct pci_dev *pdev)
 		free_sja1000dev(dev);
 	}
 
-	if (card->base_addr != NULL)
+	if (card->base_addr != 0)
 		pci_iounmap(card->pci_dev, card->base_addr);
 
-	if (card->conf_addr != NULL)
+	if (card->conf_addr != 0)
 		pci_iounmap(card->pci_dev, card->conf_addr);
 
 	kfree(card);
@@ -261,13 +261,13 @@ static int ems_pci_add_card(struct pci_dev *pdev,
 
 	/* Remap configuration space and controller memory area */
 	card->conf_addr = pci_iomap(pdev, 0, conf_size);
-	if (card->conf_addr == NULL) {
+	if (card->conf_addr == 0) {
 		err = -ENOMEM;
 		goto failure_cleanup;
 	}
 
 	card->base_addr = pci_iomap(pdev, base_bar, EMS_PCI_BASE_SIZE);
-	if (card->base_addr == NULL) {
+	if (card->base_addr == 0) {
 		err = -ENOMEM;
 		goto failure_cleanup;
 	}

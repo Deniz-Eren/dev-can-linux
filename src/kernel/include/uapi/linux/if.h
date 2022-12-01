@@ -19,10 +19,7 @@
 #ifndef _LINUX_IF_H
 #define _LINUX_IF_H
 
-//#include <linux/libc-compat.h>          /* for compatibility with glibc */
-#include "linux/types.h"		/* for "__kernel_caddr_t" et al	*/
-//#include <linux/socket.h>		/* for "struct sockaddr" et al	*/
-//#include <linux/compiler.h>		/* for "__user" et al           */
+#include <linux/types.h>		/* for "__kernel_caddr_t" et al	*/
 
 #ifdef __UAPI_DEF_IF_IFNAMSIZ
 #define	IFNAMSIZ	16

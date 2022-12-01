@@ -18,7 +18,7 @@
 #ifndef _UAPI_CAN_NETLINK_H
 #define _UAPI_CAN_NETLINK_H
 
-#include "linux/types.h"
+#include <linux/types.h>
 
 /*
  * CAN bit-timing parameters

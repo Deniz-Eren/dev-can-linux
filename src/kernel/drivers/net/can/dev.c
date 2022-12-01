@@ -18,19 +18,12 @@
 
 #include <errno.h>
 #include <string.h>
-#include "linux/types.h"
-//#include <linux/module.h>
-//#include <linux/kernel.h>
-//#include <linux/slab.h>
-//#include <linux/netdevice.h>
-//#include <linux/if_arp.h>
-#include "linux/if.h"
-#include "linux/can.h"
-#include "linux/can/dev.h"
-//#include <linux/can/skb.h>
-//#include <linux/can/netlink.h>
-//#include <linux/can/led.h>
-//#include <net/rtnetlink.h>
+#include <linux/types.h>
+#include <linux/kernel.h>
+#include <linux/netdevice.h>
+#include <linux/if.h>
+#include <linux/can.h>
+#include <linux/can/dev.h>
 
 
 struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
@@ -39,24 +32,6 @@ struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
 
 	skb = (struct sk_buff*)malloc(sizeof(struct sk_buff));
 
-//	skb = netdev_alloc_skb(dev, sizeof(struct can_skb_priv) +
-//			       sizeof(struct can_frame));
-//	if (unlikely(!skb))
-//		return NULL;
-//
-//	skb->protocol = htons(ETH_P_CAN);
-//	skb->pkt_type = PACKET_BROADCAST;
-//	skb->ip_summed = CHECKSUM_UNNECESSARY;
-//
-//	skb_reset_mac_header(skb);
-//	skb_reset_network_header(skb);
-//	skb_reset_transport_header(skb);
-//
-//	can_skb_reserve(skb);
-//	can_skb_prv(skb)->ifindex = dev->ifindex;
-//	can_skb_prv(skb)->skbcnt = 0;
-
-//	*cf = (struct can_frame *)skb_put(skb, sizeof(struct can_frame));
     *cf = (struct can_frame*)malloc(sizeof(struct can_frame));
 	memset(*cf, 0, sizeof(struct can_frame));
 
@@ -87,15 +62,7 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
 {
 	struct net_device *dev;
 	struct can_priv *priv;
-//    int size;
 
-//    if (echo_skb_max)
-//        size = ALIGN(sizeof_priv, sizeof(struct sk_buff *)) +
-//            echo_skb_max * sizeof(struct sk_buff *);
-//    else
-//        size = sizeof_priv;
-
-//    dev = alloc_netdev(size, "can%d", NET_NAME_UNKNOWN, can_setup);
     dev = (struct net_device*)malloc(sizeof(struct net_device));
 	if (!dev)
 		return NULL;
@@ -115,8 +82,6 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
 
     priv->state = CAN_STATE_STOPPED;
 
-//    init_timer(&priv->restart_timer);
-
     return dev;
 }
 
@@ -125,7 +90,6 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
  */
 void free_candev(struct net_device *dev)
 {
-	//	free_netdev(dev);
 	free(netdev_priv(dev));
 	free(dev);
 }
