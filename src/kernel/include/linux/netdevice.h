@@ -663,4 +663,10 @@ void netif_carrier_on(struct net_device *dev);
 
 void netif_carrier_off(struct net_device *dev);
 
+/* Set the sysfs physical device reference for the network logical device
+ * if set prior to registration will cause a symlink during initialization.
+ */
+//#define SET_NETDEV_DEV(net, pdev)   ((net)->dev.parent = (pdev))
+#define SET_NETDEV_DEV(net, pdev) // Undefine this since we don't use it
+
 #endif	/* _LINUX_NETDEVICE_H */

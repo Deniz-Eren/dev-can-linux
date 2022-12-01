@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <unistd.h>
 #include <sys/neutrino.h>
 #include <sys/mman.h>
 #include <hw/inout.h>
@@ -7,8 +8,13 @@
 #include "kernel/drivers/net/can/sja1000/sja1000.h"
 #include "kernel/include/linux/pci.h"
 
+#define program_version "1.0.0"
+
 extern struct pci_driver adv_pci_driver;
 extern struct pci_driver kvaser_pci_driver;
+extern struct pci_driver ems_pci_driver;
+extern struct pci_driver peak_pci_driver;
+extern struct pci_driver plx_pci_driver;
 extern struct net_device_ops sja1000_netdev_ops;
 
 struct pci_driver *detected_driver = NULL;
@@ -247,7 +253,35 @@ int pci_enable_device(struct pci_dev *dev) {
 			return -1;
         }
 
-        /* optionally determine capabilities of device */
+        /* read some basic info */
+        pci_ssvid_t ssvid;
+        pci_ssid_t ssid;
+        pci_cs_t cs; /* chassis and slot */
+
+	    if ((r = pci_device_read_ssvid(bdf, &ssvid)) != PCI_ERR_OK) {
+    		syslog(LOG_ERR, "error reading ssvid");
+
+    		return -1;
+	    }
+
+		syslog(LOG_INFO, "read ssvid: %x", ssvid);
+		dev->subsystem_vendor = ssvid;
+
+	    if ((r = pci_device_read_ssid(bdf, &ssid)) != PCI_ERR_OK) {
+    		syslog(LOG_ERR, "error reading ssid");
+
+    		return -1;
+	    }
+
+		syslog(LOG_INFO, "read ssid: %x", ssid);
+	    dev->subsystem_device = ssid;
+
+	    cs = pci_device_chassis_slot(bdf);
+
+	    dev->devfn = PCI_DEVFN(PCI_SLOT(cs), PCI_FUNC(bdf));
+		syslog(LOG_INFO, "read cs: %x, slot: %x, func: %x, devfn: %x", cs, PCI_SLOT(cs), PCI_FUNC(bdf), dev->devfn);
+
+		/* optionally determine capabilities of device */
         uint_t capid_idx = 0;
         pci_capid_t capid;
 
@@ -381,11 +415,23 @@ void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
 int pci_request_regions(struct pci_dev *dev, const char *res_name) {
 	syslog(LOG_INFO, "pci_request_regions");
 
-	return 0;
+	return -1;
 }
 
 void pci_release_regions(struct pci_dev *dev) {
 	syslog(LOG_INFO, "pci_release_regions");
+}
+
+int pci_read_config_word(const struct pci_dev *dev, int where, u16 *val) {
+	syslog(LOG_INFO, "pci_read_config_word");
+
+	return -1;
+}
+
+int pci_write_config_word(const struct pci_dev *dev, int where, u16 val) {
+	syslog(LOG_INFO, "pci_write_config_word");
+
+	return -1;
 }
 // PCI
 
@@ -408,8 +454,8 @@ int check_driver_support (const struct pci_driver* driver, pci_vid_t vid, pci_di
 }
 
 void print_card (const struct pci_driver* driver) {
-	printf("  Name of driver: %s\n", driver->name);
-	printf("  Supported cards:\n");
+	printf("  Driver: %s\n", driver->name);
+	printf("  Supported devices (detailed):\n");
 
 	if (driver->id_table != NULL) {
 		const struct pci_device_id *id_table = driver->id_table;
@@ -427,7 +473,64 @@ void print_card (const struct pci_driver* driver) {
 	}
 }
 
-int main(void) {
+int main (int argc, char* argv[]) {
+    syslog(LOG_DEBUG, "driver start (version: %s)", program_version);
+
+    int opt;
+	int optd = 0, opt_vid = -1, opt_did = -1;
+
+    while ((opt = getopt(argc, argv, "d:l?h")) != -1) {
+        switch (opt) {
+        case 'd':
+        	optd = 1;
+            sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
+            printf("Manual device selection: %x:%x\n", opt_vid, opt_did);
+            syslog(LOG_DEBUG, "manual device selection: %x:%x", opt_vid, opt_did);
+            break;
+
+        case 'l':
+        	printf("Card(s): Advantech PCI:\n");
+        	print_card(&adv_pci_driver);
+
+        	printf("Card(s): KVASER PCAN PCI CAN:\n");
+        	print_card(&kvaser_pci_driver);
+
+        	printf("Card(s): EMS CPC-PCI/PCIe/104P CAN:\n");
+        	print_card(&ems_pci_driver);
+
+        	printf("Card(s): PEAK PCAN PCI/PCIe/PCIeC miniPCI CAN cards,\n");
+        	printf("    PEAK PCAN miniPCIe/cPCI PC/104+ PCI/104e CAN Cards:\n");
+        	print_card(&peak_pci_driver);
+
+        	printf("Card(s): Adlink PCI-7841/cPCI-7841,\n"
+        			"    Adlink PCI-7841/cPCI-7841 SE,\n"
+        			"    Marathon CAN-bus-PCI,\n"
+        			"    TEWS TECHNOLOGIES TPMC810,\n"
+        			"    esd CAN-PCI/CPCI/PCI104/200,\n"
+        			"    esd CAN-PCI/PMC/266,\n"
+        			"    esd CAN-PCIe/2000,\n"
+        			"    Connect Tech Inc. CANpro/104-Plus Opto (CRG001),\n"
+        			"    IXXAT PC-I 04/PCI,\n"
+        			"    ELCUS CAN-200-PCI:");
+        	print_card(&plx_pci_driver);
+        	return EXIT_SUCCESS;
+
+        case '?':
+        case 'h':
+            printf("%s - Linux SJA1000 Drivers Ported to QNX\n", argv[0]);
+            printf("version %s\n\n", program_version);
+            printf("%s [-l] [-d {vid}:{did}] [-h]\n\n", argv[0]);
+            printf("-d {vid}:{did} - manually target desired device, e.g. -d 13fe:c302\n");
+            printf("-l             - list supported drivers\n");
+            printf("-?/h           - help menu\n");
+        	return EXIT_SUCCESS;
+
+        default:
+            printf("invalid option %c\n", opt);
+            break;
+        }
+    }
+
 	pci_vid_t vid;
     pci_did_t did;
 
@@ -438,11 +541,10 @@ int main(void) {
 
 	ThreadCtl(_NTO_TCTL_IO, 0);
 
-	printf("Advantech CAN cards:\n");
-	print_card(&adv_pci_driver);
-
-	printf("Kvaser CAN cards:\n");
-	print_card(&kvaser_pci_driver);
+	int driver_auto = 0;
+	int driver_pick = 0;
+	int driver_ignored = 0;
+	int driver_unsupported = 0;
 
 	while ((bdf = pci_device_find(idx, PCI_VID_ANY, PCI_DID_ANY, PCI_CCODE_ANY)) != PCI_BDF_NONE)
 	{
@@ -458,15 +560,45 @@ int main(void) {
 	    {
 	    	/* does this driver handle this device ? */
 
-		    if (check_driver_support(&adv_pci_driver, vid, did)) {
-		    	detected_driver = &adv_pci_driver;
-		    }
-		    else if (check_driver_support(&kvaser_pci_driver, vid, did)) {
-		    	detected_driver = &kvaser_pci_driver;
-		    }
+	    	struct pci_driver *detected_driver_temp = NULL;
 
-		    if (detected_driver) {
-		    	syslog(LOG_INFO, "checking device: %x:%x <- detected", vid, did);
+	    	if (check_driver_support(&adv_pci_driver, vid, did)) {
+	    		detected_driver_temp = &adv_pci_driver;
+			}
+			else if (check_driver_support(&kvaser_pci_driver, vid, did)) {
+				detected_driver_temp = &kvaser_pci_driver;
+			}
+			else if (check_driver_support(&ems_pci_driver, vid, did)) {
+				detected_driver_temp = &ems_pci_driver;
+			}
+			else if (check_driver_support(&peak_pci_driver, vid, did)) {
+				detected_driver_temp = &peak_pci_driver;
+			}
+			else if (check_driver_support(&plx_pci_driver, vid, did)) {
+				detected_driver_temp = &plx_pci_driver;
+			}
+
+	    	if (detected_driver_temp) {
+				if (!optd || (optd && opt_vid == vid && opt_did == did)) {
+					if (!detected_driver) detected_driver = detected_driver_temp;
+				}
+	    	}
+
+		    if (!optd && detected_driver && detected_driver == detected_driver_temp) {
+		    	driver_auto = 1;
+		    	syslog(LOG_INFO, "checking device: %x:%x <- auto (%s)", vid, did, detected_driver->name);
+		    }
+		    else if (optd && detected_driver && detected_driver == detected_driver_temp) {
+		    	driver_pick = 1;
+		    	syslog(LOG_INFO, "checking device: %x:%x <- pick (%s)", vid, did, detected_driver->name);
+		    }
+		    else if (detected_driver_temp) {
+		    	driver_ignored = 1;
+		    	syslog(LOG_INFO, "checking device: %x:%x <- ignored (%s)", vid, did, detected_driver_temp->name);
+		    }
+		    else if (!detected_driver_temp && opt_vid == vid && opt_did == did) {
+		    	driver_unsupported = 1;
+		    	syslog(LOG_INFO, "checking device: %x:%x <- unsupported", vid, did);
 		    }
 		    else {
 		    	syslog(LOG_INFO, "checking device: %x:%x", vid, did);
@@ -475,6 +607,23 @@ int main(void) {
 
 	    /* get next device instance */
 	    ++idx;
+	}
+
+	if (driver_auto) {
+		printf("Auto detected device (%x:%x) successfully; (driver \"%s\")\n", vid, did, detected_driver->name);
+	}
+	else if (driver_pick) {
+		printf("Device (%x:%x) accepted successfully; (driver \"%s\")\n", vid, did, detected_driver->name);
+	}
+	else if (driver_unsupported) {
+		printf("Device (%x:%x) not supported by any driver\n", opt_vid, opt_did);
+	}
+	else {
+		printf("Device (%x:%x) not a valid device\n", opt_vid, opt_did);
+	}
+
+	if (driver_ignored) {
+		printf("Note: one or more supported devices have been ignored because of manual device selection\n");
 	}
 
 	if (!detected_driver) {

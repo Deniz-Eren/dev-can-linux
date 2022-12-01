@@ -37,9 +37,9 @@ extern uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max);
 extern void pci_iounmap(struct pci_dev *dev, uintptr_t p);
 
 //#include <linux/resource_ext.h>
-//#include <uapi/linux/pci.h>
+#include "uapi/linux/pci.h"
 
-//#include <linux/pci_ids.h>
+#include "linux/pci_ids.h"
 
 ///*
 // * The PCI interface treats multi-function devices as independent
@@ -274,12 +274,12 @@ struct pci_dev {
 //	struct proc_dir_entry *procent;	/* device entry in /proc/bus/pci */
 //	struct pci_slot	*slot;		/* Physical slot this device is in */
 //
-//	unsigned int	devfn;		/* encoded device & function index */
+	unsigned int	devfn;		/* encoded device & function index */
 	unsigned short	vendor;
 	unsigned short	device;
-//	unsigned short	subsystem_vendor;
-//	unsigned short	subsystem_device;
-//	unsigned int	class_;		/* 3 bytes: (base,sub,prog-if) */
+	unsigned short	subsystem_vendor;
+	unsigned short	subsystem_device;
+//	unsigned int	class;		/* 3 bytes: (base,sub,prog-if) */
 //	u8		revision;	/* PCI revision, low byte of class word */
 //	u8		hdr_type;	/* PCI header type (`multi' flag masked out) */
 //	u8		pcie_cap;	/* PCIe capability offset */
@@ -918,7 +918,7 @@ struct pci_driver {
 //{
 //	return pci_bus_read_config_byte(dev->bus, dev->devfn, where, val);
 //}
-//static inline int pci_read_config_word(const struct pci_dev *dev, int where, u16 *val)
+extern int pci_read_config_word(const struct pci_dev *dev, int where, u16 *val);
 //{
 //	return pci_bus_read_config_word(dev->bus, dev->devfn, where, val);
 //}
@@ -931,7 +931,7 @@ struct pci_driver {
 //{
 //	return pci_bus_write_config_byte(dev->bus, dev->devfn, where, val);
 //}
-//static inline int pci_write_config_word(const struct pci_dev *dev, int where, u16 val)
+extern int pci_write_config_word(const struct pci_dev *dev, int where, u16 val);
 //{
 //	return pci_bus_write_config_word(dev->bus, dev->devfn, where, val);
 //}
