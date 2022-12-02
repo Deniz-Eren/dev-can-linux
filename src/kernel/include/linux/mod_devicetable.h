@@ -7,10 +7,8 @@
 #ifndef LINUX_MOD_DEVICETABLE_H
 #define LINUX_MOD_DEVICETABLE_H
 
-#ifdef __KERNEL__
 #include <linux/types.h>
 typedef unsigned long kernel_ulong_t;
-#endif
 
 #define PCI_ANY_ID ((u32)(~0))
 
