@@ -23,50 +23,19 @@ struct pci_driver *detected_driver = NULL;
 struct net_device* device[16];
 netdev_tx_t (*dev_xmit[16]) (struct sk_buff *skb, struct net_device *dev);
 
-/**
- * Command:
- *
- * 		pci-tool -vvvvv
- *
- * Output:
- *
- * B000:D05:F00 @ idx 7
- *         vid/did: 13fe/c302
- *                 <vendor id - unknown>, <device id - unknown>
- *         class/subclass/reg: 0c/09/00
- *                 CANbus Serial Bus Controller
- *         revid: 0
- *         cmd/status registers: 103/0
- *         Capabilities list (0):
- *
- *         Address Space list - 2 assigned
- *             [0] I/O, addr=c000, size=400, align: 400, attr: 32bit CONTIG ENABLED
- *             [1] I/O, addr=c400, size=400, align: 400, attr: 32bit CONTIG ENABLED
- *         Interrupt list - 0 assigned
- *         hdrType: 0
- *                 ssvid: 13fe  ?
- *                 ssid:  c302
- *
- *         Device Dependent Registers
- *                 [40] 00000000  00000000  00000000  00000000
- *                   :
- *                 [f0] 00000000  00000000  00000000  00000000
- *
- */
-
 // NETDEVICE
 #include <linux/netdevice.h>
 
 void netif_wake_queue(struct net_device *dev)
 {
-	syslog(LOG_INFO, "netif_wake_queue");
+	syslog(LOG_DEBUG, "netif_wake_queue");
 }
 
 int netif_rx(struct sk_buff *skb)
 {
 	struct can_frame* msg = (struct can_frame*)skb->data;
 
-	syslog(LOG_INFO, "netif_rx; can%d: %x#%2x%2x%2x%2x%2x%2x%2x%2x",
+	syslog(LOG_DEBUG, "netif_rx; can%d: %x#%2x%2x%2x%2x%2x%2x%2x%2x",
 			skb->dev_id,
 			msg->can_id,
 			msg->data[0],
@@ -83,39 +52,39 @@ int netif_rx(struct sk_buff *skb)
 
 void netif_start_queue(struct net_device *dev)
 {
-	syslog(LOG_INFO, "netif_start_queue");
+	syslog(LOG_DEBUG, "netif_start_queue");
 }
 
 void netif_carrier_on(struct net_device *dev)
 {
-	syslog(LOG_INFO, "netif_carrier_on");
+	syslog(LOG_DEBUG, "netif_carrier_on");
 	// Not called from SJA1000 driver
 }
 
 void netif_carrier_off(struct net_device *dev)
 {
-	syslog(LOG_INFO, "netif_carrier_off");
+	syslog(LOG_DEBUG, "netif_carrier_off");
 }
 
 int netif_queue_stopped(const struct net_device *dev)
 {
-	syslog(LOG_INFO, "netif_queue_stopped");
+	syslog(LOG_DEBUG, "netif_queue_stopped");
 	return false;
 }
 
 void netif_stop_queue(struct net_device *dev)
 {
-	syslog(LOG_INFO, "netif_stop_queue");
+	syslog(LOG_DEBUG, "netif_stop_queue");
 }
 // NETDEVICE
 
 // CAN
 void can_bus_off(struct net_device *dev) {
-	syslog(LOG_INFO, "can_bus_off");
+	syslog(LOG_DEBUG, "can_bus_off");
 }
 
 unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx) {
-	syslog(LOG_INFO, "can_get_echo_skb");
+	syslog(LOG_DEBUG, "can_get_echo_skb");
 
 	return 0;
 }
@@ -123,17 +92,17 @@ unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx) {
 void can_put_echo_skb(struct sk_buff *skb, struct net_device *dev,
 		      unsigned int idx)
 {
-	syslog(LOG_INFO, "can_put_echo_skb");
+	syslog(LOG_DEBUG, "can_put_echo_skb");
 }
 
 void can_free_echo_skb(struct net_device *dev, unsigned int idx) {
-	syslog(LOG_INFO, "can_free_echo_skb");
+	syslog(LOG_DEBUG, "can_free_echo_skb");
 }
 
 void can_change_state(struct net_device *dev, struct can_frame *cf,
 		      enum can_state tx_state, enum can_state rx_state)
 {
-	syslog(LOG_INFO, "can_change_state");
+	syslog(LOG_DEBUG, "can_change_state");
 }
 // CAN
 
@@ -150,7 +119,7 @@ int register_candev(struct net_device *dev) {
 	dev_xmit[dev->dev_id] = dev->netdev_ops->ndo_start_xmit;
 	device[dev->dev_id] = dev;
 
-	syslog(LOG_INFO, "register_candev: %s", dev->name);
+	syslog(LOG_DEBUG, "register_candev: %s", dev->name);
 
 	if (sja1000_netdev_ops.ndo_open(dev)) {
 		return -1;
@@ -160,7 +129,7 @@ int register_candev(struct net_device *dev) {
 }
 
 void unregister_candev(struct net_device *dev) {
-	syslog(LOG_INFO, "unregister_candev: %s", dev->name);
+	syslog(LOG_DEBUG, "unregister_candev: %s", dev->name);
 
 	if (sja1000_netdev_ops.ndo_stop(dev)) {
 		syslog(LOG_ERR, "internal error; ndo_stop failure");
@@ -169,13 +138,13 @@ void unregister_candev(struct net_device *dev) {
 
 int open_candev(struct net_device *dev)
 {
-	syslog(LOG_INFO, "open_candev: %s", dev->name);
+	syslog(LOG_DEBUG, "open_candev: %s", dev->name);
 	return 0;
 }
 
 void close_candev(struct net_device *dev)
 {
-	syslog(LOG_INFO, "close_candev: %s", dev->name);
+	syslog(LOG_DEBUG, "close_candev: %s", dev->name);
 }
 // DEV
 
@@ -201,7 +170,7 @@ extern int
 request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 	    const char *name, void *dev)
 {
-	syslog(LOG_INFO, "request_irq; irq: %d, name: %s", irq, name);
+	syslog(LOG_DEBUG, "request_irq; irq: %d, name: %s", irq, name);
 
 	struct net_device *ndev = (struct net_device *)dev;
 
@@ -226,7 +195,7 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 
 void free_irq(unsigned int irq, void *dev)
 {
-	syslog(LOG_INFO, "free_irq; irq: %d", irq);
+	syslog(LOG_DEBUG, "free_irq; irq: %d", irq);
 
 	// Disconnect the ISR handler
     InterruptDetach(id);
@@ -235,7 +204,7 @@ void free_irq(unsigned int irq, void *dev)
 
 // PCI
 int pci_enable_device(struct pci_dev *dev) {
-	syslog(LOG_INFO, "pci_enable_device: %x:%x",
+	syslog(LOG_DEBUG, "pci_enable_device: %x:%x",
 			dev->vendor, dev->device);
 
 	uint_t idx = 0;
@@ -370,7 +339,7 @@ int pci_enable_device(struct pci_dev *dev) {
 }
 
 void pci_disable_device(struct pci_dev *dev) {
-	syslog(LOG_INFO, "pci_disable_device");
+	syslog(LOG_DEBUG, "pci_disable_device");
 
 	if (dev != NULL) {
 		if (dev->hdl != NULL) {
@@ -380,7 +349,7 @@ void pci_disable_device(struct pci_dev *dev) {
 }
 
 uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
-	syslog(LOG_INFO, "pci_iomap; bar: %d, max: %d", bar, max);
+	syslog(LOG_DEBUG, "pci_iomap; bar: %d, max: %d", bar, max);
 
 	if (bar >= dev->nba) {
 		syslog(LOG_ERR, "internal error; bar: %d, nba: %d", bar, dev->nba);
@@ -412,7 +381,7 @@ uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
 		}
 	}
 	else {
-		syslog(LOG_INFO, "ba[%d] mapping successful", bar);
+		syslog(LOG_DEBUG, "ba[%d] mapping successful", bar);
 	}
 
 	return dev->ba[bar].addr;
@@ -430,7 +399,7 @@ void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
 		}
 	}
 
-	syslog(LOG_INFO, "pci_iounmap; bar: %d, size: %d", bar, size);
+	syslog(LOG_DEBUG, "pci_iounmap; bar: %d, size: %d", bar, size);
 
 	if (bar == -1 || !size) {
 		syslog(LOG_ERR, "internal error; bar size failure during pci_iounmap");
@@ -442,23 +411,23 @@ void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
 }
 
 int pci_request_regions(struct pci_dev *dev, const char *res_name) {
-	syslog(LOG_INFO, "pci_request_regions");
+	syslog(LOG_DEBUG, "pci_request_regions");
 
 	return -1;
 }
 
 void pci_release_regions(struct pci_dev *dev) {
-	syslog(LOG_INFO, "pci_release_regions");
+	syslog(LOG_DEBUG, "pci_release_regions");
 }
 
 int pci_read_config_word(const struct pci_dev *dev, int where, u16 *val) {
-	syslog(LOG_INFO, "pci_read_config_word");
+	syslog(LOG_DEBUG, "pci_read_config_word");
 
 	return -1;
 }
 
 int pci_write_config_word(const struct pci_dev *dev, int where, u16 val) {
-	syslog(LOG_INFO, "pci_write_config_word");
+	syslog(LOG_DEBUG, "pci_write_config_word");
 
 	return -1;
 }
@@ -522,7 +491,7 @@ void* test_tx (void*  arg) {
 }
 
 int main (int argc, char* argv[]) {
-    syslog(LOG_DEBUG, "driver start (version: %s)", program_version);
+    syslog(LOG_INFO, "driver start (version: %s)", program_version);
 
     int opt;
 	int optd = 0, opt_vid = -1, opt_did = -1;
@@ -533,7 +502,7 @@ int main (int argc, char* argv[]) {
         	optd = 1;
             sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
             printf("Manual device selection: %x:%x\n", opt_vid, opt_did);
-            syslog(LOG_DEBUG, "manual device selection: %x:%x", opt_vid, opt_did);
+            syslog(LOG_INFO, "manual device selection: %x:%x", opt_vid, opt_did);
             break;
 
         case 'l':
@@ -584,8 +553,6 @@ int main (int argc, char* argv[]) {
 
 	uint_t idx = 0;
 	pci_bdf_t bdf = 0;
-
-	syslog(LOG_INFO, "start");
 
 	ThreadCtl(_NTO_TCTL_IO, 0);
 
