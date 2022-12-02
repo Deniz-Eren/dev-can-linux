@@ -6,13 +6,13 @@
 #include <linux/pci.h>
 #include <linux/can/dev.h>
 
+#include "config.h"
+
 #define program_version "1.0.0"
 
 int optv = 0;
 int optq = 0;
 int optd = 0, opt_vid = -1, opt_did = -1;
-
-extern struct pci_driver *detected_driver;
 
 /* Defined in src/dev.c */
 extern struct net_device* device[16];

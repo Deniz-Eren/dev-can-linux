@@ -122,4 +122,6 @@ extern struct pci_driver ems_pci_driver;
 extern struct pci_driver peak_pci_driver;
 extern struct pci_driver plx_pci_driver;
 
+extern struct pci_driver *detected_driver;
+
 #endif /* _TYPES_H */
