@@ -8,6 +8,9 @@
 
 #define program_version "1.0.0"
 
+int optv = 0;
+int optq = 0;
+
 extern struct pci_driver adv_pci_driver;
 extern struct pci_driver kvaser_pci_driver;
 extern struct pci_driver ems_pci_driver;
@@ -48,19 +51,26 @@ void* test_tx (void*  arg) {
 }
 
 int main (int argc, char* argv[]) {
-    syslog(LOG_INFO, "driver start (version: %s)", program_version);
+    log_info("driver start (version: %s)\n", program_version);
 
     int opt;
 	int optd = 0, opt_vid = -1, opt_did = -1;
 
-    while ((opt = getopt(argc, argv, "d:l?h")) != -1) {
+    while ((opt = getopt(argc, argv, "d:vql?h")) != -1) {
         switch (opt) {
         case 'd':
         	optd = 1;
             sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
-            printf("Manual device selection: %x:%x\n", opt_vid, opt_did);
-            syslog(LOG_INFO, "manual device selection: %x:%x", opt_vid, opt_did);
+            log_info("manual device selection: %x:%x\n", opt_vid, opt_did);
             break;
+
+        case 'v':
+        	optv++;
+        	break;
+
+        case 'q':
+        	optq = 1;
+        	break;
 
         case 'l':
         	printf("Card(s): Advantech PCI:\n");
@@ -93,10 +103,58 @@ int main (int argc, char* argv[]) {
         case 'h':
             printf("%s - Linux SJA1000 Drivers Ported to QNX\n", argv[0]);
             printf("version %s\n\n", program_version);
-            printf("%s [-l] [-d {vid}:{did}] [-h]\n\n", argv[0]);
-            printf("-d {vid}:{did} - manually target desired device, e.g. -d 13fe:c302\n");
-            printf("-l             - list supported drivers\n");
-            printf("-?/h           - help menu\n");
+            printf("%s [-l] [-d {vid}:{did}] [-v[v..]] [-?/h]\n", argv[0]);
+            printf("\n");
+            printf("Command-line arguments:\n");
+            printf("\n");
+            printf(" -l             - list supported drivers\n");
+            printf(" -d {vid}:{did} - manually target desired device, e.g. -d 13fe:c302\n");
+            printf(" -v             - verbose mode 1; syslog(i) info\n");
+            printf(" -vv            - verbose mode 2; syslog(i) info & debug\n");
+            printf(" -vvv           - verbose mode 3; syslog(i) all, stdout(ii) info\n");
+            printf(" -vvvv          - verbose mode 4; syslog(i) all, stdout(ii) info & debug\n");
+            printf(" -vvvvv         - verbose mode 5; syslog(i) all (+ call trace), stdout(ii) all\n");
+            printf(" -vvvvvv        - verbose mode 6; syslog(i) all (+ call trace), stdout(ii) all\n");
+            printf("                                                                (+ call trace)\n");
+            printf(" -q             - quiet mode trumps all verbose modes\n");
+            printf(" -?/h           - help menu\n");
+            printf("\n");
+            printf("Notes:\n");
+            printf("\n");
+            printf("(i)   use command slog2info to check output to syslog\n");
+            printf("(ii)  stdout is the standard output stream you are reading now\n");
+            printf("(iii) errors & warnings are logged to syslog & stdout unaffected by verbose\n");
+            printf("      modes but silenced by quiet mode\n");
+			printf("(iv)  \"call trace\" level logging is only useful when single messages are sent\n");
+			printf("      and received, intended only for testing during implementation of new\n");
+			printf("      driver support.\n");
+            printf("\n");
+            printf("Examples:\n");
+            printf("\n");
+            printf("Run with auto detection of hardware:\n");
+            printf("  dev-can-linux\n");
+            printf("\n");
+            printf("Check syslog for errors & warnings:\n");
+            printf("  slog2info\n");
+            printf("\n");
+            printf("If multiple supported cards are installed, the first supported card will be\n");
+            printf("automatically chosen. To override this behaviour and manually specify the\n");
+            printf("desired device, first find out what the vendor ID (vid) and device ID (did) of\n");
+            printf("the desired card is as follows:\n");
+			printf("  pci-tool -v\n");
+			printf("\n");
+            printf("An example output looks like this:\n");
+			printf("  B000:D05:F00 @ idx 7\n");
+			printf("          vid/did: 13fe/c302\n");
+			printf("                  <vendor id - unknown>, <device id - unknown>\n");
+			printf("          class/subclass/reg: 0c/09/00\n");
+			printf("                  CANbus Serial Bus Controller\n");
+			printf("\n");
+			printf("In this example we would chose the numbers vid/did: 13fe/c302\n");
+			printf("\n");
+            printf("Target specific hardware detection of hardware and enable max verbose mode for\n");
+            printf("debugging:\n");
+            printf("  dev-can-linux -d 13fe:c302 -vvvv\n");
         	return EXIT_SUCCESS;
 
         default:
@@ -158,22 +216,22 @@ int main (int argc, char* argv[]) {
 
 		    if (!optd && detected_driver && detected_driver == detected_driver_temp) {
 		    	driver_auto = 1;
-		    	syslog(LOG_INFO, "checking device: %x:%x <- auto (%s)", vid, did, detected_driver->name);
+		    	log_info("checking device: %x:%x <- auto (%s)\n", vid, did, detected_driver->name);
 		    }
 		    else if (optd && detected_driver && detected_driver == detected_driver_temp) {
 		    	driver_pick = 1;
-		    	syslog(LOG_INFO, "checking device: %x:%x <- pick (%s)", vid, did, detected_driver->name);
+		    	log_info("checking device: %x:%x <- pick (%s)\n", vid, did, detected_driver->name);
 		    }
 		    else if (detected_driver_temp) {
 		    	driver_ignored = 1;
-		    	syslog(LOG_INFO, "checking device: %x:%x <- ignored (%s)", vid, did, detected_driver_temp->name);
+		    	log_info("checking device: %x:%x <- ignored (%s)\n", vid, did, detected_driver_temp->name);
 		    }
 		    else if (!detected_driver_temp && opt_vid == vid && opt_did == did) {
 		    	driver_unsupported = 1;
-		    	syslog(LOG_INFO, "checking device: %x:%x <- unsupported", vid, did);
+		    	log_info("checking device: %x:%x <- unsupported\n", vid, did);
 		    }
 		    else {
-		    	syslog(LOG_INFO, "checking device: %x:%x", vid, did);
+		    	log_info("checking device: %x:%x\n", vid, did);
 		    }
 	    }
 

@@ -27,7 +27,7 @@ extern int
 request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 	    const char *name, void *dev)
 {
-	syslog(LOG_DEBUG, "request_irq; irq: %d, name: %s", irq, name);
+	log_trace("request_irq; irq: %d, name: %s\n", irq, name);
 
 	struct net_device *ndev = (struct net_device *)dev;
 
@@ -43,7 +43,7 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 		SIGEV_SET_TYPE(&event, SIGEV_INTR);
 
 	    if ((id = InterruptAttach(irq, &irq_handler, NULL, 0, 0)) == -1) {
-	    	syslog(LOG_ERR, "internal error; interrupt attach failure");
+	    	log_err("internal error; interrupt attach failure\n");
 	    }
 	}
 
@@ -52,7 +52,7 @@ request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,
 
 void free_irq(unsigned int irq, void *dev)
 {
-	syslog(LOG_DEBUG, "free_irq; irq: %d", irq);
+	log_trace("free_irq; irq: %d\n", irq);
 
 	// Disconnect the ISR handler
     InterruptDetach(id);

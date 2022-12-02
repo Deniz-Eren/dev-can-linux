@@ -10,14 +10,14 @@
 
 void netif_wake_queue(struct net_device *dev)
 {
-	syslog(LOG_DEBUG, "netif_wake_queue");
+	log_trace("netif_wake_queue\n");
 }
 
 int netif_rx(struct sk_buff *skb)
 {
 	struct can_frame* msg = (struct can_frame*)skb->data;
 
-	syslog(LOG_DEBUG, "netif_rx; can%d: %x#%2x%2x%2x%2x%2x%2x%2x%2x",
+	log_trace("netif_rx; can%d: %x#%2x%2x%2x%2x%2x%2x%2x%2x\n",
 			skb->dev_id,
 			msg->can_id,
 			msg->data[0],
@@ -34,28 +34,28 @@ int netif_rx(struct sk_buff *skb)
 
 void netif_start_queue(struct net_device *dev)
 {
-	syslog(LOG_DEBUG, "netif_start_queue");
+	log_trace("netif_start_queue\n");
 }
 
 void netif_carrier_on(struct net_device *dev)
 {
-	syslog(LOG_DEBUG, "netif_carrier_on");
+	log_trace("netif_carrier_on\n");
 	// Not called from SJA1000 driver
 }
 
 void netif_carrier_off(struct net_device *dev)
 {
-	syslog(LOG_DEBUG, "netif_carrier_off");
+	log_trace("netif_carrier_off\n");
 }
 
 int netif_queue_stopped(const struct net_device *dev)
 {
-	syslog(LOG_DEBUG, "netif_queue_stopped");
+	log_trace("netif_queue_stopped\n");
 
 	return 0;
 }
 
 void netif_stop_queue(struct net_device *dev)
 {
-	syslog(LOG_DEBUG, "netif_stop_queue");
+	log_trace("netif_stop_queue\n");
 }
