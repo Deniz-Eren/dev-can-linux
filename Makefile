@@ -1,4 +1,4 @@
-ARTIFACT = devc-can
+ARTIFACT = dev-can-linux
 
 #Build architecture/variant string, possible values: x86, armv7le, etc...
 PLATFORM ?= x86_64
