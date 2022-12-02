@@ -3,8 +3,10 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <wchar.h>
 #include <stdint.h>
+#include <errno.h>
 #include <syslog.h>
 #include <sys/neutrino.h>
 #include <pci/pci.h>
@@ -31,32 +33,7 @@ typedef intrspin_t spinlock_t;
 #define __UAPI_DEF_IF_IFNAMSIZ
 #define __UAPI_DEF_IF_NET_DEVICE_FLAGS
 #define __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO
-
-/* Do nothing for the following macros */
-#define MODULE_AUTHOR(str)
-#define MODULE_DESCRIPTION(str)
-#define MODULE_SUPPORTED_DEVICE(str)
-#define MODULE_LICENSE(str)
-#define MODULE_DEVICE_TABLE(pci, tbl)
-#define module_pci_driver(pci_driver)
-#define EXPORT_SYMBOL_GPL(func)
-
-/* Define mapping to QNX IO */
-#define readb(addr)			in8(addr)
-#define readw(addr)			in16(addr)
-#define readl(addr)			in32(addr)
-
-#define ioread8(addr)       readb(addr)
-#define ioread16(addr)      readw(addr)
-#define ioread32(addr)      readl(addr)
-
-#define writeb(v, addr)		out8((addr), (v))
-#define writew(v, addr)		out16((addr), (v))
-#define writel(v, addr)		out32((addr), (v))
-
-#define iowrite8(v, addr)   writeb((v), (addr))
-#define iowrite16(v, addr)  writew((v), (addr))
-#define iowrite32(v, addr)  writel((v), (addr))
+#define CONFIG_CAN_LEDS
 
 extern int optv;
 extern int optq;
@@ -65,51 +42,51 @@ extern int opt_vid;
 extern int opt_did;
 
 #define log_err(fmt, arg...) { \
-		if (!optq) { \
-			syslog(LOG_ERR, fmt, ##arg); \
-			printf(fmt, ##arg); \
-		} \
-	}
+        if (!optq) { \
+            syslog(LOG_ERR, fmt, ##arg); \
+            printf(fmt, ##arg); \
+        } \
+    }
 
 #define log_warn(fmt, arg...) { \
-		if (!optq) { \
-			syslog(LOG_WARNING, fmt, ##arg); \
-			printf(fmt, ##arg); \
-		} \
-	}
+        if (!optq) { \
+            syslog(LOG_WARNING, fmt, ##arg); \
+            printf(fmt, ##arg); \
+        } \
+    }
 
 #define log_info(fmt, arg...) { \
-		if (!optq) { \
-			if (optv >= 1) { \
-				syslog(LOG_INFO, fmt, ##arg); \
-			} \
-			if (!optq && optv >= 3) { \
-				printf(fmt, ##arg); \
-			} \
-		} \
-	}
+        if (!optq) { \
+            if (optv >= 1) { \
+                syslog(LOG_INFO, fmt, ##arg); \
+            } \
+            if (!optq && optv >= 3) { \
+                printf(fmt, ##arg); \
+            } \
+        } \
+    }
 
 #define log_dbg(fmt, arg...) { \
-		if (!optq) { \
-			if (optv >= 2) { \
-				syslog(LOG_DEBUG, fmt, ##arg); \
-			} \
-			if (!optq && optv >= 4) { \
-				printf(fmt, ##arg); \
-			} \
-		} \
-	}
+        if (!optq) { \
+            if (optv >= 2) { \
+                syslog(LOG_DEBUG, fmt, ##arg); \
+            } \
+            if (!optq && optv >= 4) { \
+                printf(fmt, ##arg); \
+            } \
+        } \
+    }
 
 #define log_trace(fmt, arg...) { \
-		if (!optq) { \
-			if (optv >= 5) { \
-				syslog(LOG_DEBUG, fmt, ##arg); \
-			} \
-			if (!optq && optv >= 6) { \
-				printf(fmt, ##arg); \
-			} \
-		} \
-	}
+        if (!optq) { \
+            if (optv >= 5) { \
+                syslog(LOG_DEBUG, fmt, ##arg); \
+            } \
+            if (!optq && optv >= 6) { \
+                printf(fmt, ##arg); \
+            } \
+        } \
+    }
 
 /* Define mapping of dev_*() calls to syslog(*) */
 #define dev_err(dev, fmt, arg...) log_err(fmt, ##arg)
@@ -125,18 +102,14 @@ extern int opt_did;
 
 /* Structure used for driver selection processing */
 struct driver_selection_t {
-	pci_vid_t vid;
+    pci_vid_t vid;
     pci_did_t did;
 
-	int driver_auto;
-	int driver_pick;
-	int driver_ignored;
-	int driver_unsupported;
+    int driver_auto;
+    int driver_pick;
+    int driver_ignored;
+    int driver_unsupported;
 };
-
-/* Define mapping of kzalloc to simply malloc */
-#define kzalloc(size, gfp) malloc(size)
-#define kfree(ptr) free(ptr)
 
 /* Define mapping of IRQ spin lock */
 #define spin_lock_init(lock) memset(lock, 0, sizeof(intrspin_t))

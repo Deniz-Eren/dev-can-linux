@@ -42,27 +42,16 @@
  *
  */
 
-#include <string.h>
-#include <errno.h>
-//#include <linux/module.h>
-//#include <linux/init.h>
+#include <linux/module.h>
 #include <linux/kernel.h>
-//#include <linux/sched.h>
 #include <linux/types.h>
-//#include <linux/fcntl.h>
 #include <linux/interrupt.h>
-//#include <linux/ptrace.h>
-//#include <linux/string.h>
-//#include <linux/errno.h>
 #include <linux/netdevice.h>
-//#include <linux/if_arp.h>
-//#include <linux/if_ether.h>
 #include <linux/skbuff.h>
 #include <linux/delay.h>
 
 #include <linux/can/dev.h>
-//#include <linux/can/error.h>
-//#include <linux/can/led.h>
+#include <linux/can/led.h>
 
 #include "sja1000.h"
 
@@ -386,7 +375,7 @@ static void sja1000_rx(struct net_device *dev)
 	stats->rx_bytes += cf->can_dlc;
 	netif_rx(skb);
 
-	//can_led_event(dev, CAN_LED_EVENT_RX);
+	can_led_event(dev, CAN_LED_EVENT_RX);
 }
 
 static int sja1000_err(struct net_device *dev, uint8_t isrc, uint8_t status)
@@ -534,7 +523,7 @@ irqreturn_t sja1000_interrupt(int irq, void *dev_id)
 				can_get_echo_skb(dev, 0);
 			}
 			netif_wake_queue(dev);
-			//can_led_event(dev, CAN_LED_EVENT_TX);
+			can_led_event(dev, CAN_LED_EVENT_TX);
 		}
 		if (isrc & IRQ_RI) {
 			/* receive interrupt */
@@ -590,7 +579,7 @@ static int sja1000_open(struct net_device *dev)
 	/* init and start chi */
 	sja1000_start(dev);
 
-	//can_led_event(dev, CAN_LED_EVENT_OPEN);
+	can_led_event(dev, CAN_LED_EVENT_OPEN);
 
 	netif_start_queue(dev);
 
@@ -609,7 +598,7 @@ static int sja1000_close(struct net_device *dev)
 
 	close_candev(dev);
 
-	//can_led_event(dev, CAN_LED_EVENT_STOP);
+	can_led_event(dev, CAN_LED_EVENT_STOP);
 
 	return 0;
 }
@@ -675,8 +664,8 @@ int register_sja1000dev(struct net_device *dev)
 
 	ret =  register_candev(dev);
 
-//	if (!ret)
-//		devm_can_led_init(dev);
+	if (!ret)
+		devm_can_led_init(dev);
 
 	return ret;
 }
@@ -689,18 +678,3 @@ void unregister_sja1000dev(struct net_device *dev)
 }
 EXPORT_SYMBOL_GPL(unregister_sja1000dev);
 
-//static __init int sja1000_init(void)
-//{
-//	printk(KERN_INFO "%s CAN netdevice driver\n", DRV_NAME);
-//
-//	return 0;
-//}
-//
-//module_init(sja1000_init);
-//
-//static __exit void sja1000_exit(void)
-//{
-//	printk(KERN_INFO "%s: driver removed\n", DRV_NAME);
-//}
-//
-//module_exit(sja1000_exit);
