@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <syslog.h>
 #include <sys/neutrino.h>
+#include <pci/pci.h>
 
 typedef int8_t __s8;
 typedef int16_t __s16;
@@ -59,6 +60,9 @@ typedef intrspin_t spinlock_t;
 
 extern int optv;
 extern int optq;
+extern int optd;
+extern int opt_vid;
+extern int opt_did;
 
 #define log_err(fmt, arg...) { \
 		if (!optq) { \
@@ -119,6 +123,17 @@ extern int optq;
 #define netdev_info(dev, fmt, arg...) log_info(fmt, ##arg)
 #define netdev_dbg(dev, fmt, arg...) log_dbg(fmt, ##arg)
 
+/* Structure used for driver selection processing */
+struct driver_selection_t {
+	pci_vid_t vid;
+    pci_did_t did;
+
+	int driver_auto;
+	int driver_pick;
+	int driver_ignored;
+	int driver_unsupported;
+};
+
 /* Define mapping of kzalloc to simply malloc */
 #define kzalloc(size, gfp) malloc(size)
 #define kfree(ptr) free(ptr)
@@ -127,5 +142,11 @@ extern int optq;
 #define spin_lock_init(lock) memset(lock, 0, sizeof(intrspin_t))
 #define spin_lock_irqsave(lock, flags) InterruptLock(lock)
 #define spin_unlock_irqrestore(lock, flags) InterruptUnlock(lock)
+
+extern struct pci_driver adv_pci_driver;
+extern struct pci_driver kvaser_pci_driver;
+extern struct pci_driver ems_pci_driver;
+extern struct pci_driver peak_pci_driver;
+extern struct pci_driver plx_pci_driver;
 
 #endif /* _TYPES_H */

@@ -10,14 +10,16 @@
 #include <sys/mman.h>
 #include <kernel/include/linux/pci.h>
 
+struct pci_driver *detected_driver = NULL;
 
-int check_driver_support (const struct pci_driver* driver, pci_vid_t vid, pci_did_t did) {
+
+int check_driver_support (const struct pci_driver* driver, const struct driver_selection_t* ds) {
 	if (driver->id_table != NULL) {
 		const struct pci_device_id *id_table = driver->id_table;
 
 		while (id_table->vendor != 0) {
-			if (id_table->vendor == vid &&
-				id_table->device == did)
+			if (id_table->vendor == ds->vid &&
+				id_table->device == ds->did)
 			{
 				return 1;
 			}
@@ -47,6 +49,87 @@ void print_card (FILE* file, const struct pci_driver* driver) {
 			++id_table;
 		}
 	}
+}
+
+int process_driver_selection (struct driver_selection_t* ds) {
+	if (!ds) {
+		log_err("internal error; driver selection invalid!");
+
+		return -1;
+	}
+
+	ds->driver_auto = 0;
+	ds->driver_pick = 0;
+	ds->driver_ignored = 0;
+	ds->driver_unsupported = 0;
+
+	uint_t idx = 0;
+	pci_bdf_t bdf = 0;
+
+	while ((bdf = pci_device_find(idx, PCI_VID_ANY, PCI_DID_ANY, PCI_CCODE_ANY)) != PCI_BDF_NONE)
+	{
+	    pci_err_t r = pci_device_read_vid(bdf, &ds->vid);
+
+	    if (r != PCI_ERR_OK) {
+	    	continue;
+	    }
+
+	    r = pci_device_read_did(bdf, &ds->did);
+
+	    if (r == PCI_ERR_OK)
+	    {
+	    	/* does this driver handle this device ? */
+
+	    	struct pci_driver *detected_driver_temp = NULL;
+
+	    	if (check_driver_support(&adv_pci_driver, ds)) {
+	    		detected_driver_temp = &adv_pci_driver;
+			}
+			else if (check_driver_support(&kvaser_pci_driver, ds)) {
+				detected_driver_temp = &kvaser_pci_driver;
+			}
+			else if (check_driver_support(&ems_pci_driver, ds)) {
+				detected_driver_temp = &ems_pci_driver;
+			}
+			else if (check_driver_support(&peak_pci_driver, ds)) {
+				detected_driver_temp = &peak_pci_driver;
+			}
+			else if (check_driver_support(&plx_pci_driver, ds)) {
+				detected_driver_temp = &plx_pci_driver;
+			}
+
+	    	if (detected_driver_temp) {
+				if (!optd || (optd && opt_vid == ds->vid && opt_did == ds->did)) {
+					if (!detected_driver) detected_driver = detected_driver_temp;
+				}
+	    	}
+
+		    if (!optd && detected_driver && detected_driver == detected_driver_temp) {
+		    	ds->driver_auto = 1;
+		    	log_info("checking device: %x:%x <- auto (%s)\n", ds->vid, ds->did, detected_driver->name);
+		    }
+		    else if (optd && detected_driver && detected_driver == detected_driver_temp) {
+		    	ds->driver_pick = 1;
+		    	log_info("checking device: %x:%x <- pick (%s)\n", ds->vid, ds->did, detected_driver->name);
+		    }
+		    else if (detected_driver_temp) {
+		    	ds->driver_ignored = 1;
+		    	log_info("checking device: %x:%x <- ignored (%s)\n", ds->vid, ds->did, detected_driver_temp->name);
+		    }
+		    else if (!detected_driver_temp && opt_vid == ds->vid && opt_did == ds->did) {
+		    	ds->driver_unsupported = 1;
+		    	log_info("checking device: %x:%x <- unsupported\n", ds->vid, ds->did);
+		    }
+		    else {
+		    	log_info("checking device: %x:%x\n", ds->vid, ds->did);
+		    }
+	    }
+
+	    /* get next device instance */
+	    ++idx;
+	}
+
+	return 0;
 }
 
 int pci_enable_device(struct pci_dev *dev) {

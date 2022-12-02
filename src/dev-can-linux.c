@@ -10,14 +10,9 @@
 
 int optv = 0;
 int optq = 0;
+int optd = 0, opt_vid = -1, opt_did = -1;
 
-extern struct pci_driver adv_pci_driver;
-extern struct pci_driver kvaser_pci_driver;
-extern struct pci_driver ems_pci_driver;
-extern struct pci_driver peak_pci_driver;
-extern struct pci_driver plx_pci_driver;
-
-struct pci_driver *detected_driver = NULL;
+extern struct pci_driver *detected_driver;
 
 /* Defined in src/dev.c */
 extern struct net_device* device[16];
@@ -27,8 +22,8 @@ extern netdev_tx_t (*dev_xmit[16]) (struct sk_buff *skb, struct net_device *dev)
 extern void run_interrupt_wait();
 
 /* Defined in src/pci.c */
-extern int check_driver_support (const struct pci_driver* driver, pci_vid_t vid, pci_did_t did);
 extern void print_card (FILE* file, const struct pci_driver* driver);
+extern int process_driver_selection (struct driver_selection_t* ds);
 
 
 void* test_tx (void*  arg) {
@@ -54,7 +49,6 @@ int main (int argc, char* argv[]) {
     log_info("driver start (version: %s)\n", program_version);
 
     int opt;
-	int optd = 0, opt_vid = -1, opt_did = -1;
 
     while ((opt = getopt(argc, argv, "d:vql?h")) != -1) {
         switch (opt) {
@@ -109,23 +103,22 @@ int main (int argc, char* argv[]) {
             printf("\n");
             printf(" -l             - list supported drivers\n");
             printf(" -d {vid}:{did} - manually target desired device, e.g. -d 13fe:c302\n");
-            printf(" -v             - verbose mode 1; syslog(i) info\n");
-            printf(" -vv            - verbose mode 2; syslog(i) info & debug\n");
-            printf(" -vvv           - verbose mode 3; syslog(i) all, stdout(ii) info\n");
-            printf(" -vvvv          - verbose mode 4; syslog(i) all, stdout(ii) info & debug\n");
-            printf(" -vvvvv         - verbose mode 5; syslog(i) all (+ call trace), stdout(ii) all\n");
-            printf(" -vvvvvv        - verbose mode 6; syslog(i) all (+ call trace), stdout(ii) all\n");
-            printf("                                                                (+ call trace)\n");
+            printf(" -v             - verbose 1; syslog(i) info\n");
+            printf(" -vv            - verbose 2; syslog(i) info & debug\n");
+            printf(" -vvv           - verbose 3; syslog(i) all, stdout(ii) info\n");
+            printf(" -vvvv          - verbose 4; syslog(i) all, stdout(ii) info & debug\n");
+            printf(" -vvvvv         - verbose 5; syslog(i) all + trace, stdout(ii) all\n");
+            printf(" -vvvvvv        - verbose 6; syslog(i) all + trace, stdout(ii) all + trace\n");
             printf(" -q             - quiet mode trumps all verbose modes\n");
             printf(" -?/h           - help menu\n");
             printf("\n");
             printf("Notes:\n");
             printf("\n");
-            printf("(i)   use command slog2info to check output to syslog\n");
-            printf("(ii)  stdout is the standard output stream you are reading now\n");
+            printf("  (i) use command slog2info to check output to syslog\n");
+            printf(" (ii) stdout is the standard output stream you are reading now\n");
             printf("(iii) errors & warnings are logged to syslog & stdout unaffected by verbose\n");
             printf("      modes but silenced by quiet mode\n");
-			printf("(iv)  \"call trace\" level logging is only useful when single messages are sent\n");
+			printf(" (iv) \"trace\" level logging is only useful when single messages are sent\n");
 			printf("      and received, intended only for testing during implementation of new\n");
 			printf("      driver support.\n");
             printf("\n");
@@ -163,97 +156,29 @@ int main (int argc, char* argv[]) {
         }
     }
 
-	pci_vid_t vid;
-    pci_did_t did;
-
-	uint_t idx = 0;
-	pci_bdf_t bdf = 0;
-
 	ThreadCtl(_NTO_TCTL_IO, 0);
 
-	int driver_auto = 0;
-	int driver_pick = 0;
-	int driver_ignored = 0;
-	int driver_unsupported = 0;
+	struct driver_selection_t ds;
 
-	while ((bdf = pci_device_find(idx, PCI_VID_ANY, PCI_DID_ANY, PCI_CCODE_ANY)) != PCI_BDF_NONE)
-	{
-	    pci_err_t r = pci_device_read_vid(bdf, &vid);
-
-	    if (r != PCI_ERR_OK) {
-	    	continue;
-	    }
-
-	    r = pci_device_read_did(bdf, &did);
-
-	    if (r == PCI_ERR_OK)
-	    {
-	    	/* does this driver handle this device ? */
-
-	    	struct pci_driver *detected_driver_temp = NULL;
-
-	    	if (check_driver_support(&adv_pci_driver, vid, did)) {
-	    		detected_driver_temp = &adv_pci_driver;
-			}
-			else if (check_driver_support(&kvaser_pci_driver, vid, did)) {
-				detected_driver_temp = &kvaser_pci_driver;
-			}
-			else if (check_driver_support(&ems_pci_driver, vid, did)) {
-				detected_driver_temp = &ems_pci_driver;
-			}
-			else if (check_driver_support(&peak_pci_driver, vid, did)) {
-				detected_driver_temp = &peak_pci_driver;
-			}
-			else if (check_driver_support(&plx_pci_driver, vid, did)) {
-				detected_driver_temp = &plx_pci_driver;
-			}
-
-	    	if (detected_driver_temp) {
-				if (!optd || (optd && opt_vid == vid && opt_did == did)) {
-					if (!detected_driver) detected_driver = detected_driver_temp;
-				}
-	    	}
-
-		    if (!optd && detected_driver && detected_driver == detected_driver_temp) {
-		    	driver_auto = 1;
-		    	log_info("checking device: %x:%x <- auto (%s)\n", vid, did, detected_driver->name);
-		    }
-		    else if (optd && detected_driver && detected_driver == detected_driver_temp) {
-		    	driver_pick = 1;
-		    	log_info("checking device: %x:%x <- pick (%s)\n", vid, did, detected_driver->name);
-		    }
-		    else if (detected_driver_temp) {
-		    	driver_ignored = 1;
-		    	log_info("checking device: %x:%x <- ignored (%s)\n", vid, did, detected_driver_temp->name);
-		    }
-		    else if (!detected_driver_temp && opt_vid == vid && opt_did == did) {
-		    	driver_unsupported = 1;
-		    	log_info("checking device: %x:%x <- unsupported\n", vid, did);
-		    }
-		    else {
-		    	log_info("checking device: %x:%x\n", vid, did);
-		    }
-	    }
-
-	    /* get next device instance */
-	    ++idx;
+	if (process_driver_selection(&ds)) {
+		return -1;
 	}
 
-	if (driver_auto) {
-		printf("Auto detected device (%x:%x) successfully; (driver \"%s\")\n", vid, did, detected_driver->name);
+	if (ds.driver_auto) {
+		log_info("Auto detected device (%x:%x) successfully; (driver \"%s\")\n", ds.vid, ds.did, detected_driver->name);
 	}
-	else if (driver_pick) {
-		printf("Device (%x:%x) accepted successfully; (driver \"%s\")\n", vid, did, detected_driver->name);
+	else if (ds.driver_pick) {
+		log_info("Device (%x:%x) accepted successfully; (driver \"%s\")\n", ds.vid, ds.did, detected_driver->name);
 	}
-	else if (driver_unsupported) {
-		printf("Device (%x:%x) not supported by any driver\n", opt_vid, opt_did);
+	else if (ds.driver_unsupported) {
+		log_info("Device (%x:%x) not supported by any driver\n", opt_vid, opt_did);
 	}
 	else {
-		printf("Device (%x:%x) not a valid device\n", opt_vid, opt_did);
+		log_info("Device (%x:%x) not a valid device\n", opt_vid, opt_did);
 	}
 
-	if (driver_ignored) {
-		printf("Note: one or more supported devices have been ignored because of manual device selection\n");
+	if (ds.driver_ignored) {
+		log_info("Note: one or more supported devices have been ignored because of manual device selection\n");
 	}
 
 	if (!detected_driver) {
@@ -262,8 +187,8 @@ int main (int argc, char* argv[]) {
 
 	struct pci_dev pdev = {
 			.ba = NULL,
-			.vendor = vid,
-			.device = did,
+			.vendor = ds.vid,
+			.device = ds.did,
 			.dev = { .driver_data = NULL },
 			.irq = 10
 	};
