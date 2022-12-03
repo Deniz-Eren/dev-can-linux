@@ -115,10 +115,11 @@ int main (int argc, char* argv[]) {
             printf("Notes:\n");
             printf("\n");
             printf("  (i) use command slog2info to check output to syslog\n");
-            printf(" (ii) stdout is the standard output stream you are reading now\n");
-            printf("(iii) errors & warnings are logged to syslog & stdout unaffected by verbose\n");
+            printf(" (ii) stdout is the standard output stream you are reading now on screen\n");
+            printf("(iii) stderr is the standard error stream; by default writes to screen\n");
+            printf(" (iv) errors & warnings are logged to syslog & stderr unaffected by verbose\n");
             printf("      modes but silenced by quiet mode\n");
-            printf(" (iv) \"trace\" level logging is only useful when single messages are sent\n");
+            printf("  (v) \"trace\" level logging is only useful when single messages are sent\n");
             printf("      and received, intended only for testing during implementation of new\n");
             printf("      driver support.\n");
             printf("\n");

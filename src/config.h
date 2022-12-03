@@ -44,14 +44,14 @@ extern int opt_did;
 #define log_err(fmt, arg...) { \
         if (!optq) { \
             syslog(LOG_ERR, fmt, ##arg); \
-            printf(fmt, ##arg); \
+            fprintf(stderr, fmt, ##arg); \
         } \
     }
 
 #define log_warn(fmt, arg...) { \
         if (!optq) { \
             syslog(LOG_WARNING, fmt, ##arg); \
-            printf(fmt, ##arg); \
+            fprintf(stderr, fmt, ##arg); \
         } \
     }
 

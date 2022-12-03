@@ -10,6 +10,8 @@
 #include <sys/mman.h>
 #include <linux/pci.h>
 
+#include "config.h"
+
 struct pci_driver *detected_driver = NULL;
 
 
@@ -291,23 +293,7 @@ uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
     /* mmap() the address space(s) */
 
     if (mmap_device_io(dev->ba[bar].size, dev->ba[bar].addr) == MAP_DEVICE_FAILED) {
-        switch (errno) {
-        case EINVAL:
-            log_err("pci device address mapping failed; Invalid flags type, or len is 0.\n");
-            break;
-        case ENOMEM:
-            log_err("pci device address mapping failed; The address range requested is outside of the allowed process address range, or there wasn't enough memory to satisfy the request.\n");
-            break;
-        case ENXIO:
-            log_err("pci device address mapping failed; The address from io for len bytes is invalid.\n");
-            break;
-        case EPERM:
-            log_err("pci device address mapping failed; The calling process doesn't have the required permission; see procmgr_ability().\n");
-            break;
-        default:
-            log_err("pci device address mapping failed; Unknown error: %d\n", errno);
-            break;
-        }
+        log_err("pci device address mapping failed; %s\n", strerror(errno));
     }
     else {
         log_dbg("ba[%d] mapping successful\n", bar);
