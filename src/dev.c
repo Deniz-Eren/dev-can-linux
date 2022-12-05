@@ -10,17 +10,22 @@
 #include <sys/resmgr.h>
 #include <sys/dispatch.h>
 #include <sys/can_dcmd.h>
+#include <sys/netmgr.h>
+#include <sys/neutrino.h>
 
 #include <linux/pci.h>
 #include <drivers/net/can/sja1000/sja1000.h>
 
 #include "config.h"
 
+#include <net/rtnetlink.h>
+
 #define MAX_DEVICES 16
 #define MAX_MAILBOXES 16
 #define MAX_NAME_SIZE (IFNAMSIZ*2) // e.g. /dev/can1/rx0
 
 extern struct net_device_ops sja1000_netdev_ops;
+extern struct rtnl_link_ops can_link_ops;
 
 struct net_device* device[MAX_DEVICES];
 netdev_tx_t (*dev_xmit[MAX_DEVICES]) (struct sk_buff *skb, struct net_device *dev);
@@ -80,7 +85,7 @@ resmgr_connect_funcs_t connect_funcs;
 resmgr_io_funcs_t io_funcs;
 
 
-int register_candev(struct net_device *dev) {
+int register_netdev(struct net_device *dev) {
     snprintf(dev->name, IFNAMSIZ, "can%d", dev->dev_id);
 
     if (dev->dev_id >= MAX_DEVICES) {
@@ -90,7 +95,17 @@ int register_candev(struct net_device *dev) {
     dev_xmit[dev->dev_id] = dev->netdev_ops->ndo_start_xmit;
     device[dev->dev_id] = dev;
 
-    log_trace("register_candev: %s\n", dev->name);
+    log_trace("register_netdev: %s\n", dev->name);
+
+    // TODO: Check baud rate settings
+    struct can_priv *priv = netdev_priv(dev);
+    struct can_bittiming bittiming = {
+            .bitrate = 250000,
+    };
+    priv->user_bittiming = &bittiming;
+    priv->user_data_bittiming = &bittiming;
+
+    can_link_ops.changelink(dev, NULL, NULL);
 
     if (sja1000_netdev_ops.ndo_open(dev)) {
         return -1;
@@ -171,56 +186,161 @@ int register_candev(struct net_device *dev) {
             pthread_create(NULL, &attr[dev->dev_id][i*2+j], &receive_loop, ctp[dev->dev_id][i*2+j]);
 
             log_trace("resmgr_attach -> %d\n", pathID[dev->dev_id][i*2+j]);
+		    dev->flags |= IFF_UP;
         }
     }
 
     return 0;
 }
 
-void unregister_candev(struct net_device *dev) {
-    log_trace("unregister_candev: %s\n", dev->name);
+void unregister_netdev(struct net_device *dev) {
+    log_trace("unregister_netdev: %s\n", dev->name);
 
     if (sja1000_netdev_ops.ndo_stop(dev)) {
         log_err("internal error; ndo_stop failure\n");
     }
+
+    dev->flags &= ~IFF_UP;
 }
 
-int open_candev(struct net_device *dev)
+
+/*
+ * Timer
+ *
+ * Message thread
+ */
+
+static struct timer_record_t {
+    struct net_device *dev;
+
+    timer_t* id;
+
+    void (*callback)(unsigned long);
+    unsigned long data;
+    int num_callbacks;
+
+    struct sigevent event;
+    int chid;
+
+    int created;
+
+    pthread_attr_t attr;
+} timer[MAX_DEVICES];
+
+static int n_timers = 0;
+
+void* timer_loop (void*  arg);
+
+void setup_timer (timer_t* timer_id, void (*callback)(unsigned long), unsigned long data)
 {
-    log_trace("open_candev: %s\n", dev->name);
-    return 0;
+    int i = n_timers;
+
+    // TODO: Check sizeof(struct net_device *) is within sizeof(unsigned long)!
+    timer[i].dev = (struct net_device *)data;
+    timer[i].id = timer_id;
+
+    timer[i].callback = callback;
+    timer[i].data = data;
+
+    timer_delete(*timer_id);
+
+    struct sched_param scheduling_params;
+    int prio;
+
+    timer[i].chid = ChannelCreate(0);
+
+    /* Get our priority. */
+    if (SchedGet( 0, 0, &scheduling_params) != -1)
+    {
+       prio = scheduling_params.sched_priority;
+    }
+    else
+    {
+       prio = 10;
+    }
+
+    timer[i].created = 0;
+    timer[i].event.sigev_notify = SIGEV_PULSE;
+    timer[i].event.sigev_coid = ConnectAttach(ND_LOCAL_NODE, 0,
+                                     timer[i].chid,
+                                     _NTO_SIDE_CHANNEL, 0);
+    timer[i].event.sigev_priority = prio;
+    timer[i].event.sigev_code = TIMER_PULSE_CODE;
+    timer_create(CLOCK_MONOTONIC, &timer[i].event, timer_id);
+
+    /* Start the timer thread */
+    pthread_attr_init(&timer[i].attr);
+    pthread_attr_setdetachstate(&timer[i].attr, PTHREAD_CREATE_DETACHED);
+    pthread_create(NULL, &timer[i].attr, &timer_loop, &n_timers);
+
+    ++n_timers;
 }
 
-void close_candev(struct net_device *dev)
+void* timer_loop (void*  arg) {
+    int i = *(int*)arg;
+
+    int                     rcvid;
+    timer_msg_t             msg;
+
+    for (;;) {
+        rcvid = MsgReceive(timer[i].chid, &msg, sizeof(msg), NULL);
+        if (rcvid == 0) { /* we got a pulse */
+             if (msg.pulse.code == TIMER_PULSE_CODE) {
+                 timer[i].callback(timer[i].data);
+             } /* else other pulses ... */
+        } /* else other messages ... */
+    }
+
+    return(EXIT_SUCCESS);
+}
+
+void del_timer_sync (timer_t* timer_id)
 {
-    log_trace("close_candev: %s\n", dev->name);
+    timer_delete(*timer_id);
 }
 
-void can_bus_off(struct net_device *dev) {
-    log_trace("can_bus_off\n");
-}
-
-unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx) {
-    log_trace("can_get_echo_skb\n");
-
-    return 0;
-}
-
-void can_put_echo_skb(struct sk_buff *skb, struct net_device *dev,
-              unsigned int idx)
+void mod_timer (timer_t* timer_id, int ticks)
 {
-    log_trace("can_put_echo_skb\n");
+    int i = -1, j;
+
+    for (j = 0; j < n_timers; ++j) {
+        if (timer[j].id == timer_id) {
+            i = j;
+            break;
+        }
+    }
+
+    if (i == -1) {
+        log_err("mod_timer unknown timer\n");
+        return;
+    }
+
+    if (timer[i].created) {
+        timer_delete(*timer[i].id);
+    }
+
+    struct itimerspec       itime;
+
+    // first trigger, seconds:
+    itime.it_value.tv_sec = 0;
+    // first trigger, 0.1s in nanoseconds:
+    itime.it_value.tv_nsec = TIMER_INTERVAL_NS * ticks;
+
+    // interval between triggers, seconds:
+    itime.it_interval.tv_sec = 0;
+    // interval between triggers, nanoseconds:
+    itime.it_interval.tv_nsec = 0;
+    timer_settime(*timer[i].id, 0, &itime, NULL);
+
+    timer[i].created = 1;
 }
 
-void can_free_echo_skb(struct net_device *dev, unsigned int idx) {
-    log_trace("can_free_echo_skb\n");
-}
 
-void can_change_state(struct net_device *dev, struct can_frame *cf,
-              enum can_state tx_state, enum can_state rx_state)
-{
-    log_trace("can_change_state\n");
-}
+/*
+ * Resource Manager
+ *
+ * Message thread and callback functions for connection and IO
+ */
 
 void* receive_loop (void*  arg) {
     dispatch_context_t* ctp = (dispatch_context_t*)arg;

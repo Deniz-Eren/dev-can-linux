@@ -67,7 +67,7 @@
  * bit 30	: remote transmission request flag (1 = rtr frame)
  * bit 31	: frame format flag (0 = standard 11 bit, 1 = extended 29 bit)
  */
-typedef u32 canid_t;
+typedef __u32 canid_t;
 
 #define CAN_SFF_ID_BITS		11
 #define CAN_EFF_ID_BITS		29
@@ -78,7 +78,7 @@ typedef u32 canid_t;
  * bit 0-28	: error class mask (see include/linux/can/error.h)
  * bit 29-31	: set to zero
  */
-typedef u32 can_err_mask_t;
+typedef __u32 can_err_mask_t;
 
 /* CAN payload length and DLC definitions according to ISO 11898-1 */
 #define CAN_MAX_DLC 8
@@ -101,11 +101,11 @@ typedef u32 can_err_mask_t;
  */
 struct can_frame {
 	canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
-	u8    can_dlc; /* frame payload length in byte (0 .. CAN_MAX_DLEN) */
-	u8    __pad;   /* padding */
-	u8    __res0;  /* reserved / padding */
-	u8    __res1;  /* reserved / padding */
-	u8    data[CAN_MAX_DLEN] __attribute__((aligned(8)));
+	__u8    can_dlc; /* frame payload length in byte (0 .. CAN_MAX_DLEN) */
+	__u8    __pad;   /* padding */
+	__u8    __res0;  /* reserved / padding */
+	__u8    __res1;  /* reserved / padding */
+	__u8    data[CAN_MAX_DLEN] __attribute__((aligned(8)));
 };
 
 /*
@@ -138,11 +138,11 @@ struct can_frame {
  */
 struct canfd_frame {
 	canid_t can_id;  /* 32 bit CAN_ID + EFF/RTR/ERR flags */
-	u8    len;     /* frame payload length in byte */
-	u8    flags;   /* additional flags for CAN FD */
-	u8    __res0;  /* reserved / padding */
-	u8    __res1;  /* reserved / padding */
-	u8    data[CANFD_MAX_DLEN] __attribute__((aligned(8)));
+	__u8    len;     /* frame payload length in byte */
+	__u8    flags;   /* additional flags for CAN FD */
+	__u8    __res0;  /* reserved / padding */
+	__u8    __res1;  /* reserved / padding */
+	__u8    data[CANFD_MAX_DLEN] __attribute__((aligned(8)));
 };
 
 #define CAN_MTU		(sizeof(struct can_frame))

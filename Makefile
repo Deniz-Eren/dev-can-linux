@@ -20,7 +20,7 @@ LD = $(CXX)
 
 #INCLUDES += -I/path/to/my/lib/include
 #INCLUDES += -I../mylib/public
-INCLUDES += -Isrc -Isrc/kernel -Isrc/kernel/include -Isrc/kernel/include/uapi
+INCLUDES += -Isrc -Isrc/kernel -Isrc/kernel/arch/x86/include -Isrc/kernel/include -Isrc/kernel/include/uapi
 
 #LIBS += -L/path/to/my/lib/$(PLATFORM)/usr/lib -lmylib
 #LIBS += -L../mylib/$(OUTPUT_DIR) -lmylib

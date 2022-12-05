@@ -28,6 +28,9 @@
 struct sk_buff {
 	unsigned char* data;
     unsigned short dev_id;
+//	struct net_device *dev;
 };
+
+void kfree_skb(struct sk_buff *skb);
 
 #endif	/* _LINUX_SKBUFF_H */

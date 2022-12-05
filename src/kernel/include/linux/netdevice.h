@@ -26,7 +26,8 @@
 #define _LINUX_NETDEVICE_H
 
 #include <linux/types.h>
-#include <linux/compiler.h>
+#include <linux/bug.h>
+#include <linux/delay.h>
 #include <linux/skbuff.h>
 #include <uapi/linux/if.h>
 #include <limits.h>
@@ -129,6 +130,8 @@ struct net_device_ops {
  *	@netdev_ops:	Includes several pointers to callbacks,
  *			if one wants to override the ndo_*() functions
  *
+ *	@rtnl_link_ops:	Rtnl_link_ops
+ *
  *	@flags:		Interface flags (a la BSD)
  *
  *	@mtu:		Interface MTU value
@@ -136,18 +139,22 @@ struct net_device_ops {
  * 	@dev_id:		Used to differentiate devices that share
  * 				the same link layer address
  *
+ *	@tx_queue_len:		Max frames per queue allowed
+ *
  *  @priv:		Private data
  */
 
 struct net_device {
     char      	name[IFNAMSIZ];
     unsigned int         irq;
-	struct net_device_stats stats;
+    struct net_device_stats stats;
     unsigned int        flags;
     unsigned int        mtu;
     const struct net_device_ops *netdev_ops;
+	const struct rtnl_link_ops *rtnl_link_ops;
     unsigned short          dev_id;
-	void* priv;
+    unsigned long       tx_queue_len;
+    void* priv;
 };
 
 /**
@@ -196,6 +203,14 @@ void netif_stop_queue(struct net_device *dev);
 int netif_queue_stopped(const struct net_device *dev);
 
 int netif_rx(struct sk_buff *skb);
+
+/**
+ *	netif_carrier_ok - test if carrier present
+ *	@dev: network device
+ *
+ * Check if carrier is present on device
+ */
+bool netif_carrier_ok(const struct net_device *dev);
 
 void netif_carrier_on(struct net_device *dev);
 

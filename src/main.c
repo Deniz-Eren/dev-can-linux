@@ -30,15 +30,16 @@ void* test_tx (void*  arg) {
     struct sk_buff *skb;
     struct can_frame *cf;
 
-    /* create zero'ed CAN frame buffer */
-    skb = alloc_can_skb(device[1], &cf);
-
-    if (skb == NULL) {
-        return (0);
-    }
-
     while (1) {
         sleep(5);
+
+        /* create zero'ed CAN frame buffer */
+        skb = alloc_can_skb(device[1], &cf);
+
+        if (skb == NULL) {
+            return (0);
+        }
+
         dev_xmit[1](skb, device[1]);
     }
 

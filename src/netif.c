@@ -37,6 +37,10 @@ void netif_start_queue(struct net_device *dev)
     log_trace("netif_start_queue\n");
 }
 
+bool netif_carrier_ok(const struct net_device *dev) {
+    return true;
+}
+
 void netif_carrier_on(struct net_device *dev)
 {
     log_trace("netif_carrier_on\n");

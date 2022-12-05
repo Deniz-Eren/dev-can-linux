@@ -182,6 +182,7 @@ static void adv_pci_del_all_channels(struct pci_dev *pdev)
 		pci_iounmap(board->pci_dev, priv->reg_base);
 
 		free_sja1000dev(dev);
+		board->slave_dev[i] = NULL;
 	}
 }
 
@@ -222,6 +223,7 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
 	board = pci_get_drvdata(pdev);
 	board->pci_dev = pdev;
 	board->slave_dev[bar_no] = dev;
+    dev->dev_id = bar_no;
 
 	adv_pci_reset(priv);
 
@@ -229,7 +231,6 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
 		priv->reg_base, dev->irq);
 
 	SET_NETDEV_DEV(dev, &pdev->dev);
-	dev->dev_id = bar_no;
 
 	/* Register SJA1000 device */
 	err = register_sja1000dev(dev);
@@ -250,7 +251,7 @@ static void adv_pci_remove_one(struct pci_dev *pdev)
 {
 	struct adv_pci *board = pci_get_drvdata(pdev);
 
-	dev_info(&pdev->dev, "Removing card");
+	dev_info(&pdev->dev, "Removing card\n");
 
 	adv_pci_del_all_channels(pdev);
 

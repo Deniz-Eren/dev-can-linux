@@ -13,8 +13,10 @@
 #ifndef _CAN_DEV_H
 #define _CAN_DEV_H
 
+#include <linux/types.h>
 #include <linux/can.h>
 #include <linux/can/error.h>
+#include <linux/can/led.h>
 #include <linux/can/netlink.h>
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
@@ -34,31 +36,31 @@ enum can_mode {
 struct can_priv {
 	struct can_device_stats can_stats;
 
-	struct can_bittiming bittiming;//, data_bittiming;
-	const struct can_bittiming_const *bittiming_const;//,
-		//*data_bittiming_const;
+	struct can_bittiming bittiming, data_bittiming;
+	const struct can_bittiming_const *bittiming_const,
+		*data_bittiming_const;
 	struct can_clock clock;
 
 	enum can_state state;
 
-	/* CAN controller features - see include/uapi/linux/can/netlink.h */
+    /* CAN controller features - see include/uapi/linux/can/netlink.h */
 	u32 ctrlmode;		/* current options setting */
 	u32 ctrlmode_supported;	/* options that can be modified by netlink */
 	u32 ctrlmode_static;	/* static enabled options for driver/hardware */
 
-	//int restart_ms;
-	//struct timer_list restart_timer;
+	int restart_ms;
+	timer_list restart_timer;
 
 	int (*do_set_bittiming)(struct net_device *dev);
-	//int (*do_set_data_bittiming)(struct net_device *dev);
+	int (*do_set_data_bittiming)(struct net_device *dev);
 	int (*do_set_mode)(struct net_device *dev, enum can_mode mode);
 	int (*do_get_state)(const struct net_device *dev,
 			    enum can_state *state);
 	int (*do_get_berr_counter)(const struct net_device *dev,
 				   struct can_berr_counter *bec);
 
-	//unsigned int echo_skb_max;
-	//struct sk_buff **echo_skb;
+	unsigned int echo_skb_max;
+	struct sk_buff **echo_skb;
 
 //#ifdef CONFIG_CAN_LEDS
 //	struct led_trigger *tx_led_trig;
@@ -68,6 +70,16 @@ struct can_priv {
 //	struct led_trigger *rxtx_led_trig;
 //	char rxtx_led_trig_name[CAN_LED_NAME_SZ];
 //#endif
+
+    /* Instead of netlink interface we introduce this more specific and
+     * simplified user settings. Note that the user in this context is not
+     * necessarily the network layer. In the case of QNX dev-can-* drivers
+     * the user is specifically a resource manager driver. */
+    struct can_bittiming *user_bittiming;
+    struct can_bittiming *user_data_bittiming;
+    struct can_ctrlmode *user_ctrlmode;
+    int *user_restart_ms;
+    bool user_can_restart_now;
 };
 
 /*
@@ -112,19 +124,19 @@ static inline int can_dropped_invalid_skb(struct net_device *dev,
 //}
 
 /* helper to define static CAN controller features at device creation time */
-//static inline void can_set_static_ctrlmode(struct net_device *dev,
-//					   u32 static_mode)
-//{
-//	struct can_priv *priv = netdev_priv(dev);
-//
-//	/* alloc_candev() succeeded => netdev_priv() is valid at this point */
-//	priv->ctrlmode = static_mode;
-//	priv->ctrlmode_static = static_mode;
-//
-//	/* override MTU which was set by default in can_setup()? */
-//	if (static_mode & CAN_CTRLMODE_FD)
-//		dev->mtu = CANFD_MTU;
-//}
+static inline void can_set_static_ctrlmode(struct net_device *dev,
+					   u32 static_mode)
+{
+	struct can_priv *priv = netdev_priv(dev);
+
+	/* alloc_candev() succeeded => netdev_priv() is valid at this point */
+	priv->ctrlmode = static_mode;
+	priv->ctrlmode_static = static_mode;
+
+	/* override MTU which was set by default in can_setup()? */
+	if (static_mode & CAN_CTRLMODE_FD)
+		dev->mtu = CANFD_MTU;
+}
 
 /* get data length from can_dlc with sanitized can_dlc */
 u8 can_dlc2len(u8 can_dlc);
@@ -136,7 +148,7 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max);
 void free_candev(struct net_device *dev);
 
 /* a candev safe wrapper around netdev_priv */
-struct can_priv *safe_candev_priv(struct net_device *dev);
+//struct can_priv *safe_candev_priv(struct net_device *dev);
 
 int open_candev(struct net_device *dev);
 void close_candev(struct net_device *dev);
@@ -144,6 +156,9 @@ int can_change_mtu(struct net_device *dev, int new_mtu);
 
 int register_candev(struct net_device *dev);
 void unregister_candev(struct net_device *dev);
+
+int register_netdev(struct net_device *dev);
+void unregister_netdev(struct net_device *dev);
 
 int can_restart_now(struct net_device *dev);
 void can_bus_off(struct net_device *dev);
@@ -157,8 +172,6 @@ unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx);
 void can_free_echo_skb(struct net_device *dev, unsigned int idx);
 
 struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf);
-struct sk_buff *alloc_canfd_skb(struct net_device *dev,
-				struct canfd_frame **cfd);
 struct sk_buff *alloc_can_err_skb(struct net_device *dev,
 				  struct can_frame **cf);
 
