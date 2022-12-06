@@ -1,5 +1,5 @@
 /*
- * \file    dev.c
+ * \file    resmgr.c
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -19,15 +19,16 @@
  */
 
 #include <stdio.h>
+#include <string.h>
 #include <sys/iofunc.h>
 #include <sys/resmgr.h>
 #include <sys/dispatch.h>
 #include <sys/can_dcmd.h>
 #include <sys/neutrino.h>
 
-#include "config.h"
-#include "pci.h"
-#include "dev.h"
+#include <resmgr.h>
+#include <config.h>
+#include <pci.h>
 
 struct net_device* device[MAX_DEVICES];
 
@@ -217,7 +218,7 @@ void* receive_loop (void*  arg) {
      * for us and calls the appropriate callback function. */
     while (1) {
         if ((ctp = dispatch_block (ctp)) == NULL) {
-            log_err("dispatch_block failed: %s\n", strerror (errno));
+            log_err("dispatch_block failed: %s\n", strerror(errno));
 
             return (0);
         }

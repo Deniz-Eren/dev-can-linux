@@ -18,9 +18,11 @@ LD = $(CXX)
 
 #User defined include/preprocessor flags and libraries
 
-#INCLUDES += -I/path/to/my/lib/include
-#INCLUDES += -I../mylib/public
-INCLUDES += -Isrc -Isrc/kernel -Isrc/kernel/arch/x86/include -Isrc/kernel/include -Isrc/kernel/include/uapi
+INCLUDES += -Isrc -Isrc/include \
+	-Isrc/kernel \
+	-Isrc/kernel/include \
+	-Isrc/kernel/include/uapi \
+	-Isrc/kernel/arch/x86/include
 
 #LIBS += -L/path/to/my/lib/$(PLATFORM)/usr/lib -lmylib
 #LIBS += -L../mylib/$(OUTPUT_DIR) -lmylib
@@ -33,6 +35,17 @@ CCFLAGS_coverage += -g -O0 -ftest-coverage -fprofile-arcs -nopipe -Wc,-auxbase-s
 LDFLAGS_coverage += -ftest-coverage -fprofile-arcs
 CCFLAGS_profile += -g -O0 -finstrument-functions
 LIBS_profile += -lprofilingS
+
+#
+# Linux Kernel configuration macros
+#
+
+CCFLAGS += -DPROGRAM_VERSION=\"`cat "VERSION"`\" \
+	-DCONFIG_HZ=1000 \
+	-DCONFIG_CAN_CALC_BITTIMING \
+	-DCONFIG_X86_64 \
+	-DCONFIG_X86_32
+	#-DCONFIG_CAN_LEDS # Currently LEDS are not supported
 
 #Generic compiler flags (which include build type flags)
 CCFLAGS_all += -Wall -fmessage-length=0

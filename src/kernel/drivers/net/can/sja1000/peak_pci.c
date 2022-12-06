@@ -675,7 +675,7 @@ static int peak_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		}
 
 		dev_info(&pdev->dev,
-			 "%s at reg_base=0x%p cfg_base=0x%p irq=%d\n",
+			 "%s at reg_base=0x%lu cfg_base=0x%lu irq=%d\n",
 			 dev->name, priv->reg_base, chan->cfg_base, dev->irq);
 	}
 

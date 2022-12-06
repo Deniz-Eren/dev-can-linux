@@ -1,5 +1,5 @@
 /*
- * \file    dev.h
+ * \file    resmgr.h
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,8 +18,10 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SRC_DEV_H_
-#define SRC_DEV_H_
+#ifndef SRC_RESMGR_H_
+#define SRC_RESMGR_H_
+
+#include <pci/pci.h>
 
 #include <drivers/net/can/sja1000/sja1000.h>
 
@@ -64,4 +66,4 @@ struct resmgr_ops {
 
 extern struct net_device* device[MAX_DEVICES];
 
-#endif /* SRC_DEV_H_ */
+#endif /* SRC_RESMGR_H_ */

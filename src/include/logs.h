@@ -1,5 +1,5 @@
 /*
- * \file    config.h
+ * \file    logs.h
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,102 +18,13 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SRC_CONFIG_H_
-#define SRC_CONFIG_H_
+#ifndef SRC_LOGS_H_
+#define SRC_LOGS_H_
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <string.h>
-#include <wchar.h>
-#include <stdint.h>
-#include <errno.h>
 #include <syslog.h>
-#include <sys/neutrino.h>
-#include <pci/pci.h>
 
-#include "timer.h"
-
-
-#define program_version "1.0.0" /* Release version */
-
-
-/*
- * Linux Kernel configuration macros
- */
-
-#define CONFIG_HZ 1000
-#define CONFIG_CAN_CALC_BITTIMING
-#define CONFIG_X86_32
-#define CONFIG_X86_64
-//#define CONFIG_CAN_LEDS /* Currently LEDS are not supported */
-
-
-/*
- * Linux Kernel platform and architecture macros
- */
-
-#define BITS_PER_LONG 64
-
-#define __UAPI_DEF_IF_IFNAMSIZ /* defines the need for macro IFNAMSIZ */
-
-/* Defines the need for macros
- *  - IFF_UP        interface is up
- *  - IFF_NOARP     no address resolution protocol */
-#define __UAPI_DEF_IF_NET_DEVICE_FLAGS
-
-/* Defines the need for macro IFF_ECHO; this is a unique network device flags in
- * that no equivalent exists in QNX (e.g. /usr/include/net/if.h). */
-#define __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO
-
-
-/*
- * Linux Kernel compiler definition macros
- */
-
-#define __always_inline     inline
-
-
-/*
- * QNX Resource Manager macros
- */
-
-#define MAX_DEVICES 16
-
-
-/*
- * Mapping stdint.h types to Linux Kernel needed type names
- */
-
-typedef int8_t      __s8;
-typedef int16_t     __s16;
-typedef int32_t     __s32;
-typedef int64_t     __s64;
-
-typedef uint8_t     __u8;
-typedef uint16_t    __u16;
-typedef uint32_t    __u32;
-typedef uint64_t    __u64;
-
-typedef __s8        s8;
-typedef __s16       s16;
-typedef __s32       s32;
-typedef __s64       s64;
-
-typedef __u8        u8;
-typedef __u16       u16;
-typedef __u32       u32;
-typedef __u64       u64;
-
-
-/*
- * Program options
- */
-
-extern int optv;
-extern int optq;
-extern int optd;
-extern int opt_vid;
-extern int opt_did;
+#include "main.h"
 
 
 /*
@@ -167,16 +78,16 @@ extern int opt_did;
         } \
     }
 
-/* Define mapping of dev_*() calls to syslog(*) */
+/* Mapping of dev_*() calls to log_(*) */
 #define dev_err(dev, fmt, arg...) log_err(fmt, ##arg)
 #define dev_warn(dev, fmt, arg...) log_warn(fmt, ##arg)
 #define dev_info(dev, fmt, arg...) log_info(fmt, ##arg)
 #define dev_dbg(dev, fmt, arg...) log_dbg(fmt, ##arg)
 
-/* Define mapping of netdev_*() calls to syslog(*) */
+/* Mapping of netdev_*() calls to log_(*) */
 #define netdev_err(dev, fmt, arg...) log_err(fmt, ##arg)
 #define netdev_warn(dev, fmt, arg...) log_warn(fmt, ##arg)
 #define netdev_info(dev, fmt, arg...) log_info(fmt, ##arg)
 #define netdev_dbg(dev, fmt, arg...) log_dbg(fmt, ##arg)
 
-#endif /* SRC_CONFIG_H_ */
+#endif /* SRC_LOGS_H_ */

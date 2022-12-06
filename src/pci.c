@@ -19,11 +19,14 @@
  */
 
 #include <stdio.h>
+#include <string.h>
+
 #include <sys/neutrino.h>
 #include <sys/mman.h>
 
 #include "config.h"
 #include "pci.h"
+#include "main.h"
 
 struct pci_driver *detected_driver = NULL;
 
@@ -288,7 +291,7 @@ int pci_enable_device(struct pci_dev *dev) {
                 dev->ba[i] = ba[i];
 
                 log_info("read ba[%d] { addr: %x, size: %x }\n",
-                        i, ba[i].addr, ba[i].size);
+                        i, (u32)ba[i].addr, (u32)ba[i].size);
             }
         }
 #undef MAX_NUM_BA
@@ -335,7 +338,7 @@ void pci_disable_device(struct pci_dev *dev) {
 }
 
 uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
-    log_trace("pci_iomap; bar: %d, max: %d\n", bar, max);
+    log_trace("pci_iomap; bar: %d, max: %lu\n", bar, max);
 
     if (bar >= dev->nba) {
         log_err("internal error; bar: %d, nba: %d\n", bar, dev->nba);
@@ -371,7 +374,7 @@ void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
         }
     }
 
-    log_trace("pci_iounmap; bar: %d, size: %d\n", bar, size);
+    log_trace("pci_iounmap; bar: %d, size: %lu\n", bar, size);
 
     if (bar == -1 || !size) {
         log_err("internal error; bar size failure during pci_iounmap\n");

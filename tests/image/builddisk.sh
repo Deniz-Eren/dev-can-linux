@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# \file     builddisk
+# \file     builddisk.sh
 # \brief    Bash script that must run on a licensed QNX system to generate the
 #           the QNX OS test image.
 #

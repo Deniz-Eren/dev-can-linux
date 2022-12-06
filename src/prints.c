@@ -16,13 +16,16 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <stdio.h>
+
 #include "config.h"
 #include "pci.h"
+#include "main.h"
 
 
 static void print_program (void) {
     printf("dev-can-linux version %s, Copyright (C) 2022 Deniz Eren\n",
-            program_version);
+            PROGRAM_VERSION);
 
     return;
 }

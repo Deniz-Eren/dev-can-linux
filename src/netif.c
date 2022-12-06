@@ -18,6 +18,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <pci/pci.h>
+
 #include <linux/netdevice.h>
 #include <linux/can.h>
 

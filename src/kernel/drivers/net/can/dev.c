@@ -31,7 +31,7 @@
 #include <linux/can/led.h>
 #include <arch/x86/include/asm/div64.h>
 
-#include "../../../../dev.h"
+#include <resmgr.h>
 
 #define MOD_DESC "CAN device driver interface"
 
@@ -71,6 +71,14 @@ u8 can_len2dlc(u8 len)
 	return len2dlc[len];
 }
 EXPORT_SYMBOL_GPL(can_len2dlc);
+
+#ifdef __QNX__
+#pragma GCC push_options
+/*
+ * Disable optimization for QNX release configuration
+ */
+#pragma GCC optimize ("-O0")
+#endif
 
 #ifdef CONFIG_CAN_CALC_BITTIMING
 #define CAN_CALC_MAX_ERROR 50 /* in one-tenth of a percent */
@@ -252,6 +260,10 @@ static int can_fixup_bittiming(struct net_device *dev, struct can_bittiming *bt,
 
 	return 0;
 }
+
+#ifdef __QNX__
+#pragma GCC pop_options
+#endif
 
 static int can_get_bittiming(struct net_device *dev, struct can_bittiming *bt,
 			     const struct can_bittiming_const *btc)

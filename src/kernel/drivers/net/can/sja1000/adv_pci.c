@@ -227,7 +227,7 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
 
 	adv_pci_reset(priv);
 
-	dev_info(&pdev->dev, "reg_base=%p irq=%d\n",
+	dev_info(&pdev->dev, "reg_base=%lu irq=%d\n",
 		priv->reg_base, dev->irq);
 
 	SET_NETDEV_DEV(dev, &pdev->dev);

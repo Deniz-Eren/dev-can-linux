@@ -25,11 +25,12 @@
 
 #include <linux/can/dev.h>
 
-#include "pci.h"
-#include "interrupt.h"
-#include "config.h"
-#include "dev.h"
-#include "prints.h"
+#include <main.h>
+#include <config.h>
+#include <pci.h>
+#include <interrupt.h>
+#include <resmgr.h>
+#include <prints.h>
 
 int optv = 0;
 int optq = 0;
@@ -113,7 +114,7 @@ int main (int argc, char* argv[]) {
         print_notice();
     }
 
-    log_info("driver start (version: %s)\n", program_version);
+    log_info("driver start (version: %s)\n", PROGRAM_VERSION);
 
     ThreadCtl(_NTO_TCTL_IO, 0);
 

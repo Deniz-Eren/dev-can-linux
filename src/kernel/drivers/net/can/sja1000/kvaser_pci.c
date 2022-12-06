@@ -263,7 +263,7 @@ static int kvaser_pci_add_chan(struct pci_dev *pdev, int channel,
 	priv->irq_flags = IRQF_SHARED;
 	dev->irq = pdev->irq;
 
-	dev_info(&pdev->dev, "reg_base=%p conf_addr=%p irq=%d\n",
+	dev_info(&pdev->dev, "reg_base=%lu conf_addr=%lu irq=%d\n",
 		 priv->reg_base, board->conf_addr, dev->irq);
 
 	SET_NETDEV_DEV(dev, &pdev->dev);
