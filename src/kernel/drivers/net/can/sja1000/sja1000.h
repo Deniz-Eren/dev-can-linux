@@ -165,7 +165,7 @@ struct sja1000_priv {
 
 	uintptr_t reg_base;	 /* ioremap'ed address to registers */
 	unsigned long irq_flags; /* for request_irq() */
-	spinlock_t cmdreg_lock;  /* lock for concurrent cmd register writes */
+	intrspin_t cmdreg_lock;  /* lock for concurrent cmd register writes */
 
 	u16 flags;		/* custom mode flags */
 	u8 ocr;			/* output control register */

@@ -1,5 +1,5 @@
 /*
- * \file    led.c
+ * \file    interrupt.h
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,22 +18,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/can/led.h>
+#ifndef SRC_INTERRUPT_H_
+#define SRC_INTERRUPT_H_
+
+#include <linux/interrupt.h>
 
 
-#ifdef CONFIG_CAN_LEDS
+extern void run_interrupt_wait();
 
-void can_led_event (struct net_device *netdev, enum can_led_event event) {
-}
-
-void devm_can_led_init (struct net_device *netdev) {
-}
-
-int can_led_notifier_init (void) {
-    return 0;
-}
-
-void can_led_notifier_exit (void) {
-}
-
-#endif
+#endif /* SRC_INTERRUPT_H_ */

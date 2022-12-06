@@ -1,0 +1,381 @@
+#
+# \file     system.build
+# \brief    Buildfile describing the System partition (mounted at /system) used
+#           for building the QNX OS test image.
+#
+# \details  This file is the post generation hand customise output of
+#           "mkqnximage" command run on a QNX licensed machine.
+#           Important! not intended to be a secure production solution; created
+#           only for controlled testing purposes.
+#
+# Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
+[num_inodes=*1000]
+[num_sectors=*40960]
+[search=/x86_64:/x86_64/boot/sys::/opt/qnx710/target/qnx7/x86_64:/opt/qnx710/target/qnx7/x86_64/boot/sys:/opt/qnx710/target/qnx7]
+
+[uid=0 gid=0 dperms=755 type=dir] /
+[uid=0 gid=0 dperms=755 type=dir] /lib
+[uid=0 gid=0 dperms=755 type=dir] /lib/dll
+[uid=0 gid=0 dperms=755 type=dir] /xbin
+[uid=0 gid=0 dperms=755 type=dir] /etc
+[uid=0 gid=0 dperms=755 type=dir] /etc/rc.d
+
+[uid=0 gid=0 dperms=755 perms=644]
+
+
+# /etc =========================
+
+etc/profile = {
+export TERM=qansi
+export PATH=/opt/bin:/proc/boot:/system/xbin
+export LD_LIBRARY_PATH=/opt/lib:/proc/boot:/system/lib:/system/lib/dll
+export SYSNAME=CANTEST
+export TZ=AEST-10
+export PS1=\[$SYSNAME]\#
+}
+
+[gid=0 uid=0 perms=644] /etc/syslog.conf = {
+# Note need a tab to separate fields
+*.*	/dev/console
+}
+
+[gid=0 uid=0 perms=755] /etc/rc.d/rc.net = {
+#!/bin/sh
+
+. /etc/profile
+
+slay -f io-pkt-v6-hc
+
+setconf _CS_HOSTNAME $SYSNAME
+
+io-pkt-v6-hc -U 33:33 -d e1000 -v
+
+waitfor /dev/socket
+
+# User network configuration
+/data/var/etc/rc.d/rc.net
+
+dhclient -nw --no-pid -cf /system/etc/dhclient.conf -sf /system/xbin/_dhclient-script -lf /data/var/dhclient/leases -m wm0
+}
+
+
+[uid=0 gid=0 dperms=755 perms=555]
+
+#############################################
+### Libraries
+#############################################
+
+lib/libasound.so.3=lib/libasound.so.3
+lib/librcheck.so.1=usr/lib/librcheck.so.1
+[type=link] lib/librcheck.so=librcheck.so.1
+lib/libsandbox.so.1=lib/libsandbox.so.1
+lib/librpc.so.2=usr/lib/librpc.so.2
+lib/libmq.so.1=usr/lib/libmq.so.1
+lib/libedit.so.0=usr/lib/libedit.so.0
+lib/libnbutil.so.1=usr/lib/libnbutil.so.1
+lib/libc++.so.1=usr/lib/libc++.so.1
+lib/libstdc++.so.6=lib/libstdc++.so.6
+lib/libncursesw.so.1=usr/lib/libncursesw.so.1
+lib/libintl.so.1=usr/lib/libintl.so.1
+lib/libtracelog.so.1=lib/libtracelog.so.1
+lib/libslog2parse.so.1=lib/libslog2parse.so.1
+lib/libexpat.so.2=usr/lib/libexpat.so.2
+lib/libpanelw.so.1=usr/lib/libpanelw.so.1
+lib/libiconv.so.1=usr/lib/libiconv.so.1
+lib/libpps.so.1=lib/libpps.so.1
+lib/libcatalog.so.1=lib/libcatalog.so.1
+[type=link] lib/libpps.so=libpps.so.1
+[dperms=755 type=dir] etc/terminfo
+[dperms=755 type=dir] etc/terminfo/q
+[perms=444] etc/terminfo/q/qansi = usr/lib/terminfo/q/qansi
+[perms=444] etc/termcap=etc/termcap
+
+#############################################
+### Utilities
+#############################################
+xbin/shutdown=sbin/shutdown
+xbin/sync=bin/sync
+xbin/hogs=usr/bin/hogs
+xbin/sqlite3=usr/bin/sqlite3
+xbin/pdebug=usr/bin/pdebug
+xbin/ifconfig=sbin/ifconfig
+xbin/netstat=usr/bin/netstat
+xbin/pci-tool=usr/sbin/pci-tool
+xbin/tracelogger=usr/sbin/tracelogger
+xbin/if_up=usr/sbin/if_up
+xbin/df=bin/df
+xbin/fdisk=sbin/fdisk
+xbin/hostname=bin/hostname
+xbin/use=usr/bin/use
+xbin/tr=usr/bin/tr
+xbin/hd=usr/bin/hd
+xbin/mkdosfs=sbin/mkdosfs
+xbin/openssl=usr/bin/openssl
+xbin/umount=bin/umount
+xbin/aps=bin/aps
+xbin/chkqnx6fs=sbin/chkqnx6fs
+xbin/gawk=usr/bin/gawk
+[type=link] xbin/awk=gawk
+xbin/getfacl=bin/getfacl
+xbin/join=usr/bin/join
+xbin/ntpdate=usr/sbin/ntpdate
+xbin/arp=usr/bin/arp
+xbin/brconfig=sbin/brconfig
+xbin/curl=usr/bin/curl
+xbin/ed=bin/ed
+xbin/fullpath=usr/bin/fullpath
+xbin/host=usr/bin/host
+xbin/ifmcstat=usr/sbin/ifmcstat
+xbin/ifwatchd=sbin/ifwatchd
+xbin/io=sbin/io
+xbin/iperf2=usr/bin/iperf2
+xbin/iperf3=usr/bin/iperf3
+xbin/ndp=usr/sbin/ndp
+xbin/nicinfo=usr/sbin/nicinfo
+xbin/ntp-keygen=usr/sbin/ntp-keygen
+xbin/ntpq=usr/bin/ntpq
+xbin/pfctl=sbin/pfctl
+xbin/ping6=usr/bin/ping6
+xbin/route=sbin/route
+xbin/rtquery=usr/sbin/rtquery
+xbin/rtsold=usr/sbin/rtsold
+xbin/secpolmonitor=bin/secpolmonitor
+xbin/showmount=usr/bin/showmount
+xbin/sntp=bin/sntp
+xbin/sockstat=usr/bin/sockstat
+xbin/stty=bin/stty
+xbin/tcpdump=usr/sbin/tcpdump
+xbin/top=usr/bin/top
+xbin/usb=sbin/usb
+xbin/wave=usr/bin/wave
+xbin/waverec=usr/bin/waverec
+xbin/sysctl=sbin/sysctl
+xbin/slog2info=bin/slog2info
+xbin/vi=bin/vi
+xbin/pidin=bin/pidin
+xbin/ldd=usr/bin/ldd
+xbin/less=usr/bin/less
+xbin/more=usr/bin/more
+xbin/slay=bin/slay
+xbin/basename=usr/bin/basename
+xbin/bc=usr/bin/bc
+xbin/cat=bin/cat
+xbin/chgrp=bin/chgrp
+xbin/chmod=bin/chmod
+xbin/chown=bin/chown
+xbin/cksum=usr/bin/cksum
+xbin/cmp=usr/bin/cmp
+xbin/cp=bin/cp
+xbin/cut=usr/bin/cut
+xbin/date=usr/bin/date
+xbin/dd=bin/dd
+xbin/diff=usr/bin/diff
+xbin/dirname=usr/bin/dirname
+xbin/du=bin/du
+xbin/egrep=usr/bin/egrep
+xbin/env=usr/bin/env
+xbin/false=bin/false
+xbin/fgrep=usr/bin/fgrep
+xbin/file=usr/bin/file
+xbin/find=usr/bin/find
+xbin/grep=usr/bin/grep
+xbin/head=usr/bin/head
+xbin/id=usr/bin/id
+xbin/ls=bin/ls
+xbin/mkdir=bin/mkdir
+xbin/mkfifo=usr/bin/mkfifo
+xbin/mv=bin/mv
+xbin/od=usr/bin/od
+xbin/printf=usr/bin/printf
+xbin/pwd=bin/pwd
+xbin/sed=bin/sed
+xbin/sleep=usr/bin/sleep
+xbin/sort=usr/bin/sort
+xbin/strings=usr/bin/strings
+xbin/tail=usr/bin/tail
+xbin/tar=bin/tar
+xbin/tee=usr/bin/tee
+xbin/touch=usr/bin/touch
+xbin/true=bin/true
+xbin/uname=bin/uname
+xbin/uniq=usr/bin/uniq
+xbin/wc=usr/bin/wc
+xbin/which=usr/bin/which
+xbin/xargs=usr/bin/xargs
+xbin/crontab=usr/bin/crontab
+xbin/canctl=bin/canctl
+
+#############################################
+### suid Utilities
+#############################################
+[perms=ugo=rx,u+s] xbin/login=bin/login
+[perms=ugo=rx,u+s] xbin/su=bin/su
+[perms=ugo=rx,u+s] xbin/passwd=usr/bin/passwd
+[perms=ugo=rx,u+s] xbin/ping=usr/bin/ping
+[perms=ugo=rx,u+s] xbin/traceroute=usr/bin/traceroute
+[perms=ugo=rx,u+s] xbin/traceroute6=usr/bin/traceroute6
+
+#############################################
+### Services
+#############################################
+xbin/fs-nfs3=usr/sbin/fs-nfs3
+xbin/dumper=usr/sbin/dumper
+xbin/qconn=usr/sbin/qconn
+xbin/syslogd=usr/sbin/syslogd
+xbin/pps=usr/sbin/pps
+xbin/mq=sbin/mq
+xbin/mqueue=sbin/mqueue
+xbin/random=usr/sbin/random
+#xbin/gns=usr/sbin/gns
+xbin/ntpd=usr/sbin/ntpd
+xbin/devb-loopback=sbin/devb-loopback
+xbin/devb-umass=sbin/devb-umass
+xbin/fs-cifs=usr/sbin/fs-cifs
+xbin/devc-con=sbin/devc-con
+xbin/devc-pty=sbin/devc-pty
+xbin/pipe=sbin/pipe
+xbin/cron=usr/sbin/cron
+
+#############################################
+### io-pkt
+#############################################
+xbin/io-pkt-v6-hc=sbin/io-pkt-v6-hc
+#lib/dll/lsm-qnet.so=lib/dll/lsm-qnet.so
+
+xbin/dhclient=sbin/dhclient
+[perms=444] etc/dhclient.conf=etc/dhclient.conf
+xbin/dhclient-script=sbin/dhclient-script
+# dhclient embeds a PATH in it which we can't override, so have it invoke a wrapper script
+[perms=555] xbin/_dhclient-script = {
+#!/bin/sh
+export PATH=/opt/bin:/proc/boot:/system/xbin
+export LD_LIBRARY_PATH=/opt/lib:/proc/boot:/system/lib:/system/lib/dll
+exec /system/xbin/dhclient-script
+}
+
+#############################################
+### ssh
+#############################################
+xbin/sshd=usr/sbin/sshd
+xbin/ssh-keygen=usr/bin/ssh-keygen
+[dperms=555 type=dir] etc/ssh
+[perms=444] etc/ssh/sshd_config={
+HostKey /data/var/ssh/ssh_host_rsa_key
+HostKey /data/var/ssh/ssh_host_ed25519_key
+AuthorizedKeysFile	.ssh/authorized_keys
+UsePAM yes
+PermitUserEnvironment yes
+# Allowing root login via a password is generally undesirable. If you use the
+# --ssh-ident option this will be disabled and root will be able to log in
+# by means of an ssh identity file.
+PermitRootLogin yes
+PidFile none
+Subsystem   sftp    /system/xbin/sftp-server
+}
+xbin/scp=usr/bin/scp
+xbin/sftp-server=usr/libexec/sftp-server
+xbin/ssh=usr/bin/ssh
+
+#############################################
+### audio
+#############################################
+xbin/io-audio=sbin/io-audio
+lib/dll/deva-ctrl-audiopci.so=lib/dll/deva-ctrl-audiopci.so
+lib/dll/deva-mixer-ac97.so=lib/dll/deva-mixer-ac97.so
+
+#############################################
+## PAM
+#############################################
+[uid=0 gid=0 dperms=755 type=dir] /pam
+[uid=0 gid=0 dperms=755 type=dir] /pam/lib
+[uid=0 gid=0 dperms=755 type=dir] /pam/config
+
+lib/libpam.so.2=usr/lib/libpam.so.2
+
+pam/lib/pam_deny.so=usr/lib/pam_deny.so.2
+pam/lib/pam_echo.so=usr/lib/pam_echo.so.2
+pam/lib/pam_exec.so=usr/lib/pam_exec.so.2
+pam/lib/pam_group.so=usr/lib/pam_group.so.2
+pam/lib/pam_permit.so=usr/lib/pam_permit.so.2
+pam/lib/pam_qnx.so=usr/lib/pam_qnx.so.2
+pam/lib/pam_rootok.so=usr/lib/pam_rootok.so.2
+pam/lib/pam_self.so=usr/lib/pam_self.so.2
+
+[perms=444] pam/config/login = {
+auth requisite pam_qnx.so
+account requisite pam_qnx.so
+session requisite pam_qnx.so
+
+password requisite pam_qnx.so
+}
+[perms=444] pam/config/sshd = {
+auth requisite pam_qnx.so
+account requisite pam_qnx.so
+session requisite pam_qnx.so
+
+password requisite pam_qnx.so
+}
+[perms=444] pam/config/passwd = {
+auth requisite pam_qnx.so
+account requisite pam_qnx.so
+session requisite pam_qnx.so
+password requisite pam_qnx.so
+}
+[perms=444] pam/config/su = {
+auth sufficient pam_rootok.so no_warn
+auth requisite pam_qnx.so
+account requisite pam_qnx.so
+session requisite pam_qnx.so
+
+password requisite pam_qnx.so
+}
+
+#############################################
+### Customization
+#############################################
+
+lib/libssl.so.2.1=usr/lib/libssl.so.2.1
+lib/libcurl.so.11=usr/lib/libcurl.so.11
+lib/libcares.so.6=usr/lib/libcares.so.6
+lib/liblzma.so.5=usr/lib/liblzma.so.5
+lib/libbz2.so.1=usr/lib/libbz2.so.1
+/xbin/setkey=usr/sbin/setkey
+[perms=555] /xbin/rununittests=/opt/qnx710/host/linux/x86_64/../../common/mkqnximage/inputs/rununittests
+[perms=555] xbin/cleanup_tmp=/opt/qnx710/host/linux/x86_64/../../common/mkqnximage/inputs/cleanup_tmp
+# local/snippets/system_files.custom
+# Placeholder for local list of files to add to system partition
+
+xbin/secpol=bin/secpol
+
+[perms=555] xbin/pinger={
+#!/bin/sh
+# Script to ping all interfaces of our host as a means of getting our own address into the arp cache
+addr_list=192.168.1.80:172.18.0.1:172.19.0.1:172.20.0.1:172.17.0.1
+# Wait for us to get an address
+while ! ifconfig | grep 'inet .*broadcast' | grep -v 0.0.0.0 >/dev/null; do
+    sleep 2
+done
+IFS=:
+for ip in $addr_list; do
+    ping -c 1 $ip >/dev/null 2>&1 &
+done
+}
+lib/dll/devnp-e1000.so=lib/dll/devnp-e1000.so
+
+usr/share/misc/magic=usr/share/misc/magic

@@ -1,0 +1,71 @@
+#
+# \file     docker-compose.yml
+# \brief    Docker-compose script that describes the containerised test
+#           environments of the QNX OS test setup.
+#
+# Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
+services:
+  qemu:
+    build:
+      context: .
+      dockerfile: qemu.Dockerfile
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - "/dev/kvm:/dev/kvm"
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.Xauthority:/root/.Xauthority
+      - .:/root/Images
+    network_mode: "host"
+    environment:
+      - LANG=en_US.UTF-8
+      - DISPLAY=${DISPLAY}
+      - MAKE=/usr/bin/make
+      - NINJA=/usr/bin/ninja
+      - PYTHON=/usr/bin/python3
+      - NO_AT_BRIDGE=1
+    tty: true
+    command: >
+      sh -c "echo &&
+             if [ ! -d /sys/class/net/vcan0 ]; then \
+                 echo \"Setting up VCAN...\" &&
+                 ip link add dev vcan0 type vcan &&
+                 ip link set up vcan0 &&
+                 ip link add dev vcan1 type vcan &&
+                 ip link set up vcan1; \
+             else echo \"VCAN already setup\"; fi &&
+             qemu-system-x86_64 --version &&
+             qemu-system-x86_64 \
+                -k en-us \
+                -drive id=disk,file=/root/Images/disk-raw,format=raw,if=none \
+                -device ahci,id=ahci \
+                -device ide-hd,drive=disk,bus=ahci.1 \
+                -boot d \
+                -object can-bus,id=canbus0 \
+                -object can-bus,id=canbus1 \
+                -device mioe3680_pci,canbus0=canbus0,canbus1=canbus1 \
+                -object can-host-socketcan,id=canhost0,if=can0,canbus=canbus0,if=vcan0 \
+                -object can-host-socketcan,id=canhost1,if=can1,canbus=canbus1,if=vcan1 \
+                -m size=4096 \
+                -nic user,hostfwd=tcp::6022-:22,hostfwd=tcp::8000-:8000 \
+                -smp 4 \
+                -enable-kvm &&
+             tail -f /dev/null"

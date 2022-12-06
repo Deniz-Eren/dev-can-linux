@@ -130,7 +130,7 @@ struct net_device_ops {
  *	@netdev_ops:	Includes several pointers to callbacks,
  *			if one wants to override the ndo_*() functions
  *
- *	@rtnl_link_ops:	Rtnl_link_ops
+ *	@resmgr_ops:	QNX resource manager operations
  *
  *	@flags:		Interface flags (a la BSD)
  *
@@ -151,7 +151,7 @@ struct net_device {
     unsigned int        flags;
     unsigned int        mtu;
     const struct net_device_ops *netdev_ops;
-	const struct rtnl_link_ops *rtnl_link_ops;
+	const struct resmgr_ops *resmgr_ops;
     unsigned short          dev_id;
     unsigned long       tx_queue_len;
     void* priv;

@@ -1,29 +1,39 @@
+/*
+ * \file    main.c
+ *
+ * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 #include <stdio.h>
 #include <unistd.h>
 #include <hw/inout.h>
 #include <pthread.h>
 
-#include <linux/pci.h>
 #include <linux/can/dev.h>
 
+#include "pci.h"
+#include "interrupt.h"
 #include "config.h"
-
-#define program_version "1.0.0"
+#include "dev.h"
+#include "prints.h"
 
 int optv = 0;
 int optq = 0;
 int optd = 0, opt_vid = -1, opt_did = -1;
-
-/* Defined in src/dev.c */
-extern struct net_device* device[16];
-extern netdev_tx_t (*dev_xmit[16]) (struct sk_buff *skb, struct net_device *dev);
-
-/* Defined in src/interrupt.c */
-extern void run_interrupt_wait();
-
-/* Defined in src/pci.c */
-extern void print_card (FILE* file, const struct pci_driver* driver);
-extern int process_driver_selection (struct driver_selection_t* ds);
 
 
 void* test_tx (void*  arg) {
@@ -36,22 +46,31 @@ void* test_tx (void*  arg) {
         /* create zero'ed CAN frame buffer */
         skb = alloc_can_skb(device[1], &cf);
 
+        cf->can_id = 0x123;
+        cf->can_dlc = 8;
+        cf->data[0] = 0x11;
+        cf->data[1] = 0x22;
+        cf->data[2] = 0x33;
+        cf->data[3] = 0x44;
+        cf->data[4] = 0x55;
+        cf->data[5] = 0x66;
+        cf->data[6] = 0x77;
+        cf->data[7] = 0x88;
+
         if (skb == NULL) {
             return (0);
         }
 
-        dev_xmit[1](skb, device[1]);
+        device[1]->netdev_ops->ndo_start_xmit(skb, device[1]);
     }
 
     return (0);
 }
 
 int main (int argc, char* argv[]) {
-    log_info("driver start (version: %s)\n", program_version);
-
     int opt;
 
-    while ((opt = getopt(argc, argv, "d:vql?h")) != -1) {
+    while ((opt = getopt(argc, argv, "d:vqlwc?h")) != -1) {
         switch (opt) {
         case 'd':
             optd = 1;
@@ -68,88 +87,20 @@ int main (int argc, char* argv[]) {
             break;
 
         case 'l':
-            printf("Card(s): Advantech PCI:\n");
-            print_card(stdout, &adv_pci_driver);
+            print_support();
+            return EXIT_SUCCESS;
 
-            printf("Card(s): KVASER PCAN PCI CAN:\n");
-            print_card(stdout, &kvaser_pci_driver);
+        case 'w':
+            print_warranty();
+            return EXIT_SUCCESS;
 
-            printf("Card(s): EMS CPC-PCI/PCIe/104P CAN:\n");
-            print_card(stdout, &ems_pci_driver);
-
-            printf("Card(s): PEAK PCAN PCI/PCIe/PCIeC miniPCI CAN cards,\n");
-            printf("    PEAK PCAN miniPCIe/cPCI PC/104+ PCI/104e CAN Cards:\n");
-            print_card(stdout, &peak_pci_driver);
-
-            printf("Card(s): Adlink PCI-7841/cPCI-7841,\n"
-                    "    Adlink PCI-7841/cPCI-7841 SE,\n"
-                    "    Marathon CAN-bus-PCI,\n"
-                    "    TEWS TECHNOLOGIES TPMC810,\n"
-                    "    esd CAN-PCI/CPCI/PCI104/200,\n"
-                    "    esd CAN-PCI/PMC/266,\n"
-                    "    esd CAN-PCIe/2000,\n"
-                    "    Connect Tech Inc. CANpro/104-Plus Opto (CRG001),\n"
-                    "    IXXAT PC-I 04/PCI,\n"
-                    "    ELCUS CAN-200-PCI:");
-            print_card(stdout, &plx_pci_driver);
+        case 'c':
+            print_license();
             return EXIT_SUCCESS;
 
         case '?':
         case 'h':
-            printf("%s - Linux SJA1000 Drivers Ported to QNX\n", argv[0]);
-            printf("version %s\n\n", program_version);
-            printf("%s [-l] [-d {vid}:{did}] [-v[v..]] [-?/h]\n", argv[0]);
-            printf("\n");
-            printf("Command-line arguments:\n");
-            printf("\n");
-            printf(" -l             - list supported drivers\n");
-            printf(" -d {vid}:{did} - manually target desired device, e.g. -d 13fe:c302\n");
-            printf(" -v             - verbose 1; syslog(i) info\n");
-            printf(" -vv            - verbose 2; syslog(i) info & debug\n");
-            printf(" -vvv           - verbose 3; syslog(i) all, stdout(ii) info\n");
-            printf(" -vvvv          - verbose 4; syslog(i) all, stdout(ii) info & debug\n");
-            printf(" -vvvvv         - verbose 5; syslog(i) all + trace, stdout(ii) all\n");
-            printf(" -vvvvvv        - verbose 6; syslog(i) all + trace, stdout(ii) all + trace\n");
-            printf(" -q             - quiet mode trumps all verbose modes\n");
-            printf(" -?/h           - help menu\n");
-            printf("\n");
-            printf("Notes:\n");
-            printf("\n");
-            printf("  (i) use command slog2info to check output to syslog\n");
-            printf(" (ii) stdout is the standard output stream you are reading now on screen\n");
-            printf("(iii) stderr is the standard error stream; by default writes to screen\n");
-            printf(" (iv) errors & warnings are logged to syslog & stderr unaffected by verbose\n");
-            printf("      modes but silenced by quiet mode\n");
-            printf("  (v) \"trace\" level logging is only useful when single messages are sent\n");
-            printf("      and received, intended only for testing during implementation of new\n");
-            printf("      driver support.\n");
-            printf("\n");
-            printf("Examples:\n");
-            printf("\n");
-            printf("Run with auto detection of hardware:\n");
-            printf("  dev-can-linux\n");
-            printf("\n");
-            printf("Check syslog for errors & warnings:\n");
-            printf("  slog2info\n");
-            printf("\n");
-            printf("If multiple supported cards are installed, the first supported card will be\n");
-            printf("automatically chosen. To override this behaviour and manually specify the\n");
-            printf("desired device, first find out what the vendor ID (vid) and device ID (did) of\n");
-            printf("the desired card is as follows:\n");
-            printf("  pci-tool -v\n");
-            printf("\n");
-            printf("An example output looks like this:\n");
-            printf("  B000:D05:F00 @ idx 7\n");
-            printf("          vid/did: 13fe/c302\n");
-            printf("                  <vendor id - unknown>, <device id - unknown>\n");
-            printf("          class/subclass/reg: 0c/09/00\n");
-            printf("                  CANbus Serial Bus Controller\n");
-            printf("\n");
-            printf("In this example we would chose the numbers vid/did: 13fe/c302\n");
-            printf("\n");
-            printf("Target specific hardware detection of hardware and enable max verbose mode for\n");
-            printf("debugging:\n");
-            printf("  dev-can-linux -d 13fe:c302 -vvvv\n");
+            print_help(argv[0]);
             return EXIT_SUCCESS;
 
         default:
@@ -157,6 +108,12 @@ int main (int argc, char* argv[]) {
             break;
         }
     }
+
+    if (!optq) {
+        print_notice();
+    }
+
+    log_info("driver start (version: %s)\n", program_version);
 
     ThreadCtl(_NTO_TCTL_IO, 0);
 
@@ -166,22 +123,7 @@ int main (int argc, char* argv[]) {
         return -1;
     }
 
-    if (ds.driver_auto) {
-        log_info("Auto detected device (%x:%x) successfully; (driver \"%s\")\n", ds.vid, ds.did, detected_driver->name);
-    }
-    else if (ds.driver_pick) {
-        log_info("Device (%x:%x) accepted successfully; (driver \"%s\")\n", ds.vid, ds.did, detected_driver->name);
-    }
-    else if (ds.driver_unsupported) {
-        log_info("Device (%x:%x) not supported by any driver\n", opt_vid, opt_did);
-    }
-    else {
-        log_info("Device (%x:%x) not a valid device\n", opt_vid, opt_did);
-    }
-
-    if (ds.driver_ignored) {
-        log_info("Note: one or more supported devices have been ignored because of manual device selection\n");
-    }
+    print_driver_selection_results(&ds);
 
     if (!detected_driver) {
         return -1;

@@ -1,21 +1,36 @@
 /*
- * pci.c
+ * \file    pci.c
  *
- *  Created on: Dec 2, 2022
- *      Author: Deniz Eren
+ * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #include <stdio.h>
 #include <sys/neutrino.h>
 #include <sys/mman.h>
-#include <linux/pci.h>
 
 #include "config.h"
+#include "pci.h"
 
 struct pci_driver *detected_driver = NULL;
 
 
-int check_driver_support (const struct pci_driver* driver, const struct driver_selection_t* ds) {
+static int check_driver_support (const struct pci_driver* driver,
+        const struct driver_selection_t* ds)
+{
     if (driver->id_table != NULL) {
         const struct pci_device_id *id_table = driver->id_table;
 
@@ -33,26 +48,6 @@ int check_driver_support (const struct pci_driver* driver, const struct driver_s
     return 0;
 }
 
-void print_card (FILE* file, const struct pci_driver* driver) {
-    fprintf(file, "  Driver: %s\n", driver->name);
-    fprintf(file, "  Supported devices (detailed):\n");
-
-    if (driver->id_table != NULL) {
-        const struct pci_device_id *id_table = driver->id_table;
-
-        while (id_table->vendor != 0) {
-            fprintf(file, "    { vendor: %x, device: %x, subvendor: %x, subdevice: %x, class: %x, class_mask: %x\n",
-                id_table->vendor,
-                id_table->device,
-                id_table->subvendor,
-                id_table->subdevice,
-                id_table->class,
-                id_table->class_mask);
-            ++id_table;
-        }
-    }
-}
-
 int process_driver_selection (struct driver_selection_t* ds) {
     if (!ds) {
         log_err("internal error; driver selection invalid!");
@@ -68,7 +63,8 @@ int process_driver_selection (struct driver_selection_t* ds) {
     uint_t idx = 0;
     pci_bdf_t bdf = 0;
 
-    while ((bdf = pci_device_find(idx, PCI_VID_ANY, PCI_DID_ANY, PCI_CCODE_ANY)) != PCI_BDF_NONE)
+    while ((bdf = pci_device_find(
+            idx, PCI_VID_ANY, PCI_DID_ANY, PCI_CCODE_ANY) ) != PCI_BDF_NONE)
     {
         pci_err_t r = pci_device_read_vid(bdf, &ds->vid);
 
@@ -101,26 +97,44 @@ int process_driver_selection (struct driver_selection_t* ds) {
             }
 
             if (detected_driver_temp) {
-                if (!optd || (optd && opt_vid == ds->vid && opt_did == ds->did)) {
-                    if (!detected_driver) detected_driver = detected_driver_temp;
+                if (!optd || (opt_vid == ds->vid && opt_did == ds->did)) {
+                    /* Only set if not set before thus enforcing the rule that
+                     * the first accepted device will be selected */
+                    if (!detected_driver) {
+                        detected_driver = detected_driver_temp;
+                    }
                 }
             }
 
-            if (!optd && detected_driver && detected_driver == detected_driver_temp) {
+            if (!optd && detected_driver &&
+                    detected_driver == detected_driver_temp)
+            {
                 ds->driver_auto = 1;
-                log_info("checking device: %x:%x <- auto (%s)\n", ds->vid, ds->did, detected_driver->name);
+
+                log_info("checking device: %x:%x <- auto (%s)\n",
+                        ds->vid, ds->did, detected_driver->name);
             }
-            else if (optd && detected_driver && detected_driver == detected_driver_temp) {
+            else if (optd && detected_driver &&
+                    detected_driver == detected_driver_temp)
+            {
                 ds->driver_pick = 1;
-                log_info("checking device: %x:%x <- pick (%s)\n", ds->vid, ds->did, detected_driver->name);
+
+                log_info("checking device: %x:%x <- pick (%s)\n",
+                        ds->vid, ds->did, detected_driver->name);
             }
             else if (detected_driver_temp) {
                 ds->driver_ignored = 1;
-                log_info("checking device: %x:%x <- ignored (%s)\n", ds->vid, ds->did, detected_driver_temp->name);
+
+                log_info("checking device: %x:%x <- ignored (%s)\n",
+                        ds->vid, ds->did, detected_driver_temp->name);
             }
-            else if (!detected_driver_temp && opt_vid == ds->vid && opt_did == ds->did) {
+            else if (!detected_driver_temp &&
+                    opt_vid == ds->vid && opt_did == ds->did)
+            {
                 ds->driver_unsupported = 1;
-                log_info("checking device: %x:%x <- unsupported\n", ds->vid, ds->did);
+
+                log_info("checking device: %x:%x <- unsupported\n",
+                        ds->vid, ds->did);
             }
             else {
                 log_info("checking device: %x:%x\n", ds->vid, ds->did);
@@ -141,11 +155,14 @@ int pci_enable_device(struct pci_dev *dev) {
     uint_t idx = 0;
     pci_bdf_t bdf = 0;
 
-    while ((bdf = pci_device_find(idx, dev->vendor, dev->device, PCI_CCODE_ANY)) != PCI_BDF_NONE)
+    while ((bdf = pci_device_find(
+            idx, dev->vendor, dev->device, PCI_CCODE_ANY) ) != PCI_BDF_NONE)
     {
         pci_err_t r;
 
-        pci_devhdl_t hdl = pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
+        pci_devhdl_t hdl =
+                pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
+
         dev->hdl = hdl;
 
         if (hdl == NULL) {
@@ -154,35 +171,52 @@ int pci_enable_device(struct pci_dev *dev) {
                 log_err("pci device attach failed; Invalid flags.\n");
                 break;
             case PCI_ERR_ENODEV:
-                log_err("pci device attach failed; The bdf argument doesn't refer to a valid device.\n");
+                log_err("pci device attach failed; "
+                        "The bdf argument doesn't refer to a valid device.\n");
                 break;
             case PCI_ERR_ATTACH_EXCLUSIVE:
-                log_err("pci device attach failed; The device identified by bdf is already exclusively owned.\n");
+                log_err("pci device attach failed; "
+                        "The device identified by bdf is already exclusively "
+                        "owned.\n");
                 break;
             case PCI_ERR_ATTACH_SHARED:
-                log_err("pci device attach failed; The request was for exclusive attachment, but the device identified by bdf has already been successfully attached to.\n");
+                log_err("pci device attach failed; "
+                        "The request was for exclusive attachment, but the "
+                        "device identified by bdf has already been "
+                        "successfully attached to.\n");
                 break;
             case PCI_ERR_ATTACH_OWNED:
-                log_err("pci device attach failed; The request was for ownership of the device, but the device is already owned.\n");
+                log_err("pci device attach failed; "
+                        "The request was for ownership of the device, but the "
+                        "device is already owned.\n");
                 break;
             case PCI_ERR_ENOMEM:
-                log_err("pci device attach failed; Memory for internal resources couldn't be obtained. This may be a temporary condition.\n");
+                log_err("pci device attach failed; Memory for internal "
+                        "resources couldn't be obtained. This may be a "
+                        "temporary condition.\n");
                 break;
             case PCI_ERR_LOCK_FAILURE:
-                log_err("pci device attach failed; There was an error related to the creation, acquisition, or use of a synchronization object.\n");
+                log_err("pci device attach failed; "
+                        "There was an error related to the creation, "
+                        "acquisition, or use of a synchronization object.\n");
                 break;
             case PCI_ERR_ATTACH_LIMIT:
-                log_err("pci device attach failed; There have been too many attachments to the device identified by bdf.\n");
+                log_err("pci device attach failed; There have been too many "
+                        "attachments to the device identified by bdf.\n");
                 break;
             default:
-                log_err("pci device attach failed; Unknown error: %d\n", (int)r);
+                log_err("pci device attach failed; Unknown error: %d\n",
+                        (int)r);
                 break;
             }
 
             return -1;
         }
 
-        /* read some basic info */
+        /*
+         * Read some basic info
+         */
+
         pci_ssvid_t ssvid;
         pci_ssid_t ssid;
         pci_cs_t cs; /* chassis and slot */
@@ -208,22 +242,38 @@ int pci_enable_device(struct pci_dev *dev) {
         cs = pci_device_chassis_slot(bdf);
 
         dev->devfn = PCI_DEVFN(PCI_SLOT(cs), PCI_FUNC(bdf));
-        log_info("read cs: %x, slot: %x, func: %x, devfn: %x\n", cs, PCI_SLOT(cs), PCI_FUNC(bdf), dev->devfn);
 
-        /* optionally determine capabilities of device */
-        uint_t capid_idx = 0;
-        pci_capid_t capid;
+        log_info("read cs: %x, slot: %x, func: %x, devfn: %x\n",
+                cs, PCI_SLOT(cs), PCI_FUNC(bdf), dev->devfn);
 
-        /* instead of looping could use pci_device_find_capid() to select which capabilities to use */
-        while ((r = pci_device_read_capid(bdf, &capid, capid_idx)) == PCI_ERR_OK)
-        {
-            log_info("read capability[%d]: %x\n", capid_idx, capid);
+        /*
+         * Currently no device capabilities are needed to be processed thus
+         * commenting out following section
+         */
 
-            /* get next capability ID */
-            ++capid_idx;
-        }
+//        /* optionally determine capabilities of device */
+//        uint_t capid_idx = 0;
+//        pci_capid_t capid;
+//
+//        /* instead of looping could use pci_device_find_capid() to select
+//         * which capabilities to use */
+//        while ((r = pci_device_read_capid(
+//                bdf, &capid, capid_idx) ) == PCI_ERR_OK)
+//        {
+//            log_info("read capability[%d]: %x\n", capid_idx, capid);
+//
+//            /* get next capability ID */
+//            ++capid_idx;
+//        }
 
-        pci_ba_t ba[7];    // the maximum number of entries that can be returned
+        /*
+         * Process bar info
+         */
+
+#define MAX_NUM_BA  32 /* Making this larger than what should be needed */
+
+        pci_ba_t ba[MAX_NUM_BA];    /* the maximum number of entries that can
+                                       be returned */
         int_t nba = NELEMENTS(ba);
 
         /* read the address space information */
@@ -241,6 +291,11 @@ int pci_enable_device(struct pci_dev *dev) {
                         i, ba[i].addr, ba[i].size);
             }
         }
+#undef MAX_NUM_BA
+
+        /*
+         * Process IRQ info
+         */
 
         pci_irq_t irq[10];
         int_t nirq = NELEMENTS(irq);
@@ -292,7 +347,9 @@ uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
 
     /* mmap() the address space(s) */
 
-    if (mmap_device_io(dev->ba[bar].size, dev->ba[bar].addr) == MAP_DEVICE_FAILED) {
+    if (mmap_device_io(
+            dev->ba[bar].size, dev->ba[bar].addr ) == MAP_DEVICE_FAILED)
+    {
         log_err("pci device address mapping failed; %s\n", strerror(errno));
     }
     else {

@@ -1,0 +1,198 @@
+#
+# \file     ifs.build
+# \brief    Buildfile describing the image filesystem (IFS) used for building
+#           the QNX OS test image.
+#
+# \details  This file is the post generation hand customise output of
+#           "mkqnximage" command run on a QNX licensed machine.
+#           Important! not intended to be a secure production solution; created
+#           only for controlled testing purposes.
+#
+# Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
+[search=/x86_64:/x86_64/boot/sys::/opt/qnx710/target/qnx7/x86_64:/opt/qnx710/target/qnx7/x86_64/boot/sys:/opt/qnx710/target/qnx7]
+
+[uid=0 gid=0 dperms=0555 perms=0555]
+
+[image=20m]
+[virtual=x86_64,bios +compress] boot = {
+    startup-x86
+    [+keeplinked uid=0 gid=0 perms=0700 ] PATH=/opt/bin:/proc/boot:/system/xbin LD_LIBRARY_PATH=/opt/lib:/proc/boot:/system/lib:/system/lib/dll CONFIG_PATH=/proc/boot:/system/etc procnto-smp-instr -v -mr -d 0777 -u 0777  
+}
+
+[+script] startup-script = {
+    # As various programs expect some binaries in fixed location, create procmgr symlinks to them.
+    # We can't specify these paths for the files themselves since if we build a non-union system,
+    # the actual paths would be things like /ifs/bin/sh
+    procmgr_symlink /proc/boot/ksh /bin/ksh
+    procmgr_symlink /proc/boot/ksh /bin/sh
+    procmgr_symlink /system/xbin/cp /bin/cp
+    procmgr_symlink /system/xbin/rm /bin/rm
+    procmgr_symlink /dev/shmem /tmp
+    procmgr_symlink /system/xbin/ssh /usr/bin/ssh
+    procmgr_symlink /proc/boot/ldqnx-64.so.2 /usr/lib/ldqnx-64.so.2
+
+    # **FIXME**
+    # Processes should usually use _CS_CONFIG_PATH to locate configuration files.  But for now
+    # create symlinks for some locations that can't move.
+    procmgr_symlink /system/etc/terminfo /usr/share/terminfo
+    procmgr_symlink /system/etc/profile /data/var/etc/profile
+    procmgr_symlink /system/etc/termcap /data/var/etc/termcap
+    procmgr_symlink /system/usr/share/misc/magic /usr/share/misc/magic
+    procmgr_symlink /data/var/etc /etc
+    procmgr_symlink /data/var/opt /opt
+    procmgr_symlink /data/var /var
+
+    TERM=qansi
+    PATH=/opt/bin:/proc/boot:/system/xbin
+    LD_LIBRARY_PATH=/opt/lib:/proc/boot:/system/lib:/system/lib/dll
+    PCI_BKWD_COMPAT_MODULE=/proc/boot/pci_bkwd_compat.so
+    PCI_SLOG_MODULE=pci_slog2.so
+    PCI_CAP_MODULE_DIR=/proc/boot
+    procmgr_symlink /system/xbin/login /bin/login
+    #50.builtin
+    setconf TIMEZONE UTC0
+    rtc hw
+    mount -uo noexec /dev/shmem
+# local/snippets/ifs_start.custom
+# Commands executed from ifs start-up script prior to invoking main start-up script or slm
+    #~30.builtin
+    /proc/boot/startup.sh
+    #~80.builtin
+
+    reopen /dev/con1
+
+    # Display startup message and system information
+    display_msg ""
+    display_msg "----------- dev-can-linux testing vm --------------"
+    display_msg ""
+    uname -a
+    display_msg ""
+
+    # Init terminal with login shell as specified in /proc/boot/ttys
+    tinit -f /proc/boot/ttys &
+}
+
+startup.sh=./scripts/startup.sh
+post_startup.sh=./scripts/post_startup.sh
+mount_fs.sh=./scripts/mount_fs.sh
+
+lib/libc.so
+lib/libgcc_s.so.1
+lib/libm.so
+lib/libcam.so
+lib/dll/io-blk.so
+lib/dll/cam-disk.so
+lib/dll/fs-qnx6.so
+lib/dll/fs-dos.so
+lib/libslog2.so
+usr/lib/libcrypto.so
+lib/libsocket.so
+usr/lib/libz.so
+lib/libslog2shim.so
+lib/libsecpol.so.1
+lib/libpci.so
+lib/libjson.so.1
+
+#############################################
+### Terminal Login
+#############################################
+[perms=444] ttys = {
+/dev/con1 "/bin/login" qansi on
+}
+
+sbin/tinit
+
+#############################################
+### Utilities
+#############################################
+bin/on
+bin/rm
+# waitfor and ability are same binary as on
+[type=link] waitfor=on
+[type=link] ability=on
+bin/echo
+bin/ln
+sbin/rtc
+bin/setfacl
+bin/ksh
+# Allow sh to be found in PATH
+[type=link] sh=ksh
+bin/mount
+usr/bin/getconf
+# getconf and setconf are same binary
+[type=link] setconf=getconf
+
+#############################################
+### Services
+#############################################
+sbin/devb-eide
+sbin/devb-ahci
+bin/slogger2
+
+
+#############################################
+### PCI
+#############################################
+
+[perms=0444] pci_server.cfg = {
+[buscfg]
+DO_BUS_CONFIG=no
+
+[envars]
+PCI_DEBUG_MODULE=pci_debug2.so
+PCI_HW_MODULE=pci_hw-Intel_x86.so
+}
+
+
+lib/dll/pci/pci_hw-Intel_x86.so
+lib/dll/pci/pci_slog2.so
+lib/dll/pci/pci_cap-0x05.so
+lib/dll/pci/pci_cap-0x10.so
+lib/dll/pci/pci_cap-0x11.so
+lib/dll/pci/pci_strings.so
+lib/dll/pci/pci_bkwd_compat.so
+lib/dll/pci/pci_debug2.so
+sbin/pci-server
+
+
+#############################################
+### Miscellaneous
+#############################################
+# Capture the build information
+
+[perms=0444] build/ifs.build=./parts/ifs.build
+[perms=0444] build/system.build=./parts/system.build
+[perms=0444] build/data.build=./parts/data.build
+
+#############################################
+### Customization
+#############################################
+
+usr/lib/libqcrypto.so
+lib/dll/qcrypto-openssl.so
+lib/libqh.so.1
+lib/libregex.so.1
+
+[uid=0 gid=0 perms=0444] qcrypto.conf={
+openssl tags=*
+}
+# local/snippets/ifs_files.custom
+# Placeholder for local list of files to add to ifs
+
+usr/lib/ldqnx-64.so.2

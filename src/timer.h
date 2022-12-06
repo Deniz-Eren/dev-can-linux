@@ -1,5 +1,5 @@
 /*
- * \file    led.c
+ * \file    timer.h
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,22 +18,29 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/can/led.h>
+#ifndef SRC_TIMER_H_
+#define SRC_TIMER_H_
+
+#include <time.h>
+#include <linux/types.h>
 
 
-#ifdef CONFIG_CAN_LEDS
+/*
+ * SJA1000 Bus-off recovery timer
+ */
+#define HZ                  CONFIG_HZ // Internal kernel timer frequency
+#define TIMER_INTERVAL_NS   (1000000000UL / (HZ)) // Timer interval nanoseconds
+#define jiffies             0
+#define TIMER_PULSE_CODE    _PULSE_CODE_MINAVAIL
 
-void can_led_event (struct net_device *netdev, enum can_led_event event) {
-}
+/*
+ * Functions needed by the Linux Kernel source "drivers/net/can/dev.c" to
+ * implement Bus-off recovery timer functionality.
+ */
+extern void setup_timer (timer_t* timer_id, void (*callback)(unsigned long),
+        unsigned long data);
 
-void devm_can_led_init (struct net_device *netdev) {
-}
+extern void del_timer_sync (timer_t* timer_id);
+extern void mod_timer (timer_t* timer_id, int ticks);
 
-int can_led_notifier_init (void) {
-    return 0;
-}
-
-void can_led_notifier_exit (void) {
-}
-
-#endif
+#endif /* SRC_TIMER_H_ */

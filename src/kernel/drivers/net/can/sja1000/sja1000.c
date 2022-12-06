@@ -75,16 +75,14 @@ static const struct can_bittiming_const sja1000_bittiming_const = {
 
 static void sja1000_write_cmdreg(struct sja1000_priv *priv, u8 val)
 {
-	//unsigned long flags;
-
 	/*
 	 * The command register needs some locking and time to settle
 	 * the write_reg() operation - especially on SMP systems.
 	 */
-	spin_lock_irqsave(&priv->cmdreg_lock, flags);
+    InterruptLock(&priv->cmdreg_lock);
 	priv->write_reg(priv, SJA1000_CMR, val);
 	priv->read_reg(priv, SJA1000_SR);
-	spin_unlock_irqrestore(&priv->cmdreg_lock, flags);
+	InterruptUnlock(&priv->cmdreg_lock);
 }
 
 static int sja1000_is_absent(struct sja1000_priv *priv)
@@ -627,7 +625,7 @@ struct net_device *alloc_sja1000dev(int sizeof_priv)
 				       CAN_CTRLMODE_BERR_REPORTING |
 				       CAN_CTRLMODE_PRESUME_ACK;
 
-	spin_lock_init(&priv->cmdreg_lock);
+	memset(&priv->cmdreg_lock, 0, sizeof(intrspin_t));
 
 	if (sizeof_priv)
 		priv->priv = (void *)malloc(sizeof_priv);
@@ -642,7 +640,7 @@ void free_sja1000dev(struct net_device *dev)
 }
 EXPORT_SYMBOL_GPL(free_sja1000dev);
 
-/*static */const struct net_device_ops sja1000_netdev_ops = {
+static const struct net_device_ops sja1000_netdev_ops = {
 	.ndo_open	= sja1000_open,
 	.ndo_stop	= sja1000_close,
 	.ndo_start_xmit	= sja1000_start_xmit,

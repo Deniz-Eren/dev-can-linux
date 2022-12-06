@@ -29,8 +29,9 @@
 #include <linux/can/skb.h>
 #include <linux/can/netlink.h>
 #include <linux/can/led.h>
-#include <net/rtnetlink.h>
 #include <arch/x86/include/asm/div64.h>
+
+#include "../../../../dev.h"
 
 #define MOD_DESC "CAN device driver interface"
 
@@ -553,6 +554,7 @@ void can_bus_off(struct net_device *dev)
 }
 EXPORT_SYMBOL_GPL(can_bus_off);
 
+#ifndef __QNX__
 static void can_setup(struct net_device *dev)
 {
 	dev->mtu = CAN_MTU;
@@ -561,6 +563,7 @@ static void can_setup(struct net_device *dev)
 	/* New-style flags. */
 	dev->flags = IFF_NOARP;
 }
+#endif
 
 struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
 {
@@ -629,15 +632,6 @@ struct net_device *alloc_candev(int sizeof_priv, unsigned int echo_skb_max)
     }
 
     priv->state = CAN_STATE_STOPPED;
-
-    /* Initialize user data to NULL pointers so we can detect if it gets set at
-     * user level
-     */
-    priv->user_bittiming = NULL;
-    priv->user_data_bittiming = NULL;
-    priv->user_ctrlmode = NULL;
-    priv->user_restart_ms = NULL;
-    priv->user_can_restart_now = false;
 
     return dev;
 }
@@ -740,63 +734,8 @@ void close_candev(struct net_device *dev)
 }
 EXPORT_SYMBOL_GPL(close_candev);
 
-#ifndef __QNX__
-/*
- * CAN netlink interface
- */
-static const struct nla_policy can_policy[IFLA_CAN_MAX + 1] = {
-	[IFLA_CAN_STATE]	= { .type = NLA_U32 },
-	[IFLA_CAN_CTRLMODE]	= { .len = sizeof(struct can_ctrlmode) },
-	[IFLA_CAN_RESTART_MS]	= { .type = NLA_U32 },
-	[IFLA_CAN_RESTART]	= { .type = NLA_U32 },
-	[IFLA_CAN_BITTIMING]	= { .len = sizeof(struct can_bittiming) },
-	[IFLA_CAN_BITTIMING_CONST]
-				= { .len = sizeof(struct can_bittiming_const) },
-	[IFLA_CAN_CLOCK]	= { .len = sizeof(struct can_clock) },
-	[IFLA_CAN_BERR_COUNTER]	= { .len = sizeof(struct can_berr_counter) },
-	[IFLA_CAN_DATA_BITTIMING]
-				= { .len = sizeof(struct can_bittiming) },
-	[IFLA_CAN_DATA_BITTIMING_CONST]
-				= { .len = sizeof(struct can_bittiming_const) },
-};
-#endif
-
-#ifndef __QNX__
-static int can_validate(struct nlattr *tb[], struct nlattr *data[])
-{
-	bool is_can_fd = false;
-
-	/* Make sure that valid CAN FD configurations always consist of
-	 * - nominal/arbitration bittiming
-	 * - data bittiming
-	 * - control mode with CAN_CTRLMODE_FD set
-	 */
-
-	if (!data)
-		return 0;
-
-	if (data[IFLA_CAN_CTRLMODE]) {
-		struct can_ctrlmode *cm = nla_data(data[IFLA_CAN_CTRLMODE]);
-
-		is_can_fd = cm->flags & cm->mask & CAN_CTRLMODE_FD;
-	}
-
-	if (is_can_fd) {
-		if (!data[IFLA_CAN_BITTIMING] || !data[IFLA_CAN_DATA_BITTIMING])
-			return -EOPNOTSUPP;
-	}
-
-	if (data[IFLA_CAN_DATA_BITTIMING]) {
-		if (!is_can_fd || !data[IFLA_CAN_BITTIMING])
-			return -EOPNOTSUPP;
-	}
-
-	return 0;
-}
-#endif
-
 static int can_changelink(struct net_device *dev,
-			  struct nlattr *tb[], struct nlattr *data[])
+        struct user_dev_setup *user)
 {
 	struct can_priv *priv = netdev_priv(dev);
 	int err;
@@ -806,13 +745,13 @@ static int can_changelink(struct net_device *dev,
 	ASSERT_RTNL();
 #endif
 
-    if (priv->user_bittiming) {
+    if (user->set_bittiming) {
 		struct can_bittiming bt;
 
 		/* Do not allow changing bittiming while running */
 		if (dev->flags & IFF_UP)
 			return -EBUSY;
-		memcpy(&bt, priv->user_bittiming, sizeof(bt));
+		memcpy(&bt, &user->bittiming, sizeof(bt));
 		err = can_get_bittiming(dev, &bt, priv->bittiming_const);
 		if (err)
 			return err;
@@ -826,7 +765,7 @@ static int can_changelink(struct net_device *dev,
 		}
 	}
 
-	if (priv->user_ctrlmode) {
+	if (user->set_ctrlmode) {
 		struct can_ctrlmode *cm;
 		u32 ctrlstatic;
 		u32 maskedflags;
@@ -834,7 +773,7 @@ static int can_changelink(struct net_device *dev,
 		/* Do not allow changing controller mode while running */
 		if (dev->flags & IFF_UP)
 			return -EBUSY;
-		cm = priv->user_ctrlmode;
+		cm = &user->ctrlmode;
 		ctrlstatic = priv->ctrlmode_static;
 		maskedflags = cm->flags & cm->mask;
 
@@ -861,14 +800,14 @@ static int can_changelink(struct net_device *dev,
 			dev->mtu = CAN_MTU;
 	}
 
-	if (priv->user_restart_ms) {
+	if (user->set_restart_ms) {
 		/* Do not allow changing restart delay while running */
 		if (dev->flags & IFF_UP)
 			return -EBUSY;
-		priv->restart_ms = *priv->user_restart_ms;
+		priv->restart_ms = user->restart_ms;
 	}
 
-	if (priv->user_can_restart_now) {
+	if (user->set_can_restart_now) {
 		/* Do not allow a restart while not running */
 		if (!(dev->flags & IFF_UP))
 			return -EINVAL;
@@ -877,14 +816,13 @@ static int can_changelink(struct net_device *dev,
 			return err;
 	}
 
-	if (priv->user_data_bittiming) {
+	if (user->set_data_bittiming) {
 		struct can_bittiming dbt;
 
 		/* Do not allow changing bittiming while running */
 		if (dev->flags & IFF_UP)
 			return -EBUSY;
-		memcpy(&dbt, priv->user_data_bittiming,
-		       sizeof(dbt));
+		memcpy(&dbt, &user->data_bittiming, sizeof(dbt));
 		err = can_get_bittiming(dev, &dbt, priv->data_bittiming_const);
 		if (err)
 			return err;
@@ -901,73 +839,6 @@ static int can_changelink(struct net_device *dev,
 	return 0;
 }
 
-#ifndef __QNX__
-static size_t can_get_size(const struct net_device *dev)
-{
-	struct can_priv *priv = netdev_priv(dev);
-	size_t size = 0;
-
-	if (priv->bittiming.bitrate)				/* IFLA_CAN_BITTIMING */
-		size += nla_total_size(sizeof(struct can_bittiming));
-	if (priv->bittiming_const)				/* IFLA_CAN_BITTIMING_CONST */
-		size += nla_total_size(sizeof(struct can_bittiming_const));
-	size += nla_total_size(sizeof(struct can_clock));	/* IFLA_CAN_CLOCK */
-	size += nla_total_size(sizeof(u32));			/* IFLA_CAN_STATE */
-	size += nla_total_size(sizeof(struct can_ctrlmode));	/* IFLA_CAN_CTRLMODE */
-	size += nla_total_size(sizeof(u32));			/* IFLA_CAN_RESTART_MS */
-	if (priv->do_get_berr_counter)				/* IFLA_CAN_BERR_COUNTER */
-		size += nla_total_size(sizeof(struct can_berr_counter));
-	if (priv->data_bittiming.bitrate)			/* IFLA_CAN_DATA_BITTIMING */
-		size += nla_total_size(sizeof(struct can_bittiming));
-	if (priv->data_bittiming_const)				/* IFLA_CAN_DATA_BITTIMING_CONST */
-		size += nla_total_size(sizeof(struct can_bittiming_const));
-
-	return size;
-}
-#endif
-
-#ifndef __QNX__
-static int can_fill_info(struct sk_buff *skb, const struct net_device *dev)
-{
-	struct can_priv *priv = netdev_priv(dev);
-	struct can_ctrlmode cm = {.flags = priv->ctrlmode};
-	struct can_berr_counter bec;
-	enum can_state state = priv->state;
-
-	if (priv->do_get_state)
-		priv->do_get_state(dev, &state);
-
-	if ((priv->bittiming.bitrate &&
-	     nla_put(skb, IFLA_CAN_BITTIMING,
-		     sizeof(priv->bittiming), &priv->bittiming)) ||
-
-	    (priv->bittiming_const &&
-	     nla_put(skb, IFLA_CAN_BITTIMING_CONST,
-		     sizeof(*priv->bittiming_const), priv->bittiming_const)) ||
-
-	    nla_put(skb, IFLA_CAN_CLOCK, sizeof(priv->clock), &priv->clock) ||
-	    nla_put_u32(skb, IFLA_CAN_STATE, state) ||
-	    nla_put(skb, IFLA_CAN_CTRLMODE, sizeof(cm), &cm) ||
-	    nla_put_u32(skb, IFLA_CAN_RESTART_MS, priv->restart_ms) ||
-
-	    (priv->do_get_berr_counter &&
-	     !priv->do_get_berr_counter(dev, &bec) &&
-	     nla_put(skb, IFLA_CAN_BERR_COUNTER, sizeof(bec), &bec)) ||
-
-	    (priv->data_bittiming.bitrate &&
-	     nla_put(skb, IFLA_CAN_DATA_BITTIMING,
-		     sizeof(priv->data_bittiming), &priv->data_bittiming)) ||
-
-	    (priv->data_bittiming_const &&
-	     nla_put(skb, IFLA_CAN_DATA_BITTIMING_CONST,
-		     sizeof(*priv->data_bittiming_const),
-		     priv->data_bittiming_const)))
-		return -EMSGSIZE;
-
-	return 0;
-}
-#endif
-
 static size_t can_get_xstats_size(const struct net_device *dev)
 {
 	return sizeof(struct can_device_stats);
@@ -979,40 +850,10 @@ static int can_fill_xstats(struct sk_buff *skb, const struct net_device *dev)
 	return 0;
 }
 
-#ifndef __QNX__
-static int can_newlink(struct net *src_net, struct net_device *dev,
-		       struct nlattr *tb[], struct nlattr *data[])
-{
-	return -EOPNOTSUPP;
-}
-#endif
-
-/*static */struct rtnl_link_ops can_link_ops __read_mostly = {
-#ifndef __QNX__
-	.kind		= "can",
-	.maxtype	= IFLA_CAN_MAX,
-	.policy		= can_policy,
-	.setup		= can_setup,
-	.validate	= can_validate,
-	.newlink	= can_newlink,
-	.changelink	= can_changelink,
-	.get_size	= can_get_size,
-	.fill_info	= can_fill_info,
-	.get_xstats_size = can_get_xstats_size,
-	.fill_xstats	= can_fill_xstats,
-#else
-    .kind       = "can",
-    .maxtype    = IFLA_CAN_MAX,
-    .policy     = NULL,
-    .setup      = can_setup,
-    .validate   = NULL,
-    .newlink    = NULL,
+const struct resmgr_ops can_link_ops = {
     .changelink = can_changelink,
-    .get_size   = NULL,
-    .fill_info  = NULL,
     .get_xstats_size = can_get_xstats_size,
     .fill_xstats    = can_fill_xstats,
-#endif
 };
 
 /*
@@ -1020,7 +861,7 @@ static int can_newlink(struct net *src_net, struct net_device *dev,
  */
 int register_candev(struct net_device *dev)
 {
-	dev->rtnl_link_ops = &can_link_ops;
+	dev->resmgr_ops = &can_link_ops;
 	return register_netdev(dev);
 }
 EXPORT_SYMBOL_GPL(register_candev);
@@ -1035,19 +876,6 @@ void unregister_candev(struct net_device *dev)
 EXPORT_SYMBOL_GPL(unregister_candev);
 
 #ifndef __QNX__
-/*
- * Test if a network device is a candev based device
- * and return the can_priv* if so.
- */
-struct can_priv *safe_candev_priv(struct net_device *dev)
-{
-	if ((dev->type != ARPHRD_CAN) || (dev->rtnl_link_ops != &can_link_ops))
-		return NULL;
-
-	return netdev_priv(dev);
-}
-EXPORT_SYMBOL_GPL(safe_candev_priv);
-
 static __init int can_dev_init(void)
 {
 	int err;

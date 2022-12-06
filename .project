@@ -23,5 +23,6 @@
 		<nature>org.eclipse.cdt.core.ccnature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
+		<nature>com.qnx.tools.ide.systembuilder.core.nature</nature>
 	</natures>
 </projectDescription>

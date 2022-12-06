@@ -1,5 +1,5 @@
 /*
- * \file    led.c
+ * \file    pci.h
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,22 +18,34 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/can/led.h>
+#ifndef SRC_PCI_H_
+#define SRC_PCI_H_
+
+#include <linux/pci.h>
 
 
-#ifdef CONFIG_CAN_LEDS
+/* Structure used for driver selection processing */
+struct driver_selection_t {
+    pci_vid_t vid;
+    pci_did_t did;
 
-void can_led_event (struct net_device *netdev, enum can_led_event event) {
-}
+    int driver_auto;
+    int driver_pick;
+    int driver_ignored;
+    int driver_unsupported;
+};
 
-void devm_can_led_init (struct net_device *netdev) {
-}
+/* Supported CAN-bus PCI drivers */
+extern struct pci_driver adv_pci_driver;
+extern struct pci_driver kvaser_pci_driver;
+extern struct pci_driver ems_pci_driver;
+extern struct pci_driver peak_pci_driver;
+extern struct pci_driver plx_pci_driver;
 
-int can_led_notifier_init (void) {
-    return 0;
-}
+/* Detected PCI driver */
+extern struct pci_driver *detected_driver;
 
-void can_led_notifier_exit (void) {
-}
+extern int process_driver_selection (struct driver_selection_t* ds);
+extern void print_driver_selection_results (struct driver_selection_t* ds);
 
-#endif
+#endif /* SRC_PCI_H_ */

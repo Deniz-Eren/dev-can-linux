@@ -49,7 +49,7 @@ struct can_priv {
 	u32 ctrlmode_static;	/* static enabled options for driver/hardware */
 
 	int restart_ms;
-	timer_list restart_timer;
+	timer_t restart_timer;
 
 	int (*do_set_bittiming)(struct net_device *dev);
 	int (*do_set_data_bittiming)(struct net_device *dev);
@@ -62,24 +62,14 @@ struct can_priv {
 	unsigned int echo_skb_max;
 	struct sk_buff **echo_skb;
 
-//#ifdef CONFIG_CAN_LEDS
-//	struct led_trigger *tx_led_trig;
-//	char tx_led_trig_name[CAN_LED_NAME_SZ];
-//	struct led_trigger *rx_led_trig;
-//	char rx_led_trig_name[CAN_LED_NAME_SZ];
-//	struct led_trigger *rxtx_led_trig;
-//	char rxtx_led_trig_name[CAN_LED_NAME_SZ];
-//#endif
-
-    /* Instead of netlink interface we introduce this more specific and
-     * simplified user settings. Note that the user in this context is not
-     * necessarily the network layer. In the case of QNX dev-can-* drivers
-     * the user is specifically a resource manager driver. */
-    struct can_bittiming *user_bittiming;
-    struct can_bittiming *user_data_bittiming;
-    struct can_ctrlmode *user_ctrlmode;
-    int *user_restart_ms;
-    bool user_can_restart_now;
+#ifdef CONFIG_CAN_LEDS
+	struct led_trigger *tx_led_trig;
+	char tx_led_trig_name[CAN_LED_NAME_SZ];
+	struct led_trigger *rx_led_trig;
+	char rx_led_trig_name[CAN_LED_NAME_SZ];
+	struct led_trigger *rxtx_led_trig;
+	char rxtx_led_trig_name[CAN_LED_NAME_SZ];
+#endif
 };
 
 /*
