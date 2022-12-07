@@ -18,15 +18,21 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <unistd.h>
+
 #include "interrupt.h"
 
 /*
  * TODO: This implementation only works because current scenarios tested only
- * involved a single IRQ assigned to the PCI device; this needs to be made more general.
+ * involved a single IRQ assigned to the PCI device; this needs to be made more
+ * general.
  */
 
-struct sigevent event;
 int id = -1;
+
+#ifdef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
+struct sigevent event;
+#endif
 
 struct func_t {
     irq_handler_t handler;
@@ -37,10 +43,22 @@ struct func_t {
 struct func_t funcs[16];
 int funcs_size = 0;
 
-
+#ifndef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
+/*
+ * Interrupt Service Routine (ISR)
+ *
+ * The actual ISR actually does no work except returning a QNX signal event.
+ */
 const struct sigevent *irq_handler (void *area, int id) {
-    return &event;
+    int i;
+
+    for (i = 0; i < funcs_size; ++i) {
+        funcs[i].handler(funcs[i].irq, funcs[i].dev);
+    }
+
+    return NULL;
 }
+#endif
 
 int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
         const char *name, void *dev)
@@ -58,11 +76,35 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
     funcs[funcs_size++] = f;
 
     if (id == -1) {
+        unsigned flags =
+            /*
+             * Put the new event at the end of the list of existing events
+             * instead of the start.
+             */
+              _NTO_INTR_FLAGS_END
+            /*
+             * Associate the interrupt event with the process instead of the
+             * attaching thread. The interrupt event is removed when the process
+             * exits, instead of when the attaching thread exits.
+             */
+            | _NTO_INTR_FLAGS_PROCESS
+            /*
+             * Track calls to InterruptMask() and InterruptUnmask() to make
+             * detaching the interrupt handler safer.
+             */
+            | _NTO_INTR_FLAGS_TRK_MSK;
+
+#ifdef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
         SIGEV_SET_TYPE(&event, SIGEV_INTR);
 
-        if ((id = InterruptAttach(irq, &irq_handler, NULL, 0, 0)) == -1) {
+        if ((id = InterruptAttachEvent(irq, &event, flags)) == -1) {
+            log_err("internal error; interrupt attach event failure\n");
+        }
+#else
+        if ((id = InterruptAttach(irq, &irq_handler, NULL, 0, flags)) == -1) {
             log_err("internal error; interrupt attach failure\n");
         }
+#endif
     }
 
     return 0;
@@ -74,13 +116,21 @@ void free_irq (unsigned int irq, void *dev) {
     InterruptDetach(id);
 }
 
-void run_interrupt_wait() {
+void run_wait() {
     while (1) {
+#ifdef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
         int i;
-        InterruptWait( 0, NULL );
+        InterruptWait(0, NULL);
+
+        if (funcs_size) {
+            InterruptUnmask(funcs[0].irq, id);
+        }
 
         for (i = 0; i < funcs_size; ++i) {
             funcs[i].handler(funcs[i].irq, funcs[i].dev);
         }
+#else
+        sleep(60);
+#endif
     }
 }

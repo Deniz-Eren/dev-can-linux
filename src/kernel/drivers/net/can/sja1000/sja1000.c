@@ -77,14 +77,20 @@ static const struct can_bittiming_const sja1000_bittiming_const = {
 
 static void sja1000_write_cmdreg(struct sja1000_priv *priv, u8 val)
 {
-	/*
-	 * The command register needs some locking and time to settle
-	 * the write_reg() operation - especially on SMP systems.
-	 */
+#ifndef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
+    /*
+     * The command register needs some locking and time to settle
+     * the write_reg() operation - especially on SMP systems.
+     */
     InterruptLock(&priv->cmdreg_lock);
+#endif
+
 	priv->write_reg(priv, SJA1000_CMR, val);
 	priv->read_reg(priv, SJA1000_SR);
+
+#ifndef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
 	InterruptUnlock(&priv->cmdreg_lock);
+#endif
 }
 
 static int sja1000_is_absent(struct sja1000_priv *priv)
@@ -627,7 +633,9 @@ struct net_device *alloc_sja1000dev(int sizeof_priv)
 				       CAN_CTRLMODE_BERR_REPORTING |
 				       CAN_CTRLMODE_PRESUME_ACK;
 
+#ifndef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
 	memset(&priv->cmdreg_lock, 0, sizeof(intrspin_t));
+#endif
 
 	if (sizeof_priv)
 		priv->priv = (void *)malloc(sizeof_priv);

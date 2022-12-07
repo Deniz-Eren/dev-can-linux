@@ -148,8 +148,12 @@ int main (int argc, char* argv[]) {
     pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED);
     pthread_create(NULL, &attr, &test_tx, NULL);
 
-    run_interrupt_wait();
+    run_wait();
 
+    /*
+     * In practice the program runs forever or until the user terminates it;
+     * thus we can never reach here.
+     */
     adv_pci_driver.remove(&pdev);
 
     return EXIT_SUCCESS;

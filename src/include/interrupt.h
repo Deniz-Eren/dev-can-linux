@@ -24,6 +24,6 @@
 #include <linux/interrupt.h>
 
 
-extern void run_interrupt_wait();
+extern void run_wait();
 
 #endif /* SRC_INTERRUPT_H_ */
