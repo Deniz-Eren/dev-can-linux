@@ -155,6 +155,12 @@ int pci_enable_device(struct pci_dev *dev) {
     log_trace("pci_enable_device: %x:%x\n",
             dev->vendor, dev->device);
 
+    if (fixed_memory_init()) {
+        log_err("fixed_memory_init fail\n");
+
+        return -1;
+    }
+
     uint_t idx = 0;
     pci_bdf_t bdf = 0;
 

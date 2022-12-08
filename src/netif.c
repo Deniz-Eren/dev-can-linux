@@ -34,7 +34,7 @@ int netif_rx(struct sk_buff *skb)
     struct can_frame* msg = (struct can_frame*)skb->data;
 
     log_trace("netif_rx; can%d: %x#%2x%2x%2x%2x%2x%2x%2x%2x\n",
-            skb->dev_id,
+            skb->dev->dev_id,
             msg->can_id,
             msg->data[0],
             msg->data[1],
@@ -45,6 +45,7 @@ int netif_rx(struct sk_buff *skb)
             msg->data[6],
             msg->data[7]);
 
+    kfree_skb(skb);
     return 0;
 }
 

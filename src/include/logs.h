@@ -28,25 +28,38 @@
 
 
 /*
- * Logging macros
+ * Used to disable logging during ISR call
+ *
+ * Both syslog and fprintf are not safe for interrupt handlers. Also it should
+ * be safe to declare this volatile and not require any spinlocks, because
+ * according to QNX documentation only a single CPU will ever be used for ISR
+ * handling.
+ * Quote: "On a multicore system, each interrupt is directed to one (and only
+ *      one) CPU, although it doesn't matter which. How this happens is under
+ *      control of the programmable interrupt controller (PIC) chip(s) on the
+ *      board. When you initialize the PICs in your system's startup, you can
+ *      program them to deliver the interrupts to whichever CPU you want to; on
+ *      some PICs you can even get the interrupt to rotate between the CPUs each
+ *      time it goes off."
  */
+extern volatile unsigned log_enabled;
 
 #define log_err(fmt, arg...) { \
-        if (!optq) { \
+        if (log_enabled && !optq) { \
             syslog(LOG_ERR, fmt, ##arg); \
             fprintf(stderr, fmt, ##arg); \
         } \
     }
 
 #define log_warn(fmt, arg...) { \
-        if (!optq) { \
+        if (log_enabled && !optq) { \
             syslog(LOG_WARNING, fmt, ##arg); \
             fprintf(stderr, fmt, ##arg); \
         } \
     }
 
 #define log_info(fmt, arg...) { \
-        if (!optq) { \
+        if (log_enabled && !optq) { \
             if (optv >= 1) { \
                 syslog(LOG_INFO, fmt, ##arg); \
             } \
@@ -57,7 +70,7 @@
     }
 
 #define log_dbg(fmt, arg...) { \
-        if (!optq) { \
+        if (log_enabled && !optq) { \
             if (optv >= 2) { \
                 syslog(LOG_DEBUG, fmt, ##arg); \
             } \
@@ -68,7 +81,7 @@
     }
 
 #define log_trace(fmt, arg...) { \
-        if (!optq) { \
+        if (log_enabled && !optq) { \
             if (optv >= 5) { \
                 syslog(LOG_DEBUG, fmt, ##arg); \
             } \

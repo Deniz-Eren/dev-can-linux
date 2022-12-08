@@ -16,6 +16,7 @@
  * along with this program; if not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <assert.h>
 #include <errno.h>
 #include <string.h>
 #include <linux/types.h>
@@ -30,6 +31,16 @@
 #include <linux/can/netlink.h>
 #include <linux/can/led.h>
 #include <arch/x86/include/asm/div64.h>
+
+/*
+ * Check the size of sk_buff and can_frame are within the block-size limit of
+ * the fixed-block allocator
+ */
+static_assert( sizeof(struct sk_buff) <= FIXED_MAX_BLOCK_SIZE,
+        "sk_buff exceeds fixed block-size" );
+
+static_assert( sizeof(struct can_frame) <= FIXED_MAX_BLOCK_SIZE,
+        "can_frame exceeds fixed block-size" );
 
 #include <resmgr.h>
 
@@ -581,15 +592,15 @@ struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
 {
 	struct sk_buff *skb;
 
-	skb = (struct sk_buff*)malloc(sizeof(struct sk_buff));
+	skb = (struct sk_buff*)fixed_malloc(sizeof(struct sk_buff));
 	if (unlikely(!skb))
 		return NULL;
 
-    *cf = (struct can_frame*)malloc(sizeof(struct can_frame));
+    *cf = (struct can_frame*)fixed_malloc(sizeof(struct can_frame));
 	memset(*cf, 0, sizeof(struct can_frame));
 
     skb->data = (unsigned char*)(*cf);
-    skb->dev_id = dev->dev_id;
+    skb->dev = dev;
 
 	return skb;
 }

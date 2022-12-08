@@ -50,12 +50,14 @@ int funcs_size = 0;
  * The actual ISR actually does no work except returning a QNX signal event.
  */
 const struct sigevent *irq_handler (void *area, int id) {
-    int i;
+    log_enabled = false;
 
+    int i;
     for (i = 0; i < funcs_size; ++i) {
         funcs[i].handler(funcs[i].irq, funcs[i].dev);
     }
 
+    log_enabled = true;
     return NULL;
 }
 #endif
