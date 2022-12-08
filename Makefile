@@ -1,3 +1,25 @@
+# \file     Makefile
+#
+# \details  This file is the post generation hand customise output of
+#           QNX Momentics IDE run on a QNX licensed machine.
+#
+# Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
 ARTIFACT = dev-can-linux
 
 #Build architecture/variant string, possible values: x86, armv7le, etc...
@@ -24,8 +46,6 @@ INCLUDES += -Isrc -Isrc/include \
 	-Isrc/kernel/include/uapi \
 	-Isrc/kernel/arch/x86/include
 
-#LIBS += -L/path/to/my/lib/$(PLATFORM)/usr/lib -lmylib
-#LIBS += -L../mylib/$(OUTPUT_DIR) -lmylib
 LIBS += -lpci
 
 #Compiler flags for build profiles
@@ -37,16 +57,21 @@ CCFLAGS_profile += -g -O0 -finstrument-functions
 LIBS_profile += -lprofilingS
 
 #
+# Project specific configuration macros
+#
+
+CCFLAGS +=	-DPROGRAM_VERSION=\"`cat "VERSION"`\" \
+			-DCONFIG_QNX_INTERRUPT_ATTACH_EVENT
+
+#
 # Linux Kernel configuration macros
 #
 
-CCFLAGS += -DPROGRAM_VERSION=\"`cat "VERSION"`\" \
-	-DCONFIG_QNX_INTERRUPT_ATTACH_EVENT \
-	-DCONFIG_HZ=1000 \
-	-DCONFIG_CAN_CALC_BITTIMING \
-	-DCONFIG_X86_64 \
-	-DCONFIG_X86_32
-	#-DCONFIG_CAN_LEDS # Currently LEDS are not supported
+CCFLAGS +=	-DCONFIG_HZ=1000 \
+			-DCONFIG_CAN_CALC_BITTIMING \
+			-DCONFIG_X86_64 \
+			-DCONFIG_X86_32
+			#-DCONFIG_CAN_LEDS # Currently LEDS are not supported
 
 #Generic compiler flags (which include build type flags)
 CCFLAGS_all += -Wall -fmessage-length=0
