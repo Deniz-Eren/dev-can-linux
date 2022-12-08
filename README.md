@@ -70,3 +70,73 @@ Target specific hardware detection of hardware and enable max verbose mode for
 debugging:
 
     dev-can-linux -d 13fe:c302 -vvvv
+
+
+## Check Supported Hardware
+
+Run with '-l' option to check what hardware is supported:
+
+    dev-can-linux -l
+
+Current version output:
+
+    Card(s): Advantech PCI:
+      Driver: adv_pci
+      Supported devices (detailed):
+        { vendor: 13fe, device: c302, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+    Card(s): KVASER PCAN PCI CAN:
+      Driver: kvaser_pci
+      Supported devices (detailed):
+        { vendor: 10e8, device: 8406, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1a07, device: 8, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+    Card(s): EMS CPC-PCI/PCIe/104P CAN:
+      Driver: ems_pci
+      Supported devices (detailed):
+        { vendor: 110a, device: 2104, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9030, subvendor: 10b5, subdevice: 4000, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9030, subvendor: 10b5, subdevice: 4002, class: 0, class_mask: 0 }
+    Card(s): PEAK PCAN PCI/PCIe/PCIeC miniPCI CAN cards,
+        PEAK PCAN miniPCIe/cPCI PC/104+ PCI/104e CAN Cards:
+      Driver: peak_pci
+      Supported devices (detailed):
+        { vendor: 1c, device: 1, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1c, device: 3, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1c, device: 5, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1c, device: 8, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1c, device: 6, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1c, device: 7, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1c, device: 4, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1c, device: 9, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+    Card(s): Adlink PCI-7841/cPCI-7841,
+        Adlink PCI-7841/cPCI-7841 SE,
+        Marathon CAN-bus-PCI,
+        TEWS TECHNOLOGIES TPMC810,
+        esd CAN-PCI/CPCI/PCI104/200,
+        esd CAN-PCI/PMC/266,
+        esd CAN-PCIe/2000,
+        Connect Tech Inc. CANpro/104-Plus Opto (CRG001),
+        IXXAT PC-I 04/PCI,
+        ELCUS CAN-200-PCI:  Driver: sja1000_plx_pci
+      Supported devices (detailed):
+        { vendor: 144a, device: 7841, subvendor: ffffffff, subdevice: ffffffff, class: 28000, class_mask: ffffffff }
+        { vendor: 144a, device: 7841, subvendor: ffffffff, subdevice: ffffffff, class: 78000, class_mask: ffffffff }
+        { vendor: 10b5, device: 9050, subvendor: 12fe, subdevice: 4, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9030, subvendor: 12fe, subdevice: 10b, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9030, subvendor: 12fe, subdevice: 501, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9056, subvendor: 12fe, subdevice: 9, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9056, subvendor: 12fe, subdevice: e, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9056, subvendor: 12fe, subdevice: 200, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9050, subvendor: ffffffff, subdevice: 2540, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 2715, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 1498, device: 32a, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9030, subvendor: 12c4, subdevice: 900, class: 0, class_mask: 0 }
+        { vendor: 10b5, device: 9030, subvendor: e1c5, subdevice: 301, class: 0, class_mask: 0 }
+
+
+## Hardware Test Status
+
+Actual hardware tested currently are:
+
+- Advantech PCI (vendor: 13fe, device: c302)
+
+Please report back your findings with any hardware you are testing with - greatly appreciated.
