@@ -1,24 +1,38 @@
 /*
- * Copyright 2006 PathScale, Inc.  All Rights Reserved.
+ * \file    linux/io.h
+ * \brief   Read and write functions to access device I/O registers mapped using
+ *          QNX mmap_device_io() function.
  *
- * This file is free software; you can redistribute it and/or modify
- * it under the terms of version 2 of the GNU General Public License
- * as published by the Free Software Foundation.
+ * \details This file has the exact same name and path as the one supplied by
+ *          the Linux Kernel source-code, however the contents have been
+ *          completely replaced. This has been done to keep the rest of the
+ *          Linux Kernel source-code unchanged so that ongoing updates to the
+ *          Linux Kernel can be propagated to this project easily.
+ *          Macros have been defined to redirect calls to read*(), ioread*(),
+ *          write*() and iowrite*() to QNX equivalents in*() and out*()
+ *          functions.
+ *
+ * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
  *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software Foundation,
- * Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA.
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #ifndef _LINUX_IO_H
 #define _LINUX_IO_H
 
-#include <hw/inout.h>
+#include <hw/inout.h> /* QNX header */
 
 
 /* Define mapping to QNX IO */

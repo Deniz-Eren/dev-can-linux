@@ -23,20 +23,19 @@
 #include "main.h"
 
 
-static void print_program (void) {
-    printf("dev-can-linux version %s, Copyright (C) 2022 Deniz Eren\n",
-            PROGRAM_VERSION);
+void print_version (void) {
+    printf("\e[1mdev-can-linux v%s\e[m\n", PROGRAM_VERSION);
 
     return;
 }
 
 void print_notice (void) {
-    print_program();
+    print_version();
 
-    printf("dev-can-linux comes with ABSOLUTELY NO WARRANTY; for details use "
-            "option `-w'.\n");
+    printf("\e[1mdev-can-linux\e[m comes with ABSOLUTELY NO WARRANTY; for details use "
+            "option `\e[1m-w\e[m'.\n");
     printf("This is free software, and you are welcome to redistribute it\n");
-    printf("under certain conditions; option `-c' for details.\n");
+    printf("under certain conditions; option `\e[1m-c\e[m' for details.\n");
 }
 
 void print_driver_selection_results (struct driver_selection_t* ds) {
@@ -63,14 +62,14 @@ void print_driver_selection_results (struct driver_selection_t* ds) {
 }
 
 static void print_card (FILE* file, const struct pci_driver* driver) {
-    fprintf(file, "  Driver: %s\n", driver->name);
+    fprintf(file, "  Driver: \e[1m%s\e[m\n", driver->name);
     fprintf(file, "  Supported devices (detailed):\n");
 
     if (driver->id_table != NULL) {
         const struct pci_device_id *id_table = driver->id_table;
 
         while (id_table->vendor != 0) {
-            fprintf(file, "    { vendor: %x, device: %x, subvendor: %x, "
+            fprintf(file, "    { vendor: \e[1m%x\e[m, device: \e[1m%x\e[m, subvendor: %x, "
                                 "subdevice: %x, class: %x, class_mask: %x }\n",
                 id_table->vendor,
                 id_table->device,
@@ -83,98 +82,114 @@ static void print_card (FILE* file, const struct pci_driver* driver) {
     }
 }
 
-void print_support (void) {
+void print_support (bool detailed) {
     print_notice();
 
     printf("\n");
-    printf("Card(s): Advantech PCI:\n");
-    print_card(stdout, &adv_pci_driver);
 
-    printf("Card(s): KVASER PCAN PCI CAN:\n");
-    print_card(stdout, &kvaser_pci_driver);
+    if (detailed) {
+        printf("\e[1mAdvantech PCI cards:\e[m\n");
+        print_card(stdout, &adv_pci_driver);
 
-    printf("Card(s): EMS CPC-PCI/PCIe/104P CAN:\n");
-    print_card(stdout, &ems_pci_driver);
+        printf("\e[1mKVASER PCAN PCI cards:\e[m\n");
+        print_card(stdout, &kvaser_pci_driver);
 
-    printf("Card(s): PEAK PCAN PCI/PCIe/PCIeC miniPCI CAN cards,\n");
-    printf("    PEAK PCAN miniPCIe/cPCI PC/104+ PCI/104e CAN Cards:\n");
-    print_card(stdout, &peak_pci_driver);
+        printf("\e[1mEMS CPC-PCI/PCIe/104P CAN cards:\e[m\n");
+        print_card(stdout, &ems_pci_driver);
 
-    printf("Card(s): Adlink PCI-7841/cPCI-7841,\n"
-            "    Adlink PCI-7841/cPCI-7841 SE,\n"
-            "    Marathon CAN-bus-PCI,\n"
-            "    TEWS TECHNOLOGIES TPMC810,\n"
-            "    esd CAN-PCI/CPCI/PCI104/200,\n"
-            "    esd CAN-PCI/PMC/266,\n"
-            "    esd CAN-PCIe/2000,\n"
-            "    Connect Tech Inc. CANpro/104-Plus Opto (CRG001),\n"
-            "    IXXAT PC-I 04/PCI,\n"
-            "    ELCUS CAN-200-PCI:");
-    print_card(stdout, &plx_pci_driver);
+        printf("\e[1mPEAK PCAN PCI family cards:\e[m\n");
+        print_card(stdout, &peak_pci_driver);
+
+        printf("\e[1mPLX90xx PCI-bridge cards (with the SJA1000 chips):\e[m\n");
+        print_card(stdout, &plx_pci_driver);
+
+        return;
+    }
+
+    printf("Supports:\n");
+    printf("  - Advantech PCI cards\n");
+    printf("  - KVASER PCAN PCI cards\n");
+    printf("  - EMS CPC-PCI/PCIe/104P CAN cards\n");
+    printf("  - PEAK PCAN PCI family cards\n");
+    printf("  - PLX90xx PCI-bridge cards (with the SJA1000 chips)\n");
+    printf("\n");
+    printf("For more details use option `\e[1m-ll\e[m'\n");
 }
 
 void print_help (char* program_name) {
     print_notice();
 
     printf("\n");
-    printf("%s [-l] [-d {vid}:{did}] [-v[v..]] [-?/h]\n", program_name);
+    printf("\e[1mSYNOPSIS\e[m\n");
+    printf("    \e[1m%s\e[m [options]\n", program_name);
     printf("\n");
-    printf("Command-line arguments:\n");
+    printf("\e[1mDESCRIPTION\e[m\n");
+    printf("    \e[1mDEV-CAN-LINUX\e[m is a QNX CAN-bus driver project that aims at porting drivers\n");
+    printf("    from the open-source Linux Kernel project to QNX RTOS.\n");
     printf("\n");
-    printf(" -l             - list supported drivers\n");
-    printf(" -d {vid}:{did} - target desired device, e.g. -d 13fe:c302\n");
-    printf(" -v             - verbose 1; syslog(i) info\n");
-    printf(" -vv            - verbose 2; syslog(i) info & debug\n");
-    printf(" -vvv           - verbose 3; syslog(i) all, stdout(ii) info\n");
-    printf(" -vvvv          - verbose 4; syslog(i) all, stdout(ii) info & debug\n");
-    printf(" -vvvvv         - verbose 5; syslog(i) all + trace, stdout(ii) all\n");
-    printf(" -vvvvvv        - verbose 6; syslog(i) all + trace, stdout(ii) all + trace\n");
-    printf(" -q             - quiet mode trumps all verbose modes\n");
-    printf(" -w             - warranty message\n");
-    printf(" -c             - license details\n");
-    printf(" -?/h           - help menu\n");
+    printf("\e[1mOPTIONS\e[m\n");
+    printf("    \e[1m-V\e[m             - print application version and exit\n");
+    printf("    \e[1m-l\e[m             - list supported hardware and exit\n");
+    printf("    \e[1m-ll\e[m            - list supported hardware details and exit\n");
+    printf("    \e[1m-d {vid}:{did}\e[m - target desired device, e.g. -d 13fe:c302\n");
+    printf("    \e[1m-v\e[m             - verbose 1; syslog(i) info\n");
+    printf("    \e[1m-vv\e[m            - verbose 2; syslog(i) info & debug\n");
+    printf("    \e[1m-vvv\e[m           - verbose 3; syslog(i) all, stdout(ii) info\n");
+    printf("    \e[1m-vvvv\e[m          - verbose 4; syslog(i) all, stdout(ii) info & debug\n");
+    printf("    \e[1m-vvvvv\e[m         - verbose 5; syslog(i) all + trace, stdout(ii) all\n");
+    printf("    \e[1m-vvvvvv\e[m        - verbose 6; syslog(i) all + trace, stdout(ii) all + trace\n");
+    printf("    \e[1m-q\e[m             - quiet mode trumps all verbose modes\n");
+    printf("    \e[1m-w\e[m             - print warranty message and exit\n");
+    printf("    \e[1m-c\e[m             - print license details and exit\n");
+    printf("    \e[1m-?/h\e[m           - print help menu and exit\n");
     printf("\n");
-    printf("Notes:\n");
+    printf("\e[1mNOTES\e[m\n");
+    printf("      (i) use command slog2info to check output to syslog\n");
+    printf("     (ii) stdout is the standard output stream you are reading now on screen\n");
+    printf("    (iii) stderr is the standard error stream; by default writes to screen\n");
+    printf("     (iv) errors & warnings are logged to syslog & stderr unaffected by verbose\n");
+    printf("          modes but silenced by quiet mode\n");
+    printf("      (v) \"trace\" level logging is only useful when single messages are sent\n");
+    printf("          and received, intended only for testing during implementation of new\n");
+    printf("          driver support.\n");
     printf("\n");
-    printf("  (i) use command slog2info to check output to syslog\n");
-    printf(" (ii) stdout is the standard output stream you are reading now on screen\n");
-    printf("(iii) stderr is the standard error stream; by default writes to screen\n");
-    printf(" (iv) errors & warnings are logged to syslog & stderr unaffected by verbose\n");
-    printf("      modes but silenced by quiet mode\n");
-    printf("  (v) \"trace\" level logging is only useful when single messages are sent\n");
-    printf("      and received, intended only for testing during implementation of new\n");
-    printf("      driver support.\n");
+    printf("\e[1mEXAMPLES\e[m\n");
+    printf("    Run with auto detection of hardware:\n");
     printf("\n");
-    printf("Examples:\n");
+    printf("        \e[1mdev-can-linux\e[m\n");
     printf("\n");
-    printf("Run with auto detection of hardware:\n");
-    printf("  dev-can-linux\n");
+    printf("    Check syslog for errors & warnings:\n");
     printf("\n");
-    printf("Check syslog for errors & warnings:\n");
-    printf("  slog2info\n");
+    printf("        \e[1mslog2info\e[m\n");
     printf("\n");
-    printf("If multiple supported cards are installed, the first supported card will be\n");
-    printf("automatically chosen. To override this behaviour and manually specify the\n");
-    printf("desired device, first find out what the vendor ID (vid) and device ID (did) of\n");
-    printf("the desired card is as follows:\n");
-    printf("  pci-tool -v\n");
+    printf("    If multiple supported cards are installed, the first supported card will be\n");
+    printf("    automatically chosen. To override this behaviour and manually specify the\n");
+    printf("    desired device, first find out what the vendor ID (vid) and device ID (did) of\n");
+    printf("    the desired card is as follows:\n");
     printf("\n");
-    printf("An example output looks like this:\n");
-    printf("  B000:D05:F00 @ idx 7\n");
-    printf("          vid/did: 13fe/c302\n");
-    printf("                  <vendor id - unknown>, <device id - unknown>\n");
-    printf("          class/subclass/reg: 0c/09/00\n");
-    printf("                  CANbus Serial Bus Controller\n");
+    printf("        \e[1mpci-tool -v\e[m\n");
     printf("\n");
-    printf("In this example we would chose the numbers vid/did: 13fe/c302\n");
+    printf("    An example output looks like this:\n");
     printf("\n");
-    printf("Target specific hardware detection of hardware and enable max verbose mode for\n");
-    printf("debugging:\n");
-    printf("  dev-can-linux -d 13fe:c302 -vvvv\n");
+    printf("        B000:D05:F00 @ idx 7\n");
+    printf("            vid/did: \e[1m13fe/c302\e[m\n");
+    printf("                    <vendor id - unknown>, <device id - unknown>\n");
+    printf("            class/subclass/reg: 0c/09/00\n");
+    printf("                    CANbus Serial Bus Controller\n");
+    printf("\n");
+    printf("    In this example we would chose the numbers \e[1mvid=13fe\e[m, \e[1mdid=c302\e[m\n");
+    printf("\n");
+    printf("    Target specific hardware detection of hardware and enable max verbose mode for\n");
+    printf("    debugging:\n");
+    printf("\n");
+    printf("        \e[1mdev-can-linux -d 13fe:c302 -vvvv\e[m\n");
+    printf("\n");
+    printf("\e[1mBUGS\e[m\n");
+    printf("    If you find a bug, please report it.\n");
 }
 
 void print_warranty (void) {
-    print_program();
+    print_version();
 
     printf("\n");
     printf("This program is distributed in the hope that it will be useful,\n");
@@ -208,7 +223,7 @@ void print_warranty (void) {
 }
 
 void print_license (void) {
-    print_program();
+    print_version();
 
     printf("\n");
     printf("    GNU GENERAL PUBLIC LICENSE\n");

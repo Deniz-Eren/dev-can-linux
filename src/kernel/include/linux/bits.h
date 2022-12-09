@@ -1,5 +1,10 @@
 /*
- * \file    main.h
+ * \file    linux/bits.h
+ * \brief   This header only exists to include other headers.
+ *
+ * \details This file is originally from the Linux Kernel source-code and has
+ *          been modified by removing contents, such that only header inclusions
+ *          remains from the original file.
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,19 +23,9 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SRC_MAIN_H_
-#define SRC_MAIN_H_
+#ifndef __LINUX_BITS_H
+#define __LINUX_BITS_H
 
+#include <vdso/bits.h>
 
-/*
- * Program options
- */
-
-extern int optv;
-extern int optl;
-extern int optq;
-extern int optd;
-extern int opt_vid;
-extern int opt_did;
-
-#endif /* SRC_MAIN_H_ */
+#endif	/* __LINUX_BITS_H */

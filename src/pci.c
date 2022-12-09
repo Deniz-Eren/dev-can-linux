@@ -31,6 +31,10 @@
 struct pci_driver *detected_driver = NULL;
 
 
+/*
+ * TODO: use these error codes PCIBIOS_* from linux/pci.h for return values
+ */
+
 static int check_driver_support (const struct pci_driver* driver,
         const struct driver_selection_t* ds)
 {

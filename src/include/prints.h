@@ -21,8 +21,9 @@
 
 
 /* License info prints */
+extern void print_version (void);
 extern void print_notice (void);
-extern void print_support (void);
+extern void print_support (bool detailed);
 extern void print_help (char* program_name);
 extern void print_warranty (void);
 extern void print_license (void);

@@ -103,4 +103,7 @@ extern volatile unsigned log_enabled;
 #define netdev_info(dev, fmt, arg...) log_info(fmt, ##arg)
 #define netdev_dbg(dev, fmt, arg...) log_dbg(fmt, ##arg)
 
+// TODO: check what the *_once() variant is meant to do
+#define netdev_info_once(dev, fmt, arg...) netdev_dbg(dev, fmt, ##arg)
+
 #endif /* SRC_LOGS_H_ */

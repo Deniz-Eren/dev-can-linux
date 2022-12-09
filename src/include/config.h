@@ -26,7 +26,7 @@
 #include <stdbool.h>
 #include <errno.h>
 
-#include <sys/neutrino.h>
+#include <sys/neutrino.h> /* QNX header */
 
 #include "timer.h"
 
@@ -35,33 +35,35 @@
  * Linux Kernel platform and architecture macros
  */
 
-#define BITS_PER_LONG 64
+#define __KERNEL__
 
-#define __UAPI_DEF_IF_IFNAMSIZ /* defines the need for macro IFNAMSIZ */
+#define BITS_PER_LONG (64)
+
+/* Defines the need for macro IFNAMSIZ */
+#define __UAPI_DEF_IF_IFNAMSIZ (1)
 
 /* Defines the need for macros
  *  - IFF_UP        interface is up
  *  - IFF_NOARP     no address resolution protocol */
-#define __UAPI_DEF_IF_NET_DEVICE_FLAGS
+#define __UAPI_DEF_IF_NET_DEVICE_FLAGS (1)
 
 /* Defines the need for macro IFF_ECHO; this is a unique network device flags in
  * that no equivalent exists in QNX (e.g. /usr/include/net/if.h). */
-#define __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO
-
+#define __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO (1)
 
 /*
  * Linux Kernel compiler definition macros
  */
 
-#define __always_inline     inline
-
+#define __always_inline     inline // Impact: reduce binary size
+#define __must_check
+#define __attribute_const__
 
 /*
  * QNX Resource Manager macros
  */
 
 #define MAX_DEVICES 16
-
 
 /*
  * Mapping stdint.h types to Linux Kernel needed type names

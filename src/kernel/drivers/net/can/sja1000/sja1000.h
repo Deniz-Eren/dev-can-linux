@@ -1,4 +1,17 @@
 /*
+ * \file    drivers/net/can/sja1000/sja1000.h
+ * \brief   This file is originally from the Linux Kernel source-code and has
+ *          been modified to integrate to QNX RTOS.
+ *
+ * \details Changes have been made to replace all spin_lock_irqsave functions
+ *          with QNX InterruptLock functions. Removed the networking layer and
+ *          replaced the memory allocation, error handling and logging, together
+ *          with changes to some structure internals. For example net_device
+ *          structure has been greatly simplified by removing networking
+ *          specific functionality and retaining only CAN-bus critical features.
+ *          PCI memory address types 'void __iomem *' have been changed to QNX
+ *          equivalent type 'uintptr_t'.
+ *
  * sja1000.h -  Philips SJA1000 network device driver
  *
  * Copyright (c) 2003 Matthias Brukner, Trajet Gmbh, Rebenring 33,
@@ -6,6 +19,8 @@
  *
  * Copyright (c) 2002-2007 Volkswagen Group Electronic Research
  * All rights reserved.
+ *
+ * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -48,6 +63,7 @@
 #include <linux/irqreturn.h>
 #include <linux/can/dev.h>
 #include <linux/can/platform/sja1000.h>
+#include <linux/bitops.h>
 
 #define SJA1000_ECHO_SKB_MAX	1 /* the SJA1000 has one TX buffer object */
 
@@ -145,7 +161,8 @@
 /*
  * Flags for sja1000priv.flags
  */
-#define SJA1000_CUSTOM_IRQ_HANDLER 0x1
+#define SJA1000_CUSTOM_IRQ_HANDLER	BIT(0)
+#define SJA1000_QUIRK_NO_CDR_REG	BIT(1)
 
 /*
  * SJA1000 private data structure

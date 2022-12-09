@@ -60,18 +60,17 @@ LIBS_profile += -lprofilingS
 # Project specific configuration macros
 #
 
-CCFLAGS +=	-DPROGRAM_VERSION=\"`cat "VERSION"`\" \
-			-DCONFIG_QNX_INTERRUPT_ATTACH_EVENT
+CCFLAGS +=	-DPROGRAM_VERSION=\"`cat "VERSION"`\"
+CCFLAGS +=	-DCONFIG_QNX_INTERRUPT_ATTACH_EVENT
 
 #
 # Linux Kernel configuration macros
 #
 
-CCFLAGS +=	-DCONFIG_HZ=1000 \
-			-DCONFIG_CAN_CALC_BITTIMING \
-			-DCONFIG_X86_64 \
-			-DCONFIG_X86_32
-			#-DCONFIG_CAN_LEDS # Currently LEDS are not supported
+CCFLAGS +=	-DCONFIG_HZ=1000
+CCFLAGS +=	-DCONFIG_CAN_CALC_BITTIMING
+CCFLAGS +=	-DCONFIG_X86_64
+CCFLAGS +=	-DCONFIG_X86_32
 
 #Generic compiler flags (which include build type flags)
 CCFLAGS_all += -Wall -fmessage-length=0

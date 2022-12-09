@@ -36,7 +36,7 @@
  * This requirement will prevent regression.
  */
 #define FIXED_MAX_NUM_BLOCKS  256
-#define FIXED_MAX_BLOCK_SIZE  16
+#define FIXED_MAX_BLOCK_SIZE  32
 
 
 extern void* volatile FixedArray[FIXED_MAX_NUM_BLOCKS];

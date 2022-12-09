@@ -1,4 +1,14 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 /*
+ * \file    linux/netdevice.h
+ * \brief   This file is originally from the Linux Kernel source-code and has
+ *          been modified to integrate to QNX RTOS.
+ *
+ * \details Changes have been made to remove the networking layer and only keep
+ *          heavily simplified structures that directly get interfaced by
+ *          CAN-bus specific functions. Also turned many netif_*() functions to
+ *          stubs that are reimplemented using QNX functions.
+ *
  * INET		An implementation of the TCP/IP protocol suite for the LINUX
  *		operating system.  INET is implemented using the  BSD Socket
  *		interface as the means of communication with the user level.
@@ -15,29 +25,44 @@
  *		Bjorn Ekwall. <bj0rn@blox.se>
  *              Pekka Riikonen <priikone@poseidon.pspt.fi>
  *
- *		This program is free software; you can redistribute it and/or
- *		modify it under the terms of the GNU General Public License
- *		as published by the Free Software Foundation; either version
- *		2 of the License, or (at your option) any later version.
- *
  *		Moved to /usr/include/linux for NET3
+ *
+ * Please also check the "SPDX-License-Identifier" documentation from the Linux
+ * Kernel source code repository: github.com/torvalds/linux.git for further
+ * details.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #ifndef _LINUX_NETDEVICE_H
 #define _LINUX_NETDEVICE_H
 
 #include <linux/types.h>
-#include <linux/bug.h>
 #include <linux/delay.h>
 #include <linux/skbuff.h>
 #include <uapi/linux/if.h>
 #include <limits.h>
 
+/* Backlog congestion levels */
+#define NET_RX_SUCCESS		0	/* keep 'em coming, baby */
+#define NET_RX_DROP		1	/* packet dropped */
 
 enum netdev_tx {
 	__NETDEV_TX_MIN	 = INT_MIN,	/* make sure enum is signed */
 	NETDEV_TX_OK	 = 0x00,	/* driver took care of packet */
 	NETDEV_TX_BUSY	 = 0x10,	/* driver tx path was busy*/
-	NETDEV_TX_LOCKED = 0x20,	/* driver tx lock was already taken */
 };
 typedef enum netdev_tx netdev_tx_t;
 
@@ -221,5 +246,8 @@ void netif_carrier_off(struct net_device *dev);
  */
 //#define SET_NETDEV_DEV(net, pdev)   ((net)->dev.parent = (pdev))
 #define SET_NETDEV_DEV(net, pdev) // Undefine this since we don't use it
+
+int register_netdev(struct net_device *dev);
+void unregister_netdev(struct net_device *dev);
 
 #endif	/* _LINUX_NETDEVICE_H */

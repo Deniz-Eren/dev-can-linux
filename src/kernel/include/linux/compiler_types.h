@@ -1,11 +1,11 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * \file    linux/kernel.h
- * \brief   This header only exists to include other headers.
+ * \file    linux/compiler_types.h
+ * \brief   This header only exists to define macro __PASTE
  *
  * \details This file is originally from the Linux Kernel source-code and has
- *          been modified by removing contents, such that only header inclusions
- *          remains from the original file.
+ *          been modified by removing contents, such that only macro definition
+ *          __PASTE remains.
  *
  * Please also check the "SPDX-License-Identifier" documentation from the Linux
  * Kernel source code repository: github.com/torvalds/linux.git for further
@@ -26,12 +26,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _LINUX_KERNEL_H
-#define _LINUX_KERNEL_H
+#ifndef __LINUX_COMPILER_TYPES_H
+#define __LINUX_COMPILER_TYPES_H
 
-#include <stdarg.h>
-#include <linux/types.h>
-#include <linux/compiler.h>
-#include <linux/minmax.h>
+/* Indirect macros required for expanded argument pasting, eg. __LINE__. */
+#define ___PASTE(a,b) a##b
+#define __PASTE(a,b) ___PASTE(a,b)
 
-#endif
+#endif /* __LINUX_COMPILER_TYPES_H */

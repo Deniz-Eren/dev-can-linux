@@ -1,7 +1,12 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * \file    led.c
+ * \file    vdso/bits.h
+ * \brief   This file is originally from the Linux Kernel source-code and has
+ *          not been modified.
  *
- * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+ * Please also check the "SPDX-License-Identifier" documentation from the Linux
+ * Kernel source code repository: github.com/torvalds/linux.git for further
+ * details.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,22 +23,11 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <linux/can/led.h>
+#ifndef __VDSO_BITS_H
+#define __VDSO_BITS_H
 
+#include <vdso/const.h>
 
-#ifdef CONFIG_CAN_LEDS
+#define BIT(nr)			(UL(1) << (nr))
 
-void can_led_event (struct net_device *netdev, enum can_led_event event) {
-}
-
-void devm_can_led_init (struct net_device *netdev) {
-}
-
-int can_led_notifier_init (void) {
-    return 0;
-}
-
-void can_led_notifier_exit (void) {
-}
-
-#endif
+#endif	/* __VDSO_BITS_H */

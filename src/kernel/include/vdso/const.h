@@ -1,7 +1,12 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- * \file    main.h
+ * \file    vdso/const.h
+ * \brief   This file is originally from the Linux Kernel source-code and has
+ *          not been modified.
  *
- * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+ * Please also check the "SPDX-License-Identifier" documentation from the Linux
+ * Kernel source code repository: github.com/torvalds/linux.git for further
+ * details.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,19 +23,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SRC_MAIN_H_
-#define SRC_MAIN_H_
+#ifndef __VDSO_CONST_H
+#define __VDSO_CONST_H
 
+#include <uapi/linux/const.h>
 
-/*
- * Program options
- */
+#define UL(x)		(_UL(x))
+#define ULL(x)		(_ULL(x))
 
-extern int optv;
-extern int optl;
-extern int optq;
-extern int optd;
-extern int opt_vid;
-extern int opt_did;
-
-#endif /* SRC_MAIN_H_ */
+#endif /* __VDSO_CONST_H */

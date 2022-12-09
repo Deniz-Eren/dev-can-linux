@@ -1,3 +1,35 @@
+/* SPDX-License-Identifier: GPL-2.0+ WITH Linux-syscall-note */
+/*
+ * \file    uapi/linux/if.h
+ * \brief   This file is originally from the Linux Kernel source-code and has
+ *          been modified by removing contents until only the defitions for
+ *          IFNAMSIZ macro and enum net_device_flags remains.
+ *
+ *		Global definitions for the INET interface module.
+ *
+ * Authors:	Original taken from Berkeley UNIX 4.3, (c) UCB 1982-1988
+ *		Ross Biro
+ *		Fred N. van Kempen, <waltje@uWalt.NL.Mugnet.ORG>
+ *
+ * Please also check the "SPDX-License-Identifier" documentation from the Linux
+ * Kernel source code repository: github.com/torvalds/linux.git for further
+ * details.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
 /*
  * INET		An implementation of the TCP/IP protocol suite for the LINUX
  *		operating system.  INET is implemented using the  BSD Socket
@@ -21,12 +53,13 @@
 
 #include <linux/types.h>		/* for "__kernel_caddr_t" et al	*/
 
-#ifdef __UAPI_DEF_IF_IFNAMSIZ
+#if __UAPI_DEF_IF_IFNAMSIZ
 #define	IFNAMSIZ	16
 #endif /* __UAPI_DEF_IF_IFNAMSIZ */
-#define	IFALIASZ	256
-//#include <linux/hdlc/ioctl.h>
 
+/* For glibc compatibility. An empty enum does not compile. */
+#if __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO != 0 || \
+    __UAPI_DEF_IF_NET_DEVICE_FLAGS != 0
 /**
  * enum net_device_flags - &struct net_device flags
  *
@@ -37,7 +70,7 @@
  * are shared for all types of net_devices. The sysfs entries are available
  * via /sys/class/net/<dev>/flags. Flags which can be toggled through sysfs
  * are annotated below, note that only a few flags can be toggled and some
- * other flags are always always preserved from the original net_device flags
+ * other flags are always preserved from the original net_device flags
  * even if you try to set them via sysfs. Flags which are always preserved
  * are kept under the flag grouping @IFF_VOLATILE. Flags which are volatile
  * are annotated below as such.
@@ -69,7 +102,7 @@
  */
 enum net_device_flags {
 /* for compatibility with glibc net/if.h */
-#ifdef __UAPI_DEF_IF_NET_DEVICE_FLAGS
+#if __UAPI_DEF_IF_NET_DEVICE_FLAGS
 	IFF_UP				= 1<<0,  /* sysfs */
 	IFF_BROADCAST			= 1<<1,  /* volatile */
 	IFF_DEBUG			= 1<<2,  /* sysfs */
@@ -87,11 +120,12 @@ enum net_device_flags {
 	IFF_AUTOMEDIA			= 1<<14, /* sysfs */
 	IFF_DYNAMIC			= 1<<15, /* sysfs */
 #endif /* __UAPI_DEF_IF_NET_DEVICE_FLAGS */
-#ifdef __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO
+#if __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO
 	IFF_LOWER_UP			= 1<<16, /* volatile */
 	IFF_DORMANT			= 1<<17, /* volatile */
 	IFF_ECHO			= 1<<18, /* volatile */
 #endif /* __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO */
 };
+#endif /* __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO != 0 || __UAPI_DEF_IF_NET_DEVICE_FLAGS != 0 */
 
 #endif /* _LINUX_IF_H */

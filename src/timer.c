@@ -25,12 +25,10 @@
 
 
 static struct timer_record_t {
-    struct net_device *dev;
-
     timer_t* id;
 
-    void (*callback)(unsigned long);
-    unsigned long data;
+    void (*callback)(void*);
+    void *data;
     int num_callbacks;
 
     struct sigevent event;
@@ -46,14 +44,10 @@ static int n_timers = 0;
 static void* timer_loop (void* arg);
 
 
-void setup_timer (timer_t* timer_id, void (*callback)(unsigned long),
-        unsigned long data)
-{
+void setup_timer (timer_t* timer_id, void (*callback)(void*), void *data) {
     int i = n_timers;
 
-    timer[i].dev = (struct net_device *)data;
     timer[i].id = timer_id;
-
     timer[i].callback = callback;
     timer[i].data = data;
 
@@ -109,12 +103,12 @@ static void* timer_loop (void*  arg) {
     return EXIT_SUCCESS;
 }
 
-void del_timer_sync (timer_t* timer_id)
+void cancel_delayed_work_sync (timer_t* timer_id)
 {
     timer_delete(*timer_id);
 }
 
-void mod_timer (timer_t* timer_id, int ticks)
+void schedule_delayed_work (timer_t* timer_id, int ticks)
 {
     int i = -1, j;
 

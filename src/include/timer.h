@@ -37,10 +37,10 @@
  * Functions needed by the Linux Kernel source "drivers/net/can/dev.c" to
  * implement Bus-off recovery timer functionality.
  */
-extern void setup_timer (timer_t* timer_id, void (*callback)(unsigned long),
-        unsigned long data);
+extern void setup_timer (timer_t* timer_id, void (*callback)(void*),
+        void *priv);
 
-extern void del_timer_sync (timer_t* timer_id);
-extern void mod_timer (timer_t* timer_id, int ticks);
+extern void cancel_delayed_work_sync (timer_t* timer_id);
+extern void schedule_delayed_work (timer_t* timer_id, int ticks);
 
 #endif /* SRC_TIMER_H_ */

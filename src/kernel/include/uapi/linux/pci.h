@@ -1,5 +1,11 @@
+/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */
 /*
- *	pci.h
+ * \file    uapi/linux/pci.h
+ * \brief   This file is originally from the Linux Kernel source-code and has
+ *          been modified very slightly to integrate to QNX RTOS.
+ *
+ * \details Original Linux version except setting PCI_SLOT as _PCI_SLOT and
+ *          PCI_FUNC as _PCI_FUNC to prevent clash with QNX macros.
  *
  *	PCI defines and function prototypes
  *	Copyright 1994, Drew Eckhardt
@@ -12,6 +18,24 @@
  *	PCI Local Bus Specification
  *	PCI to PCI Bridge Specification
  *	PCI System Design Guide
+ *
+ * Please also check the "SPDX-License-Identifier" documentation from the Linux
+ * Kernel source code repository: github.com/torvalds/linux.git for further
+ * details.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #ifndef _UAPILINUX_PCI_H
@@ -27,10 +51,18 @@
  *	7:3 = slot
  *	2:0 = function
  */
-/* Setting PCI_SLOT as _PCI_SLOT and PCI_FUNC as _PCI_FUNC to prevent clash with QNX macros */
 #define PCI_DEVFN(slot, func)	((((slot) & 0x1f) << 3) | ((func) & 0x07))
-#define _PCI_SLOT(devfn)		(((devfn) >> 3) & 0x1f)
-#define _PCI_FUNC(devfn)		((devfn) & 0x07)
+#ifdef __QNX__
+/*
+ * Setting PCI_SLOT as _PCI_SLOT and PCI_FUNC as _PCI_FUNC to prevent clash with
+ * QNX macros
+ */
+#define _PCI_SLOT(devfn)    (((devfn) >> 3) & 0x1f)
+#define _PCI_FUNC(devfn)	((devfn) & 0x07)
+#else
+#define PCI_SLOT(devfn)		(((devfn) >> 3) & 0x1f)
+#define PCI_FUNC(devfn)		((devfn) & 0x07)
+#endif
 
 /* Ioctls for /proc/bus/pci/X/Y nodes. */
 #define PCIIOC_BASE		('P' << 24 | 'C' << 16 | 'I' << 8)

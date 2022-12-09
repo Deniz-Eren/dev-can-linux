@@ -40,12 +40,16 @@ struct user_dev_setup {
     struct can_bittiming data_bittiming;
     struct can_ctrlmode ctrlmode;
     int restart_ms;
+    struct can_tdc tdc;
+    u16 termination;
 
     bool set_bittiming;
     bool set_data_bittiming;
     bool set_ctrlmode;
     bool set_restart_ms;
-    bool set_can_restart_now;
+    bool set_restart;
+    bool set_tdc;
+    bool set_termination;
 };
 
 /*

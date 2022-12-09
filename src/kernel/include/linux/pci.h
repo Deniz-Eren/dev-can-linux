@@ -1,21 +1,55 @@
+/* SPDX-License-Identifier: GPL-2.0 */
 /*
- *	pci.h
+ * \file    linux/pci.h
+ * \brief   This file is originally from the Linux Kernel source-code and has
+ *          been modified to integrate to QNX RTOS.
+ *
+ * \details Changes have been made to remove PCI handling content and only keep
+ *          heavily simplified pci_dev and pci_driver structures. Also the
+ *          following functions have been turned into stubs that are
+ *          reimplemented using QNX functions:
+ *              pci_read_config_word()
+ *              pci_write_config_word()
+ *              pci_enable_device()
+ *              pci_disable_device()
+ *              pci_request_regions()
+ *              pci_release_regions()
+ *              pci_iomap()
+ *              pci_iounmap()
  *
  *	PCI defines and function prototypes
  *	Copyright 1994, Drew Eckhardt
  *	Copyright 1997--1999 Martin Mares <mj@ucw.cz>
  *
+ *	PCI Express ASPM defines and function prototypes
+ *	Copyright (c) 2007 Intel Corp.
+ *		Zhang Yanmin (yanmin.zhang@intel.com)
+ *		Shaohua Li (shaohua.li@intel.com)
+ *
  *	For more information, please consult the following manuals (look at
  *	http://www.pcisig.com/ for how to get them):
  *
- *	PCI BIOS Specification
- *	PCI Local Bus Specification
- *	PCI to PCI Bridge Specification
- *	PCI System Design Guide
+ * Please also check the "SPDX-License-Identifier" documentation from the Linux
+ * Kernel source code repository: github.com/torvalds/linux.git for further
+ * details.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
+
 #ifndef LINUX_PCI_H
 #define LINUX_PCI_H
-
 
 #include <errno.h>
 #include <pci/pci.h>
@@ -36,8 +70,8 @@ extern void pci_iounmap(struct pci_dev *dev, uintptr_t p);
  * The pci_dev structure is used to describe PCI devices.
  */
 struct pci_dev {
-	pci_devhdl_t hdl;
-	pci_ba_t *ba;
+	pci_devhdl_t hdl; /* QNX type */
+	pci_ba_t *ba; /* QNX type */
 	int_t nba;
 
 	unsigned int	devfn;		/* encoded device & function index */
@@ -55,6 +89,39 @@ struct pci_dev {
 	 */
 	unsigned int	irq;
 };
+
+/* Error values that may be returned by PCI functions */
+#define PCIBIOS_SUCCESSFUL		0x00
+#define PCIBIOS_FUNC_NOT_SUPPORTED	0x81
+#define PCIBIOS_BAD_VENDOR_ID		0x83
+#define PCIBIOS_DEVICE_NOT_FOUND	0x86
+#define PCIBIOS_BAD_REGISTER_NUMBER	0x87
+#define PCIBIOS_SET_FAILED		0x88
+#define PCIBIOS_BUFFER_TOO_SMALL	0x89
+
+/* Translate above to generic errno for passing back through non-PCI code */
+static inline int pcibios_err_to_errno(int err)
+{
+	if (err <= PCIBIOS_SUCCESSFUL)
+		return err; /* Assume already errno */
+
+	switch (err) {
+	case PCIBIOS_FUNC_NOT_SUPPORTED:
+		return -ENOENT;
+	case PCIBIOS_BAD_VENDOR_ID:
+		return -ENOTTY;
+	case PCIBIOS_DEVICE_NOT_FOUND:
+		return -ENODEV;
+	case PCIBIOS_BAD_REGISTER_NUMBER:
+		return -EFAULT;
+	case PCIBIOS_SET_FAILED:
+		return -EIO;
+	case PCIBIOS_BUFFER_TOO_SMALL:
+		return -ENOSPC;
+	}
+
+	return -ERANGE;
+}
 
 struct pci_driver {
 	const char *name;

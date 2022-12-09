@@ -1,13 +1,28 @@
 /*
- * device.h - generic, centralized driver model
+ * \file    linux/device.h
+ * \brief   Defines simplified 'struct device' and some of its functions.
  *
- * Copyright (c) 2001-2003 Patrick Mochel <mochel@osdl.org>
- * Copyright (c) 2004-2009 Greg Kroah-Hartman <gregkh@suse.de>
- * Copyright (c) 2008-2009 Novell Inc.
+ * \details This file has the exact same name and path as the one supplied by
+ *          the Linux Kernel source-code, however the contents have been
+ *          completely replaced. This has been done to keep the rest of the
+ *          Linux Kernel source-code unchanged so that ongoing updates to the
+ *          Linux Kernel can be propagated to this project easily.
  *
- * This file is released under the GPLv2
+ * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
- * See Documentation/driver-model/ for more information.
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
 #ifndef _DEVICE_H_
@@ -19,8 +34,8 @@
  * @driver_data: Private pointer for driver specific info.
  */
 struct device {
-	void *driver_data;	/* Driver data, set and get with
-					   	   dev_set/get_drvdata */
+	void		*driver_data;	/* Driver data, set and get with
+					   dev_set_drvdata/dev_get_drvdata */
 };
 
 static inline void *dev_get_drvdata(const struct device *dev)

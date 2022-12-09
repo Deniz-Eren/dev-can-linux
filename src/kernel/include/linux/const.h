@@ -1,7 +1,11 @@
 /*
- * \file    main.h
+ * \file    linux/const.h
+ * \brief   This file is originally from the Linux Kernel source-code and has
+ *          not been modified.
  *
- * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+ * Please also check the "SPDX-License-Identifier" documentation from the Linux
+ * Kernel source code repository: github.com/torvalds/linux.git for further
+ * details.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,19 +22,17 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SRC_MAIN_H_
-#define SRC_MAIN_H_
+#ifndef _LINUX_CONST_H
+#define _LINUX_CONST_H
 
+#include <vdso/const.h>
 
 /*
- * Program options
+ * This returns a constant expression while determining if an argument is
+ * a constant expression, most importantly without evaluating the argument.
+ * Glory to Martin Uecker <Martin.Uecker@med.uni-goettingen.de>
  */
+#define __is_constexpr(x) \
+	(sizeof(int) == sizeof(*(8 ? ((void *)((long)(x) * 0l)) : (int *)8)))
 
-extern int optv;
-extern int optl;
-extern int optq;
-extern int optd;
-extern int opt_vid;
-extern int opt_did;
-
-#endif /* SRC_MAIN_H_ */
+#endif /* _LINUX_CONST_H */

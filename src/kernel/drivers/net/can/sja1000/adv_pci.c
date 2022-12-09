@@ -36,7 +36,6 @@
 
 MODULE_AUTHOR("Deniz Eren (deniz.eren@icloud.com)");
 MODULE_DESCRIPTION("Socket-CAN driver for Advantech PCI cards");
-MODULE_SUPPORTED_DEVICE("Advantech PCI cards");
 MODULE_LICENSE("GPL v2");
 
 #define MAX_NO_OF_CHANNELS        4 /* max no of channels on a single card */

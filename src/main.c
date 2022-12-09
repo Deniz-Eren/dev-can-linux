@@ -33,6 +33,7 @@
 #include <prints.h>
 
 int optv = 0;
+int optl = 0;
 int optq = 0;
 int optd = 0, opt_vid = -1, opt_did = -1;
 
@@ -47,6 +48,7 @@ void* test_tx (void*  arg) {
         /* create zero'ed CAN frame buffer */
         skb = alloc_can_skb(device[1], &cf);
 
+        skb->len = CAN_MTU;
         cf->can_id = 0x123;
         cf->can_dlc = 8;
         cf->data[0] = 0x11;
@@ -71,7 +73,7 @@ void* test_tx (void*  arg) {
 int main (int argc, char* argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, argv, "d:vqlwc?h")) != -1) {
+    while ((opt = getopt(argc, argv, "d:vqlVwc?h")) != -1) {
         switch (opt) {
         case 'd':
             optd = 1;
@@ -88,7 +90,11 @@ int main (int argc, char* argv[]) {
             break;
 
         case 'l':
-            print_support();
+            optl++;
+            break;
+
+        case 'V':
+            print_version();
             return EXIT_SUCCESS;
 
         case 'w':
@@ -108,6 +114,12 @@ int main (int argc, char* argv[]) {
             printf("invalid option %c\n", opt);
             break;
         }
+    }
+
+    if (optl) {
+        print_support(optl > 1);
+
+        return EXIT_SUCCESS;
     }
 
     if (!optq) {
@@ -134,7 +146,7 @@ int main (int argc, char* argv[]) {
             .ba = NULL,
             .vendor = ds.vid,
             .device = ds.did,
-            .dev = { .driver_data = NULL },
+            //.dev = { .driver_data = NULL },
             .irq = 10
     };
 

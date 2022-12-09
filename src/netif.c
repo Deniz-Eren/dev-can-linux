@@ -22,6 +22,7 @@
 
 #include <linux/netdevice.h>
 #include <linux/can.h>
+#include <linux/can/error.h>
 
 
 void netif_wake_queue(struct net_device *dev)
@@ -29,13 +30,71 @@ void netif_wake_queue(struct net_device *dev)
     log_trace("netif_wake_queue\n");
 }
 
+/*
+ * Test from Linux:
+ *      cansend vcan0 1F334455#1122334455667788
+ *      cansend vcan0 123#1122334455667788
+ */
 int netif_rx(struct sk_buff *skb)
 {
     struct can_frame* msg = (struct can_frame*)skb->data;
 
-    log_trace("netif_rx; can%d: %x#%2x%2x%2x%2x%2x%2x%2x%2x\n",
+    /* handle error message frame */
+    if (msg->can_id & CAN_ERR_FLAG) {
+        if (msg->can_id & CAN_ERR_TX_TIMEOUT) {
+            log_warn("netif_rx: can%d: TX timeout (by netdevice driver)\n",
+                    skb->dev->dev_id);
+        }
+        if (msg->can_id & CAN_ERR_LOSTARB) {
+            log_warn("netif_rx: can%d: lost arbitration: %x\n",
+                    skb->dev->dev_id, msg->data[0]);
+        }
+        if (msg->can_id & CAN_ERR_CRTL) {
+            log_warn("netif_rx: can%d: controller problems: %x\n",
+                    skb->dev->dev_id, msg->data[1]);
+        }
+        if (msg->can_id & CAN_ERR_PROT) {
+            log_warn("netif_rx: can%d: protocol violations: %x, %x\n",
+                    skb->dev->dev_id, msg->data[2], msg->data[3]);
+        }
+        if (msg->can_id & CAN_ERR_TRX) {
+            log_warn("netif_rx: can%d: transceiver status: %x\n",
+                    skb->dev->dev_id, msg->data[4]);
+        }
+        if (msg->can_id & CAN_ERR_ACK) {
+            log_warn("netif_rx: can%d: received no ACK on transmission\n",
+                    skb->dev->dev_id);
+        }
+        if (msg->can_id & CAN_ERR_BUSOFF) {
+            log_warn("netif_rx: can%d: bus off\n", skb->dev->dev_id);
+        }
+        if (msg->can_id & CAN_ERR_BUSERROR) {
+            log_warn("netif_rx: can%d: bus error (may flood!)\n",
+                    skb->dev->dev_id);
+        }
+        if (msg->can_id & CAN_ERR_RESTARTED) {
+            log_warn("netif_rx: can%d: controller restarted\n",
+                    skb->dev->dev_id);
+        }
+        if (msg->can_id & CAN_ERR_CNT) {
+            log_warn("netif_rx: can%d: TX error counter; tx:%x, rx:%x\n",
+                    skb->dev->dev_id, msg->data[6], msg->data[7]);
+        }
+
+        return NET_RX_SUCCESS;
+    }
+
+    if (msg->can_id & CAN_RTR_FLAG) {
+        log_trace("netif_rx; CAN_RTR_FLAG\n");
+
+        return NET_RX_SUCCESS;
+    }
+
+    log_trace("netif_rx; can%d(%s): %x#%2x%2x%2x%2x%2x%2x%2x%2x\n",
             skb->dev->dev_id,
-            msg->can_id,
+            /* EFF/SFF is set in the MSB */
+            (msg->can_id & CAN_EFF_FLAG) ? "EFF" : "SFF",
+            msg->can_id & CAN_ERR_MASK, /* omit EFF, RTR, ERR flags */
             msg->data[0],
             msg->data[1],
             msg->data[2],
@@ -45,8 +104,7 @@ int netif_rx(struct sk_buff *skb)
             msg->data[6],
             msg->data[7]);
 
-    kfree_skb(skb);
-    return 0;
+    return NET_RX_SUCCESS;
 }
 
 void netif_start_queue(struct net_device *dev)

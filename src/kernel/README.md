@@ -40,23 +40,34 @@ See [Test Platform](../../tests/image/).
 
 ## Structure
 
+To read the file chart presented in text format below, please interpret the words "items", "replaced", "added" and "unchanged" in the context of the text in those files, as follows:
+
+- Items: can be structures and/or functions.
+- Replaced: original names, arguments and member variables (or just their names) have been kept the same but their contents and functionality has been completed replaced with QNX application specific functionality.
+- Added: completely new structure and/or functions added.
+- Unchanged: left as-is from the original Linux Kernel source-code; there could be minor cosmetic changes, which can be reviewed using the documented _Meld_ comparison process.
+- Removed: items not applicable or needed; completely removed and not replaced and no new items added in it's place.
+
+To elaborate, this is a textual analysis only, intended to provide some guidance on how to rebase changes from the Linux Kernel and what where to focus. Otherwise the actual functionality of timers, delays, hardware interface function calls, etc, have all been redirected to QNX equivalent functions; e.g. "unchanged" refers to the textual contents of the file being unchanged.
+
+File modification chart:
+
     src/kernel/
     ├── arch
     │   └── x86
     │       └── include
     │           └── asm
-    │               ├── bug.h <--------
     │               └── div64.h <------
     ├── drivers
     │   └── net
     │       └── can
     │           ├── dev.c <------------
     │           └── sja1000
-    │               ├── adv_pci.c <----
-    │               ├── ems_pci.c <----
-    │               ├── kvaser_pci.c <-
-    │               ├── peak_pci.c <---
-    │               ├── plx_pci.c <----
+    │               ├── adv_pci.c <---- added driver (not from Linux)
+    │               ├── ems_pci.c <---- unchanged
+    │               ├── kvaser_pci.c <- unchanged
+    │               ├── peak_pci.c <--- unchanged
+    │               ├── plx_pci.c <---- unchanged
     │               ├── sja1000.c <----
     │               └── sja1000.h <----
     ├── include
@@ -64,11 +75,9 @@ See [Test Platform](../../tests/image/).
     │   │   ├── bitops
     │   │   │   ├── fls64.h <----------
     │   │   │   └── __fls.h <----------
-    │   │   ├── bug.h <----------------
     │   │   └── div64.h <--------------
     │   ├── linux
     │   │   ├── bitops.h <-------------
-    │   │   ├── bug.h <----------------
     │   │   ├── can
     │   │   │   ├── dev.h <------------
     │   │   │   ├── led.h <------------
@@ -78,8 +87,6 @@ See [Test Platform](../../tests/image/).
     │   │   ├── compiler.h <-----------
     │   │   ├── delay.h <--------------
     │   │   ├── device.h <-------------
-    │   │   ├── i2c-algo-bit.h <-------
-    │   │   ├── i2c.h <----------------
     │   │   ├── interrupt.h <----------
     │   │   ├── io.h <-----------------
     │   │   ├── irqreturn.h <----------
@@ -90,9 +97,9 @@ See [Test Platform](../../tests/image/).
     │   │   ├── netdevice.h <----------
     │   │   ├── pci.h <----------------
     │   │   ├── pci_ids.h <------------
-    │   │   ├── skbuff.h <-------------
+    │   │   ├── skbuff.h <------------- 2 items replaced; others removed
     │   │   ├── slab.h <---------------
-    │   │   └── types.h <--------------
+    │   │   └── types.h <-------------- all removed; project types added
     │   └── uapi
     │       └── linux
     │           ├── can
