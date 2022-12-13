@@ -25,7 +25,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-[search=/x86_64:/x86_64/boot/sys::/opt/qnx710/target/qnx7/x86_64:/opt/qnx710/target/qnx7/x86_64/boot/sys:/opt/qnx710/target/qnx7]
+[search=/x86_64:/x86_64/boot/sys::/opt/qnx710:/opt/qnx710/target/qnx7/x86_64:/opt/qnx710/target/qnx7/x86_64/boot/sys:/opt/qnx710/target/qnx7:/root/qnx710:/root/qnx710/target/qnx7/x86_64:/root/qnx710/target/qnx7/x86_64/boot/sys:/root/qnx710/target/qnx7]
 
 [uid=0 gid=0 dperms=0555 perms=0555]
 

@@ -49,7 +49,7 @@ if [ -t 1 ]; then
 fi
 
 #. ${TOOL_DIR}/functions
-. /opt/qnx710/host/common/mkqnximage/functions
+. $QNX_BASE/host/common/mkqnximage/functions
 #. local/options
 
 ### System Partition ###########################################################

@@ -1,0 +1,64 @@
+#
+# \file     docker-compose.yml
+# \brief    Docker Compose script that describes the Linux container needed to
+#           run the Jenkins CI environment needed to cross-compile and test
+#           dev-can-linux.
+#
+# Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
+services:
+  jenkins:
+    hostname: jenkins
+    container_name: jenkins
+    image: jenkins/jenkins:lts-jdk11
+    ports:
+      - 8080:8080
+      - 50000:50000
+    stdin_open: true
+    tty: true
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ~/jenkins_home:/var/jenkins_home
+      - ../..:/opt/dev-can-linux
+    environment:
+      - LANG=en_US.UTF-8
+  agent:
+    hostname: agent
+    container_name: agent
+    build:
+      context: .
+      dockerfile: jenkins-ssh-agent.Dockerfile
+    expose:
+      - 22
+    stdin_open: true
+    tty: true
+    restart: always
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ../..:/opt/dev-can-linux
+    environment:
+      - LANG=en_US.UTF-8
+      - DOCKER_GROUP=${DOCKER_GROUP}
+      - JENKINS_AGENT_SSH_PUBKEY=${JENKINS_AGENT_SSH_PUBKEY}
+    command: >
+      sh -c "echo starting dev-can-linux jenkins agent... \
+        && /usr/sbin/sshd \
+        && groupmod -g $DOCKER_GROUP docker \
+        && usermod -aG docker jenkins \
+        && tail -f /dev/null"

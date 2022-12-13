@@ -1,0 +1,87 @@
+/**
+ * \file    Jenkinsfile
+ * \brief   Jenkinsfile Groovy script
+ *
+ * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
+
+node('jenkins_agent') {
+
+    def buildpath = "/var/tmp/$NODE_NAME";
+
+    try {
+        stage('checkout') {
+            sh(script: """
+                rm -rf $buildpath
+                mkdir -p $buildpath
+            """)
+
+            checkout([$class: 'GitSCM',
+                branches: [[name: '*/main']],
+                extensions: [[$class: 'RelativeTargetDirectory',
+                    relativeTargetDir: "$buildpath/dev-can-linux/"]],
+                userRemoteConfigs: [[
+                    credentialsId: '',
+                    url: '/opt/dev-can-linux'
+                ]]])
+        }
+
+        stage('last-changes') {
+            def publisher = LastChanges.getLastChangesPublisher \
+                null, "SIDE", "LINE", true, true, \
+                "", "", "", "$buildpath/dev-can-linux", ""
+
+            publisher.publishLastChanges()
+        }
+
+        stage('setup') {
+            sh(script: """
+                cd /opt/dev-can-linux/dev
+
+                docker build \
+                    -f /opt/dev-can-linux/dev/qnx.Dockerfile \
+                    -t localhost/dev-can-linux-jenkins .
+
+                docker run -d --name=dev_env \
+                    localhost/dev-can-linux-jenkins tail -f /dev/null
+
+                docker cp /opt/dev-can-linux dev_env:/root/
+
+                docker exec --user root --workdir /root dev_env \
+                    bash -c "source /root/.profile \
+                        && /root/dev-can-linux/dev/setup-profile.sh \
+                        && ls \\\$QNX_TARGET \
+                        && ls \\\$QNX_HOST"
+
+                echo ${env.DOCKER_GROUP}
+                echo ${env.JENKINS_AGENT_SSH_PUBKEY}
+            """)
+        }
+    }
+    catch (err) {
+        currentBuild.result = 'FAILURE'
+    }
+    finally {
+        stage('clean-up') {
+            sh(script: """
+                docker stop dev_env
+                docker rm dev_env
+                rm -rf $buildpath
+            """)
+        }
+    }
+}

@@ -27,7 +27,7 @@
 
 [num_inodes=*1000]
 [num_sectors=*40960]
-[search=/x86_64:/x86_64/boot/sys::/opt/qnx710/target/qnx7/x86_64:/opt/qnx710/target/qnx7/x86_64/boot/sys:/opt/qnx710/target/qnx7]
+[search=/x86_64:/x86_64/boot/sys::/opt/qnx710:/opt/qnx710/target/qnx7/x86_64:/opt/qnx710/target/qnx7/x86_64/boot/sys:/opt/qnx710/target/qnx7:/root/qnx710:/root/qnx710/target/qnx7/x86_64:/root/qnx710/target/qnx7/x86_64/boot/sys:/root/qnx710/target/qnx7]
 
 [uid=0 gid=0 dperms=755 type=dir] /
 [uid=0 gid=0 dperms=755 type=dir] /lib
@@ -356,8 +356,8 @@ lib/libcares.so.6=usr/lib/libcares.so.6
 lib/liblzma.so.5=usr/lib/liblzma.so.5
 lib/libbz2.so.1=usr/lib/libbz2.so.1
 /xbin/setkey=usr/sbin/setkey
-[perms=555] /xbin/rununittests=/opt/qnx710/host/linux/x86_64/../../common/mkqnximage/inputs/rununittests
-[perms=555] xbin/cleanup_tmp=/opt/qnx710/host/linux/x86_64/../../common/mkqnximage/inputs/cleanup_tmp
+[perms=555] /xbin/rununittests=host/common/mkqnximage/inputs/rununittests
+[perms=555] xbin/cleanup_tmp=host/common/mkqnximage/inputs/cleanup_tmp
 # local/snippets/system_files.custom
 # Placeholder for local list of files to add to system partition
 

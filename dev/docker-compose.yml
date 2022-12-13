@@ -1,0 +1,53 @@
+#
+# \file     docker-compose.yml
+# \brief    Docker Compose script that describes the Linux container needed to
+#           run the QNX development environment needed to cross-compile
+#           dev-can-linux.
+#
+# Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+#
+
+services:
+  qnx:
+    hostname: qnx-dev
+    container_name: qnx710-dev
+    build:
+      context: .
+      dockerfile: qnx.Dockerfile
+    network_mode: host
+    stdin_open: true
+    tty: true
+    restart: always
+    devices:
+      - "/dev/dri:/dev/dri"
+    volumes:
+      - ~/.ssh:/root/.ssh
+      - /tmp/.X11-unix:/tmp/.X11-unix
+      - ~/.Xauthority:/root/.Xauthority
+      - /etc/localtime:/etc/localtime:ro
+      - ~:/root/userhome
+      - ..:/root/dev-can-linux
+    environment:
+      - LANG=en_US.UTF-8
+      - LC_ALL=en_US.utf8
+      - DISPLAY=${DISPLAY}
+      - NO_AT_BRIDGE=1
+    command: >
+      sh -c "echo starting dev-can-linux dev environment... \
+        && /root/dev-can-linux/dev/setup-profile.sh \
+        && tail -f /dev/null"
+    runtime: nvidia

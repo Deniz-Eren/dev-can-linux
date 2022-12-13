@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 #
-# \file     qemu.Dockerfile
-# \brief    Dockerfile script that describes the Linux container needed to run
-#           the QNX OS test setup within a QEmu VM capable of emulating needed
-#           CAN-bus hardware for testing CAN-bus messaging.
+# \file     qnx.Dockerfile
+# \brief    Template Dockerfile script that describes the Linux container
+#           needed to run the QNX development environment needed to
+#           cross-compile dev-can-linux.
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -22,6 +22,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+# Default template starts with Ubuntu as the base image.
+# After setup is complete (see README.md) change this to reference your own
+# image:
 FROM ubuntu:22.04
 
 RUN export TZ=Australia/Sydney \
@@ -33,12 +36,15 @@ RUN export TZ=Australia/Sydney \
     && apt-get install --no-install-recommends -y \
         apt-utils \
         lsb-release \
+        language-pack-en-base \
         wget \
         ca-certificates \
         iproute2 \
         less \
         net-tools \
-        qemu-system-x86 \
+        vim \
+        git \
+        libswt-gtk-4-java \
     && apt-get autoremove -y \
     && apt-get autoclean -y
 

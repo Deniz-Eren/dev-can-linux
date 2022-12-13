@@ -1,9 +1,9 @@
 # syntax=docker/dockerfile:1
 #
-# \file     qemu.Dockerfile
-# \brief    Dockerfile script that describes the Linux container needed to run
-#           the QNX OS test setup within a QEmu VM capable of emulating needed
-#           CAN-bus hardware for testing CAN-bus messaging.
+# \file     jenkins-ssh-agent.Dockerfile
+# \brief    Dockerfile script that describes the Jenkins SHH agent container
+#           needed to run the Jenkins CI environment to cross-compile and test
+#           dev-can-linux.
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -22,7 +22,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-FROM ubuntu:22.04
+FROM jenkins/ssh-agent:jdk11
 
 RUN export TZ=Australia/Sydney \
     && ln -snf /usr/share/zoneinfo/$TZ /etc/localtime \
@@ -30,18 +30,8 @@ RUN export TZ=Australia/Sydney \
     && apt-get update \
     && apt-get dist-upgrade -y \
     && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get install --no-install-recommends -y \
-        apt-utils \
-        lsb-release \
-        wget \
-        ca-certificates \
-        iproute2 \
-        less \
-        net-tools \
-        qemu-system-x86 \
+    && apt-get install --no-install-recommends --assume-yes \
+        docker.io \
+        docker-compose \
     && apt-get autoremove -y \
     && apt-get autoclean -y
-
-ENV NVIDIA_DRIVER_CAPABILITIES all
-
-WORKDIR /root
