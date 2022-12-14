@@ -74,6 +74,16 @@ debugging:
     dev-can-linux -d 13fe:c302 -vvvv
 
 
+## Installation
+
+To install untar a release package directly to your desired install prefix:
+
+    tar -xf dev-can-linux-#.#.#-qnx710.tar.gz -C /opt/
+
+This example command installs to the prefix "/opt/" but you can specify "/usr/"
+or "/usr/local/" or another location.
+
+
 ## Check Supported Hardware
 
 Run with '-l' option to check what hardware is supported:
