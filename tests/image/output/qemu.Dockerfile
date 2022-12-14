@@ -39,6 +39,7 @@ RUN export TZ=Australia/Sydney \
         less \
         net-tools \
         qemu-system-x86 \
+        qemu-system-gui \
     && apt-get autoremove -y \
     && apt-get autoclean -y
 

@@ -60,17 +60,17 @@ LIBS_profile += -lprofilingS
 # Project specific configuration macros
 #
 
-CCFLAGS +=	-DPROGRAM_VERSION=\"`cat "VERSION"`\"
-CCFLAGS +=	-DCONFIG_QNX_INTERRUPT_ATTACH_EVENT
+CCFLAGS +=	-DPROGRAM_VERSION=\"`cat "config/VERSION"`\"
+CCFLAGS +=	-DCONFIG_QNX_INTERRUPT_ATTACH_EVENT=`cat "config/CONFIG_QNX_INTERRUPT_ATTACH_EVENT"`
 
 #
 # Linux Kernel configuration macros
 #
 
-CCFLAGS +=	-DCONFIG_HZ=1000
-CCFLAGS +=	-DCONFIG_CAN_CALC_BITTIMING
-CCFLAGS +=	-DCONFIG_X86_64
-CCFLAGS +=	-DCONFIG_X86_32
+CCFLAGS +=	-DCONFIG_HZ=`cat "config/CONFIG_HZ"`
+CCFLAGS +=	-DCONFIG_CAN_CALC_BITTIMING # Always enabled
+CCFLAGS +=	-DCONFIG_X86_64             # Always enabled
+CCFLAGS +=	-DCONFIG_X86_32             # Always enabled
 
 #Generic compiler flags (which include build type flags)
 CCFLAGS_all += -Wall -fmessage-length=0

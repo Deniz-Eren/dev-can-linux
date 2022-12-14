@@ -30,7 +30,7 @@
 
 int id = -1;
 
-#ifdef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
 struct sigevent event;
 #endif
 
@@ -43,7 +43,7 @@ struct func_t {
 struct func_t funcs[16];
 int funcs_size = 0;
 
-#ifndef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
 /*
  * Interrupt Service Routine (ISR)
  *
@@ -96,7 +96,7 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
              */
             | _NTO_INTR_FLAGS_TRK_MSK;
 
-#ifdef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
         SIGEV_SET_TYPE(&event, SIGEV_INTR);
 
         if ((id = InterruptAttachEvent(irq, &event, flags)) == -1) {
@@ -120,7 +120,7 @@ void free_irq (unsigned int irq, void *dev) {
 
 void run_wait() {
     while (1) {
-#ifdef CONFIG_QNX_INTERRUPT_ATTACH_EVENT
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
         int i;
         InterruptWait(0, NULL);
 

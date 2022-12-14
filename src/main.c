@@ -73,7 +73,7 @@ void* test_tx (void*  arg) {
 int main (int argc, char* argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, argv, "d:vqlVwc?h")) != -1) {
+    while ((opt = getopt(argc, argv, "d:vqlVCwc?h")) != -1) {
         switch (opt) {
         case 'd':
             optd = 1;
@@ -95,6 +95,10 @@ int main (int argc, char* argv[]) {
 
         case 'V':
             print_version();
+            return EXIT_SUCCESS;
+
+        case 'C':
+            print_configs();
             return EXIT_SUCCESS;
 
         case 'w':

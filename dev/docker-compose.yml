@@ -40,6 +40,7 @@ services:
       - ~/.Xauthority:/root/.Xauthority
       - /etc/localtime:/etc/localtime:ro
       - ~:/root/userhome
+      - ~/ide-7.1-workspace:/root/ide-7.1-workspace
       - ..:/root/dev-can-linux
     environment:
       - LANG=en_US.UTF-8

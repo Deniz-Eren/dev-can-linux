@@ -29,6 +29,16 @@ void print_version (void) {
     return;
 }
 
+void print_configs (void) {
+    print_version();
+
+    printf("CONFIG_HZ=%d\n", CONFIG_HZ);
+    printf("CONFIG_QNX_INTERRUPT_ATTACH_EVENT=%d\n",
+            CONFIG_QNX_INTERRUPT_ATTACH_EVENT);
+
+    return;
+}
+
 void print_notice (void) {
     print_version();
 
@@ -129,6 +139,7 @@ void print_help (char* program_name) {
     printf("\n");
     printf("\e[1mOPTIONS\e[m\n");
     printf("    \e[1m-V\e[m             - print application version and exit\n");
+    printf("    \e[1m-C\e[m             - print build configurations and exit\n");
     printf("    \e[1m-l\e[m             - list supported hardware and exit\n");
     printf("    \e[1m-ll\e[m            - list supported hardware details and exit\n");
     printf("    \e[1m-d {vid}:{did}\e[m - target desired device, e.g. -d 13fe:c302\n");

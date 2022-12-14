@@ -25,6 +25,10 @@ services:
     build:
       context: .
       dockerfile: qemu.Dockerfile
+    network_mode: host
+    stdin_open: true
+    tty: true
+    restart: always
     cap_add:
       - NET_ADMIN
     devices:
@@ -33,16 +37,13 @@ services:
       - ~/.ssh:/root/.ssh
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.Xauthority:/root/.Xauthority
+      - /etc/localtime:/etc/localtime:ro
       - .:/root/Images
-    network_mode: "host"
     environment:
       - LANG=en_US.UTF-8
+      - LC_ALL=en_US.utf8
       - DISPLAY=${DISPLAY}
-      - MAKE=/usr/bin/make
-      - NINJA=/usr/bin/ninja
-      - PYTHON=/usr/bin/python3
       - NO_AT_BRIDGE=1
-    tty: true
     command: >
       sh -c "echo &&
              if [ ! -d /sys/class/net/vcan0 ]; then \

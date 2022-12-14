@@ -10,6 +10,26 @@ We have chosen _Podman_ as our containerization tool for it's convenient
 handling of rootless installations, which is perfect for development
 environments.
 
+Please note as of currently (14/12/2022) _podman-compose_ version that comes
+with Ubuntu 22.04 has a
+[networking issue](https://github.com/containers/podman-compose/issues/397)
+impacting the use of QNX _qconn_ connection. For this reason please install the
+latest _podman-compose_ from GitHub:
+
+    pip3 install https://github.com/containers/podman-compose/archive/devel.tar.gz
+
+TODO: Fix will be in _podman-compose_ version 1.0.4; once its in main release we
+will remove this comment.
+
+
+## Prerequisites
+
+On your host environment create a directory in your home directory to house your
+QNX Momentics IDE workspace. Otherwise, as you bring your disposable container
+up and down, you will lose your IDE settings. This is done simply:
+
+    mkdir ~/ide-7.1-workspace
+
 
 ## Step 1
 

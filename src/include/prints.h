@@ -20,8 +20,9 @@
 #define SRC_PRINTS_H_
 
 
-/* License info prints */
+/* Info prints */
 extern void print_version (void);
+extern void print_configs (void);
 extern void print_notice (void);
 extern void print_support (bool detailed);
 extern void print_help (char* program_name);
