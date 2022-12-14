@@ -33,7 +33,7 @@ RUN export TZ=Australia/Sydney \
     && apt-get update \
     && apt-get dist-upgrade -y \
     && export DEBIAN_FRONTEND=noninteractive \
-    && apt-get install --no-install-recommends -y \
+    && apt-get install --no-install-recommends --assume-yes \
         apt-utils \
         lsb-release \
         language-pack-en-base \
@@ -45,6 +45,7 @@ RUN export TZ=Australia/Sydney \
         vim \
         git \
         libswt-gtk-4-java \
+        cmake-curses-gui \
     && apt-get autoremove -y \
     && apt-get autoclean -y
 

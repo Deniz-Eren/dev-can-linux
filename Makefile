@@ -2,6 +2,12 @@
 #
 # \details  This file is the post generation hand customise output of
 #           QNX Momentics IDE run on a QNX licensed machine.
+#           Do NOT remove or replace this file using CMake system, because this
+#           file is used parallel to the CMake system when developing within QNX
+#           Momentics.
+#           IMPORTANT! Macro configurations must be handled with configuration
+#           files in config/ directory, not here directly! Both CMake and this
+#           Makefile refer to the same configuration settings.
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -60,7 +66,7 @@ LIBS_profile += -lprofilingS
 # Project specific configuration macros
 #
 
-CCFLAGS +=	-DPROGRAM_VERSION=\"`cat "config/VERSION"`\"
+CCFLAGS +=	-DPROGRAM_VERSION=\"`cat "config/PROGRAM_VERSION"`\"
 CCFLAGS +=	-DCONFIG_QNX_INTERRUPT_ATTACH_EVENT=`cat "config/CONFIG_QNX_INTERRUPT_ATTACH_EVENT"`
 
 #
