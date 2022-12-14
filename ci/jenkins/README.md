@@ -10,10 +10,14 @@ _jenkins_ and a permanent worker agent named _agent_.
 
 ## Host-side Setup
 
-Make a *jenkins_home* directory is created in your home directory before
-proceeding:
+Make a *jenkins_home* directory and a *Release* directory in your home
+directory path before proceeding:
 
     mkdir ~/jenkins_home
+    mkdir ~/Release
+
+The *jenkins_home* is where the Jenkins files can persists and the *Release* is
+where the released build packages will be copied.
 
 Generate the needed environment variables and SSH key pair for Jenkins agent
 communication by running the supplied script:

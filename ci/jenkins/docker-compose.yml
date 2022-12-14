@@ -51,6 +51,7 @@ services:
     restart: always
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ~/Release:/var/Release
       - ../..:/opt/dev-can-linux
     environment:
       - LANG=en_US.UTF-8

@@ -32,6 +32,14 @@
 
 #define CAN_CALC_MAX_ERROR 50 /* in one-tenth of a percent */
 
+#ifdef __QNX__
+#pragma GCC push_options
+/*
+ * Disable optimization for QNX release configuration
+ */
+#pragma GCC optimize ("-O0")
+#endif
+
 /* Bit-timing calculation derived from:
  *
  * Code based on LinCAN sources and H8S2638 project
@@ -84,6 +92,18 @@ can_update_sample_point(const struct can_bittiming_const *btc,
 
 	return best_sample_point;
 }
+
+#ifdef __QNX__
+#pragma GCC pop_options
+#endif
+
+#ifdef __QNX__
+#pragma GCC push_options
+/*
+ * Disable optimization for QNX release configuration
+ */
+#pragma GCC optimize ("-O0")
+#endif
 
 int can_calc_bittiming(const struct net_device *dev, struct can_bittiming *bt,
 		       const struct can_bittiming_const *btc)
@@ -197,6 +217,10 @@ int can_calc_bittiming(const struct net_device *dev, struct can_bittiming *bt,
 
 	return 0;
 }
+
+#ifdef __QNX__
+#pragma GCC pop_options
+#endif
 
 void can_calc_tdco(struct can_tdc *tdc, const struct can_tdc_const *tdc_const,
 		   const struct can_bittiming *dbt,

@@ -47,7 +47,7 @@ add_compile_definitions( CONFIG_CAN_CALC_BITTIMING )
 add_compile_definitions( CONFIG_X86_64 )
 add_compile_definitions( CONFIG_X86_32 )
 
-project( DEV-CAN-LINUX
+project( dev-can-linux
          VERSION ${PROGRAM_VERSION}
          LANGUAGES CXX )
 
@@ -60,7 +60,7 @@ set( CPACK_PACKAGE_VERSION ${PROJECT_VERSION} )
 # Append module paths to CMAKE_MODULE_PATH
 list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules )
 
-# Configure the compiler for C++17 support
+# Configure the compiler
 set( CMAKE_CXX_STANDARD 17 )
 set( CMAKE_CXX_STANDARD_REQUIRED True )
 

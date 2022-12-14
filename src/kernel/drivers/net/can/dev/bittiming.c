@@ -29,6 +29,14 @@
 
 #include <linux/can/dev.h>
 
+#ifdef __QNX__
+#pragma GCC push_options
+/*
+ * Disable optimization for QNX release configuration
+ */
+#pragma GCC optimize ("-O0")
+#endif
+
 /* Checks the validity of the specified bit-timing parameters prop_seg,
  * phase_seg1, phase_seg2 and sjw and tries to determine the bitrate
  * prescaler value brp. You can find more information in the header
@@ -67,6 +75,10 @@ static int can_fixup_bittiming(const struct net_device *dev, struct can_bittimin
 
 	return 0;
 }
+
+#ifdef __QNX__
+#pragma GCC pop_options
+#endif
 
 /* Checks the validity of predefined bitrate settings */
 static int
