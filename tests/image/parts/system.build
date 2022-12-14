@@ -100,6 +100,7 @@ lib/libpanelw.so.1=usr/lib/libpanelw.so.1
 lib/libiconv.so.1=usr/lib/libiconv.so.1
 lib/libpps.so.1=lib/libpps.so.1
 lib/libcatalog.so.1=lib/libcatalog.so.1
+lib/libxml2.so.2=usr/lib/libxml2.so.2
 [type=link] lib/libpps.so=libpps.so.1
 [dperms=755 type=dir] etc/terminfo
 [dperms=755 type=dir] etc/terminfo/q

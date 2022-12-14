@@ -31,6 +31,9 @@ set( CMAKE_TOOLCHAIN_FILE
 
 project( dev-can-linux )
 
+# Append module paths to CMAKE_MODULE_PATH
+list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules )
+
 # Read configuration items from config/ files
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/PROGRAM_VERSION" PROGRAM_VERSION )
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_HZ" CONFIG_HZ )
@@ -60,9 +63,6 @@ set( CPACK_PACKAGE_VERSION_PATCH ${PROJECT_VERSION_PATCH} )
 set( CPACK_PACKAGE_VERSION ${PROJECT_VERSION} )
 set( CPACK_PACKAGE_DESCRIPTION_FILE "${PROJECT_SOURCE_DIR}/README.md" )
 set( CPACK_RESOURCE_FILE_LICENSE "${PROJECT_SOURCE_DIR}/LICENSE" )
-
-# Append module paths to CMAKE_MODULE_PATH
-list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules )
 
 # Compiler settings
 set( CMAKE_CXX_STANDARD 17 )
@@ -103,5 +103,9 @@ target_link_libraries( dev-can-linux -lpci )
 install( TARGETS dev-can-linux
         DESTINATION bin/
         COMPONENT ${CMAKE_PROJECT_NAME} )
+
+include( CMakeCodeCoverageRunHelper )
+
+code_coverage_flags()
 
 include( CPack )

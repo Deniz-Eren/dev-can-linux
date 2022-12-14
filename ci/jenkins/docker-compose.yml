@@ -26,9 +26,7 @@ services:
     hostname: jenkins
     container_name: jenkins
     image: jenkins/jenkins:lts-jdk11
-    ports:
-      - 8080:8080
-      - 50000:50000
+    network_mode: host
     stdin_open: true
     tty: true
     restart: always
@@ -38,17 +36,29 @@ services:
       - ../..:/opt/dev-can-linux
     environment:
       - LANG=en_US.UTF-8
+    command: >
+      sh -c "echo &&
+        if [ ! -d /var/jenkins_home/init.groovy.d ]; then \
+            echo \"Setting up init.groovy.d...\" &&
+            cp -r /opt/dev-can-linux/ci/jenkins/init.groovy.d \
+                /var/jenkins_home/; \
+        else echo \"Jenkins init.groovy.d already exists\"; fi \
+        && PATH=$PATH:/opt/java/openjdk/bin ; JAVA_HOME=/opt/java/openjdk ; \
+            /usr/local/bin/jenkins.sh"
   agent:
     hostname: agent
     container_name: agent
     build:
       context: .
       dockerfile: jenkins-ssh-agent.Dockerfile
-    expose:
-      - 22
+    network_mode: host
     stdin_open: true
     tty: true
     restart: always
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - "/dev/kvm:/dev/kvm"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ~/Release:/var/Release
@@ -58,8 +68,15 @@ services:
       - DOCKER_GROUP=${DOCKER_GROUP}
       - JENKINS_AGENT_SSH_PUBKEY=${JENKINS_AGENT_SSH_PUBKEY}
     command: >
-      sh -c "echo starting dev-can-linux jenkins agent... \
-        && /usr/sbin/sshd \
+      sh -c "echo &&
+        if [ ! -d /sys/class/net/vcan0 ]; then \
+            echo \"Setting up VCAN...\" &&
+            ip link add dev vcan0 type vcan &&
+            ip link set up vcan0 &&
+            ip link add dev vcan1 type vcan &&
+            ip link set up vcan1; \
+        else echo \"VCAN already setup\"; fi \
+        && /opt/dev-can-linux/ci/jenkins/setup-ssh-port.sh \
         && groupmod -g $DOCKER_GROUP docker \
         && usermod -aG docker jenkins \
         && tail -f /dev/null"

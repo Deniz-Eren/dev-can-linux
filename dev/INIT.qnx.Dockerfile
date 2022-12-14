@@ -44,6 +44,9 @@ RUN export TZ=Australia/Sydney \
         net-tools \
         vim \
         git \
+        lcov \
+        openssh-client \
+        sshpass \
         libswt-gtk-4-java \
         cmake-curses-gui \
     && apt-get autoremove -y \

@@ -90,6 +90,7 @@ On startup choose the option to install recommended plugins.
 In addition to those, install plugins:
 
 - _Last Changes_
+- _HTML Publisher_
 
 
 ## Jenkins Manage Credentials
@@ -136,7 +137,7 @@ For _Usage_ select _Use this node as much as possible_.
 
 For _Launch method_ select _Launch agents via SSH_.
 
-Enter _agent_ as _Host_ and select the credentials we made in the previous
+Enter _localhost_ as _Host_ and select the credentials we made in the previous
 section.
 
 For the _Host Key Verification Strategy_, select _Non verifying Verification
@@ -144,7 +145,7 @@ Strategy_.
 
 Now click _Advanced..._ to reveal more options.
 
-For _Port_ put _22_.
+For _Port_ put _8022_.
 
 For _JavaPath_ put _/opt/java/openjdk/bin/java_.
 
@@ -173,6 +174,24 @@ You should be able to click on _DEV-CAN-LINUX_ from the _Dashboard_ and then
 click _Build Now_ to start the pipeline.
 
 
+## Special Notice
+
+To run Jenkins plug-in _HTML Publisher_ we have introduced a
+_startup-properties.groovy_ file to _init.groovy.d_ path of our Jenkins home
+that allows publishing HTML documents. In doing this we are declaring we
+trust the HTML documents we produce in our project.
+
+Also this Jenkins install is intended to be a local installation only to aid in
+the development process rather than a wider server or cloud setup. If this
+Jenkins configuration is ever considered for wider usage please consider this
+topic.
+
+Note security notification on this topic
+[Configuring Content Security Policy](
+https://www.jenkins.io/doc/book/security/configuring-content-security-policy/).
+Risk must be assess per HTML publishing application.
+
+
 ## Troubleshooting
 
 Note Jenkins doesn't seem to allow connection when using the default
@@ -198,3 +217,8 @@ _agent_ using the private key _.jenkins_agent_ works:
 
     root@jenkins:~# ssh -i ./dev-can-linux/ci/jenkins/.jenkins_agent jenkins@agent
 
+Note certain Linux host Kernel modules are needed, you may need to run:
+
+    sudo ./tests/emulation/setuphost.sh
+
+This should be the only thing that needs to be run with 'sudo'.

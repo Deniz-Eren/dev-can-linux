@@ -31,6 +31,13 @@ RUN export TZ=Australia/Sydney \
     && apt-get dist-upgrade -y \
     && export DEBIAN_FRONTEND=noninteractive \
     && apt-get install --no-install-recommends --assume-yes \
+        apt-utils \
+        lsb-release \
+        wget \
+        ca-certificates \
+        iproute2 \
+        less \
+        net-tools \
         docker.io \
         docker-compose \
     && apt-get autoremove -y \

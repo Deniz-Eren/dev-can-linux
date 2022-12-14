@@ -18,6 +18,9 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#ifdef COVERAGE
+#include <signal.h>
+#endif
 #include <stdio.h>
 #include <unistd.h>
 #include <hw/inout.h>
@@ -36,6 +39,14 @@ int optv = 0;
 int optl = 0;
 int optq = 0;
 int optd = 0, opt_vid = -1, opt_did = -1;
+
+struct pci_dev pdev = {
+        .ba = NULL,
+        .vendor = 0,
+        .device = 0,
+        .dev = { .driver_data = NULL },
+        .irq = 0
+};
 
 
 void* test_tx (void*  arg) {
@@ -70,8 +81,32 @@ void* test_tx (void*  arg) {
     return (0);
 }
 
+#ifdef COVERAGE
+
+void __gcov_flush(void);
+
+void gcov_flush_signal (int sig_no) {
+    log_enabled = false;
+
+    /*
+     * In practice the program runs forever or until the user terminates it;
+     * thus we can never reach here.
+     */
+    adv_pci_driver.remove(&pdev);
+
+    /*
+     * Flush GCov buffers so we have *.gcda files generated
+     */
+    __gcov_flush();
+}
+#endif
+
 int main (int argc, char* argv[]) {
     int opt;
+
+#ifdef COVERAGE
+    signal(SIGINT, gcov_flush_signal);
+#endif
 
     while ((opt = getopt(argc, argv, "d:vqlVCwc?h")) != -1) {
         switch (opt) {
@@ -146,13 +181,8 @@ int main (int argc, char* argv[]) {
         return -1;
     }
 
-    struct pci_dev pdev = {
-            .ba = NULL,
-            .vendor = ds.vid,
-            .device = ds.did,
-            //.dev = { .driver_data = NULL },
-            .irq = 10
-    };
+    pdev.vendor = ds.vid;
+    pdev.device = ds.did;
 
     if (detected_driver->probe(&pdev, NULL)) {
         return -1;

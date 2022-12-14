@@ -22,6 +22,8 @@
 
 services:
   qemu:
+    hostname: qemu-test
+    container_name: qemu-test
     build:
       context: .
       dockerfile: qemu.Dockerfile
@@ -38,7 +40,7 @@ services:
       - /tmp/.X11-unix:/tmp/.X11-unix
       - ~/.Xauthority:/root/.Xauthority
       - /etc/localtime:/etc/localtime:ro
-      - .:/root/Images
+      - ../image/output:/root/Images
     environment:
       - LANG=en_US.UTF-8
       - LC_ALL=en_US.utf8

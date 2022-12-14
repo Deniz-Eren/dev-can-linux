@@ -54,13 +54,143 @@ node('jenkins_agent') {
 
                 docker build \
                     -f /opt/dev-can-linux/dev/qnx.Dockerfile \
-                    -t localhost/dev-can-linux-jenkins .
+                    -t localhost/dev-can-linux-dev .
 
                 docker run -d --name=dev_env \
-                    localhost/dev-can-linux-jenkins tail -f /dev/null
+                    --network host \
+                    localhost/dev-can-linux-dev tail -f /dev/null
 
                 docker cp /opt/dev-can-linux dev_env:/root/
+
+                cd /opt/dev-can-linux/tests/emulation
+
+                docker build \
+                    -f /opt/dev-can-linux/tests/emulation/qemu.Dockerfile \
+                    -t localhost/dev-can-linux-qemu .
+
+                docker run -d --name=qemu_env \
+                    --network host \
+                    --device=/dev/kvm \
+                    localhost/dev-can-linux-qemu tail -f /dev/null
+
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && cd /root/dev-can-linux/tests/image \
+                    && ./builddisk.sh"
+
+                rm -rf /home/jenkins/Images
+
+                docker cp dev_env:/root/dev-can-linux/tests/image/output \
+                    /home/jenkins/Images
+
+                docker cp /home/jenkins/Images qemu_env:/root/Images
             """)
+        }
+
+        stage('qemu') {
+            sh(script: """
+                docker exec -d --user root --workdir /root qemu_env \
+                    qemu-system-x86_64 \
+                        -k en-us \
+                        -drive id=disk,file=/root/Images/disk-raw,format=raw,if=none \
+                        -device ahci,id=ahci \
+                        -device ide-hd,drive=disk,bus=ahci.1 \
+                        -boot d \
+                        -object can-bus,id=c0 \
+                        -object can-bus,id=c1 \
+                        -device mioe3680_pci,canbus0=c0,canbus1=c1 \
+                        -object can-host-socketcan,id=h0,if=c0,canbus=c0,if=vcan0 \
+                        -object can-host-socketcan,id=h1,if=c1,canbus=c1,if=vcan1 \
+                        -m size=4096 \
+                        -nic user,hostfwd=tcp::6022-:22,hostfwd=tcp::8000-:8000 \
+                        -smp 4 \
+                        -enable-kvm \
+                        -nographic
+
+                docker exec --user root --workdir /root dev_env \
+                    bash -c "source .profile \
+                        && until sshpass -p 'root' ssh \
+                            -o 'StrictHostKeyChecking=no' \
+                            -p6022 root@localhost \\\"uname -a\\\" \
+                            2> /dev/null; \
+                            do sleep 1; done"
+            """)
+        }
+
+        stage('test-qcc') {
+            sh(script: """
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && mkdir -p /data/home/root \
+                    && cd /data/home/root \
+                    && mkdir -p build_qcc_coverage \
+                    && cd build_qcc_coverage \
+                    && cmake -DCMAKE_BUILD_TYPE=Coverage \
+                        /root/dev-can-linux \
+                    && make -j8 \
+                    && cpack"
+
+                # Copy build directory to the QNX VM
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && sshpass -p 'root' scp -o 'StrictHostKeyChecking=no' \
+                        -r -P6022 /data/home/root/build_qcc_coverage \
+                        root@localhost:/data/home/root/"
+
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
+                        -p6022 root@localhost \
+                        \\\"tar -xf /data/home/root/build_qcc_coverage/dev-can-linux-*.tar.gz \
+                            -C /opt/\\\""
+
+                docker exec -d --user root --workdir /root dev_env bash -c \
+                    "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
+                        -p6022 root@localhost \
+                        \\\"dev-can-linux -vvvvv\\\""
+
+                sleep 10
+
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
+                        -p6022 root@localhost \
+                        \\\"slay -s SIGINT dev-can-linux\\\" || (exit 0)"
+
+                # Copy build directory back from the QNX VM
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && sshpass -p 'root' scp -o 'StrictHostKeyChecking=no' \
+                        -r -P6022 \
+                        root@localhost:/data/home/root/build_qcc_coverage \
+                        /data/home/root/"
+
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && cd /data/home/root/build_qcc_coverage \
+                    && lcov --gcov-tool=\\\$QNX_HOST/usr/bin/ntox86_64-gcov \
+                        -t "test_coverage_results" -o tests.info \
+                        -c -d /data/home/root/build_qcc_coverage \
+                        --base-directory=/root/dev-can-linux \
+                        --no-external --quiet \
+                    && genhtml -o /data/home/root/build_qcc_coverage/cov-html \
+                        tests.info --quiet"
+
+                rm -rf $WORKSPACE/test-coverage-qcc
+
+                docker cp \
+                    dev_env:/data/home/root/build_qcc_coverage/cov-html \
+                        $WORKSPACE/test-coverage-qcc
+            """)
+
+            publishHTML(target : [allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'test-coverage-qcc',
+                reportFiles: 'index.html',
+                reportName: 'Coverage Report (QCC)',
+                reportTitles: 'Coverage Report (QCC)'])
         }
 
         stage('release') {
@@ -92,6 +222,10 @@ node('jenkins_agent') {
             sh(script: """
                 docker stop dev_env
                 docker rm dev_env
+
+                docker stop qemu_env
+                docker rm qemu_env
+
                 rm -rf $buildpath
             """)
         }
