@@ -91,6 +91,7 @@ In addition to those, install plugins:
 
 - _Last Changes_
 - _HTML Publisher_
+- _Valgrind_
 
 
 ## Jenkins Manage Credentials

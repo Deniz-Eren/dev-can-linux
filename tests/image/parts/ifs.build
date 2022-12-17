@@ -46,6 +46,7 @@
     procmgr_symlink /dev/shmem /tmp
     procmgr_symlink /system/xbin/ssh /usr/bin/ssh
     procmgr_symlink /proc/boot/ldqnx-64.so.2 /usr/lib/ldqnx-64.so.2
+    procmgr_symlink /system/usr/lib/valgrind /usr/lib/valgrind
 
     # **FIXME**
     # Processes should usually use _CS_CONFIG_PATH to locate configuration files.  But for now
@@ -93,6 +94,8 @@ post_startup.sh=./scripts/post_startup.sh
 mount_fs.sh=./scripts/mount_fs.sh
 
 lib/libc.so
+lib/libc.so.5
+lib/libc.so.5.sym
 lib/libgcc_s.so.1
 lib/libm.so
 lib/libcam.so

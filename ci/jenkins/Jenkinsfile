@@ -142,7 +142,7 @@ node('jenkins_agent') {
                 docker exec --user root --workdir /root dev_env bash -c \
                     "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
                         -p6022 root@localhost \
-                        \\\"tar -xf /data/home/root/build_qcc_coverage/dev-can-linux-*.tar.gz \
+                        \\\"tar -xf /data/home/root/build_qcc_coverage/dev-can-linux-*-cov.tar.gz \
                             -C /opt/\\\""
 
                 docker exec -d --user root --workdir /root dev_env bash -c \
