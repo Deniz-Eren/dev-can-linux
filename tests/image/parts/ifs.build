@@ -98,19 +98,41 @@ lib/libc.so.5
 lib/libc.so.5.sym
 lib/libgcc_s.so.1
 lib/libm.so
+lib/libm.so.3
+lib/libm.so.3.sym
 lib/libcam.so
+lib/libcam.so.2
+lib/libcam.so.2.sym
 lib/dll/io-blk.so
+lib/dll/io-blk.so.sym
 lib/dll/cam-disk.so
+lib/dll/cam-disk.so.sym
 lib/dll/fs-qnx6.so
+lib/dll/fs-qnx6.so.sym
 lib/dll/fs-dos.so
+lib/dll/fs-dos.so.sym
 lib/libslog2.so
+lib/libslog2.so.1
+lib/libslog2.so.1.sym
 usr/lib/libcrypto.so
+usr/lib/libcrypto.so.2.1
+usr/lib/libcrypto.so.2.1.sym
 lib/libsocket.so
+lib/libsocket.so.3
+lib/libsocket.so.3.sym
 usr/lib/libz.so
+usr/lib/libz.so.2
+usr/lib/libz.so.2.sym
 lib/libslog2shim.so
+lib/libslog2shim.so.1
+lib/libslog2shim.so.1.sym
 lib/libsecpol.so.1
+lib/libsecpol.so.1.sym
 lib/libpci.so
+lib/libpci.so.2.3
+lib/libpci.so.2.3.sym
 lib/libjson.so.1
+lib/libjson.so.1.sym
 
 #############################################
 ### Terminal Login
@@ -164,13 +186,29 @@ PCI_HW_MODULE=pci_hw-Intel_x86.so
 
 
 lib/dll/pci/pci_hw-Intel_x86.so
+lib/dll/pci/pci_hw-Intel_x86.so.2.4
+lib/dll/pci/pci_hw-Intel_x86.so.2.4.sym
 lib/dll/pci/pci_slog2.so
+lib/dll/pci/pci_slog2.so.2.1
+lib/dll/pci/pci_slog2.so.2.1.sym
 lib/dll/pci/pci_cap-0x05.so
+lib/dll/pci/pci_cap-0x05.so.2.3
+lib/dll/pci/pci_cap-0x05.so.2.3.sym
 lib/dll/pci/pci_cap-0x10.so
+lib/dll/pci/pci_cap-0x10.so.2.3
+lib/dll/pci/pci_cap-0x10.so.2.3.sym
 lib/dll/pci/pci_cap-0x11.so
+lib/dll/pci/pci_cap-0x11.so.2.2
+lib/dll/pci/pci_cap-0x11.so.2.2.sym
 lib/dll/pci/pci_strings.so
+lib/dll/pci/pci_strings.so.2.0
+lib/dll/pci/pci_strings.so.2.0.sym
 lib/dll/pci/pci_bkwd_compat.so
+lib/dll/pci/pci_bkwd_compat.so.2.1
+lib/dll/pci/pci_bkwd_compat.so.2.1.sym
 lib/dll/pci/pci_debug2.so
+lib/dll/pci/pci_debug2.so.2.1
+lib/dll/pci/pci_debug2.so.2.1.sym
 sbin/pci-server
 
 
@@ -188,9 +226,14 @@ sbin/pci-server
 #############################################
 
 usr/lib/libqcrypto.so
+usr/lib/libqcrypto.so.1.0
+usr/lib/libqcrypto.so.1.0.sym
 lib/dll/qcrypto-openssl.so
+lib/dll/qcrypto-openssl.so.sym
 lib/libqh.so.1
+lib/libqh.so.1.sym
 lib/libregex.so.1
+lib/libregex.so.1.sym
 
 [uid=0 gid=0 perms=0444] qcrypto.conf={
 openssl tags=*
@@ -199,3 +242,4 @@ openssl tags=*
 # Placeholder for local list of files to add to ifs
 
 usr/lib/ldqnx-64.so.2
+usr/lib/ldqnx-64.so.2.sym

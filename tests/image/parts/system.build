@@ -222,11 +222,10 @@ xbin/xargs=usr/bin/xargs
 xbin/crontab=usr/bin/crontab
 xbin/canctl=bin/canctl
 
-#
-# Valgrind
-#
+#############################################
+### Valgrind
+#############################################
 xbin/valgrind=usr/bin/valgrind
-xbin/valgrind-di-server=usr/bin/valgrind-di-server
 usr/lib/valgrind/cachegrind-amd64-nto=usr/lib/valgrind/cachegrind-amd64-nto
 usr/lib/valgrind/callgrind-amd64-nto=usr/lib/valgrind/callgrind-amd64-nto
 usr/lib/valgrind/drd-amd64-nto=usr/lib/valgrind/drd-amd64-nto
@@ -241,7 +240,6 @@ usr/lib/valgrind/memcheck-amd64-nto=usr/lib/valgrind/memcheck-amd64-nto
 usr/lib/valgrind/none-amd64-nto=usr/lib/valgrind/none-amd64-nto
 usr/lib/valgrind/default.supp=usr/lib/valgrind/default.supp
 usr/lib/valgrind/vgpreload_core-amd64-nto.so=usr/lib/valgrind/vgpreload_core-amd64-nto.so
-
 
 #############################################
 ### suid Utilities
