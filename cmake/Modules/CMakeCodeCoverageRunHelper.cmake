@@ -174,7 +174,7 @@ function( code_coverage_gen_html exec_target_name )
 
             add_custom_target( test-cov-preprocessing ALL
                 COMMAND lcov
-                    --gcov-tool=$ENV{QNX_HOST}/usr/bin/ntox86_64-gcov
+                    --gcov-tool=${QNX_GCOV_EXE}
                     -t "test_coverage_results" -o tests.info
                     -c -d ${CMAKE_BINARY_DIR}
                     --base-directory=${CMAKE_SOURCE_DIR}
