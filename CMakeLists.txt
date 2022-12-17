@@ -47,8 +47,7 @@ add_compile_definitions(
 
 # Always enable the following
 add_compile_definitions( CONFIG_CAN_CALC_BITTIMING )
-add_compile_definitions( CONFIG_X86_64 )
-add_compile_definitions( CONFIG_X86_32 )
+add_compile_definitions( CONFIG_X86_64 ) # 32-bit alternative is CONFIG_X86_32
 
 project( dev-can-linux
          VERSION ${PROGRAM_VERSION}

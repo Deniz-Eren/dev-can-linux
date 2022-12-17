@@ -80,9 +80,10 @@ CCFLAGS +=	-DCONFIG_QNX_INTERRUPT_ATTACH_EVENT=`cat "config/CONFIG_QNX_INTERRUPT
 #
 
 CCFLAGS +=	-DCONFIG_HZ=`cat "config/CONFIG_HZ"`
-CCFLAGS +=	-DCONFIG_CAN_CALC_BITTIMING # Always enabled
-CCFLAGS +=	-DCONFIG_X86_64             # Always enabled
-CCFLAGS +=	-DCONFIG_X86_32             # Always enabled
+
+# Always enable the following
+CCFLAGS +=	-DCONFIG_CAN_CALC_BITTIMING
+CCFLAGS +=	-DCONFIG_X86_64 # 32-bit alternative is CONFIG_X86_32
 
 #Generic compiler flags (which include build type flags)
 CCFLAGS_all += -Wall -fmessage-length=0
