@@ -86,7 +86,7 @@ node('jenkins_agent') {
 
         stage('integration testing (with coverage)') {
             sh(script: """
-                /opt/dev-can-linux/ci/jenkins/integration-testing.sh
+                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh
             """)
 
             publishHTML(target : [allowMissing: false,

@@ -76,7 +76,7 @@ services:
             ip link add dev vcan1 type vcan &&
             ip link set up vcan1; \
         else echo \"VCAN already setup\"; fi \
-        && /opt/dev-can-linux/ci/jenkins/setup-ssh-port.sh \
+        && /opt/dev-can-linux/ci/jenkins/scripts/setup-ssh-port.sh \
         && groupmod -g $DOCKER_GROUP docker \
         && usermod -aG docker jenkins \
         && tail -f /dev/null"
