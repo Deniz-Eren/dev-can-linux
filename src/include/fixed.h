@@ -23,9 +23,11 @@
 
 #include <string.h>
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
 #include <sys/neutrino.h>
-#else
+#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 ||
+         CONFIG_QNX_INTERRUPT_ATTACH == 1 */
 #include <pthread.h>
 #include <unistd.h>
 #endif
@@ -48,9 +50,11 @@
 extern void* volatile FixedArray[FIXED_MAX_NUM_BLOCKS];
 extern volatile int FixedArrayIndex;
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
 extern intrspin_t FixedArraySpin;
-#else
+#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 ||
+         CONFIG_QNX_INTERRUPT_ATTACH == 1 */
 extern pthread_mutex_t FixedArrayMutex;
 #endif
 

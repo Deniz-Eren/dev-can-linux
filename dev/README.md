@@ -1,7 +1,9 @@
-# DEV-CAN-LINUX development environment
+# DEV-CAN-LINUX
 
 A containerized QNX development environment setup is presented here based on
 Ubuntu host operating system.
+
+## Development Environment Setup
 
 The Dockerfile configured in this section is also used by the local Jenkins
 setup described in [ci/jenkins/](../ci/jenkins).
@@ -22,7 +24,7 @@ TODO: Fix will be in _podman-compose_ version 1.0.4; once its in main release we
 will remove this comment.
 
 
-## Prerequisites
+### Prerequisites
 
 On your host environment create a directory in your home directory to house your
 QNX Momentics IDE workspace. Otherwise, as you bring your disposable container
@@ -31,21 +33,21 @@ up and down, you will lose your IDE settings. This is done simply:
     mkdir ~/ide-7.1-workspace
 
 
-## Step 1
+### Step 1
 
 Make a copy of the _INIT_ template _qnx.Dockerfile_ provided:
 
     cd dev-can-linux/dev
     cp INIT.qnx.Dockerfile qnx.Dockerfile
 
-## Step 2
+### Step 2
 
 Start the development environment with default Ubuntu base image:
 
     cd dev-can-linux/dev
     podman-compose up -d
 
-## Step 3
+### Step 3
 
 Login to the development environment container and install your personal/private
 licensed _QNX Software Center_ program:
@@ -83,7 +85,7 @@ When prompted allow the QNX 7.1 system to install to the default location of
 [setup profile script](setup-profile.sh) assumes this path.
 
 
-## Step 4
+### Step 4
 
 Once your QNX 7.1 system is installed and ready, Stop the _dev_ podman-compose
 container instance:
@@ -102,7 +104,7 @@ Where <username> is either your repository user-name if you intend use a secure
 remote private and personal repository as per _Step 6_ below, or just something
 else unique you chose to use.
 
-## Step 5
+### Step 5
 
 Our recommended container manager for our development environment is Podman,
 however for [CI Jenkins pipelines](../ci/jenkins) we find it convenient to use
@@ -121,7 +123,7 @@ prefix:
 
 You can now delete the temporary tar file.
 
-## Step 6 (Optional)
+### Step 6 (Optional)
 
 If you chose to backup your image to a secure remote private and personal
 repository, then these remaining steps apply. Ensure this is your own personal
@@ -144,7 +146,7 @@ and
 
     podman image list
 
-## Step 7
+### Step 7
 
 Edit your qnx.Dockerfile and change the FROM repo to be either your local
 committed image name or your private remote repo.
@@ -162,3 +164,15 @@ For remote private repo:
 Now you will have a disposable container setup where you can perform _down_ and
 _up_ whenever you like to throw away your _qnx710-dev_ container and re-create
 it from committed base image; this gives great flexibility.
+
+
+## Debugging Core Dumps (GDB Usage)
+
+One can use GDB within the Ubuntu development environment shell, simply running:
+
+    $QNX_HOST/usr/bin/ntox86_64-gdb
+
+If you have a core dump file (for example _vgcore.704533_):
+
+    $QNX_HOST/usr/bin/ntox86_64-gdb dev-can-linux vgcore.704533
+

@@ -183,7 +183,8 @@ struct sja1000_priv {
 	uintptr_t reg_base;	 /* ioremap'ed address to registers */
 	unsigned long irq_flags; /* for request_irq() */
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
 	intrspin_t cmdreg_lock;  /* lock for concurrent cmd register writes */
 #endif
 

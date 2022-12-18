@@ -27,9 +27,11 @@
 void* volatile FixedArray[FIXED_MAX_NUM_BLOCKS];
 volatile int FixedArrayIndex = 0;
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
 intrspin_t FixedArraySpin;
-#else
+#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 ||
+         CONFIG_QNX_INTERRUPT_ATTACH == 1 */
 pthread_mutex_t FixedArrayMutex = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
@@ -49,7 +51,8 @@ int fixed_memory_init (void) {
         }
     }
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
     memset(&FixedArraySpin, 0, sizeof(intrspin_t));
 #endif
 
@@ -59,9 +62,11 @@ int fixed_memory_init (void) {
 void* fixed_malloc (size_t size) {
     void* result = NULL;
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
     InterruptLock(&FixedArraySpin);
-#else
+#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 ||
+         CONFIG_QNX_INTERRUPT_ATTACH == 1 */
     int ret_code;
 
     do {
@@ -80,9 +85,11 @@ void* fixed_malloc (size_t size) {
         result = FixedArray[FixedArrayIndex++];
     }
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
     InterruptUnlock(&FixedArraySpin);
-#else
+#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 ||
+         CONFIG_QNX_INTERRUPT_ATTACH == 1 */
     ret_code = pthread_mutex_unlock(&FixedArrayMutex);
 
     if (ret_code != EOK) {
@@ -95,9 +102,11 @@ void* fixed_malloc (size_t size) {
 }
 
 void fixed_free (void* ptr) {
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
     InterruptLock(&FixedArraySpin);
-#else
+#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 ||
+         CONFIG_QNX_INTERRUPT_ATTACH == 1 */
     int ret_code;
 
     do {
@@ -114,9 +123,11 @@ void fixed_free (void* ptr) {
 
     FixedArray[--FixedArrayIndex] = ptr;
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH != 1
     InterruptUnlock(&FixedArraySpin);
-#else
+#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 ||
+         CONFIG_QNX_INTERRUPT_ATTACH == 1 */
     ret_code = pthread_mutex_unlock(&FixedArrayMutex);
 
     if (ret_code != EOK) {

@@ -35,6 +35,11 @@
 #include <resmgr.h>
 #include <prints.h>
 
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH == 1
+#error Cannot set (CONFIG_QNX_) *INTERRUPT_ATTACH_EVENT and *INTERRUPT_ATTACH
+#endif
+
 int optv = 0;
 int optl = 0;
 int optq = 0;

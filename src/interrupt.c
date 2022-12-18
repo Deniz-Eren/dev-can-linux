@@ -30,7 +30,8 @@
 
 int id = -1;
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
+    CONFIG_QNX_INTERRUPT_ATTACH == 1
 struct sigevent event;
 #endif
 
@@ -43,11 +44,20 @@ struct func_t {
 struct func_t funcs[16];
 int funcs_size = 0;
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+#if CONFIG_QNX_INTERRUPT_ATTACH == 1
 /*
  * Interrupt Service Routine (ISR)
  *
  * The actual ISR actually does no work except returning a QNX signal event.
+ */
+const struct sigevent *irq_handler (void *area, int id) {
+    return &event;
+}
+#elif CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
+/*
+ * Interrupt Service Routine (ISR)
+ *
+ * The actual ISR performs the work.
  */
 const struct sigevent *irq_handler (void *area, int id) {
     log_enabled = false;
@@ -96,9 +106,12 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
              */
             | _NTO_INTR_FLAGS_TRK_MSK;
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
+    CONFIG_QNX_INTERRUPT_ATTACH == 1
         SIGEV_SET_TYPE(&event, SIGEV_INTR);
+#endif
 
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
         if ((id = InterruptAttachEvent(irq, &event, flags)) == -1) {
             log_err("internal error; interrupt attach event failure\n");
         }
@@ -120,7 +133,14 @@ void free_irq (unsigned int irq, void *dev) {
 
 void run_wait() {
     while (1) {
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
+#if CONFIG_QNX_INTERRUPT_ATTACH == 1
+        int i;
+        InterruptWait(0, NULL);
+
+        for (i = 0; i < funcs_size; ++i) {
+            funcs[i].handler(funcs[i].irq, funcs[i].dev);
+        }
+#elif CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
         int i;
         InterruptWait(0, NULL);
 
@@ -131,7 +151,10 @@ void run_wait() {
         for (i = 0; i < funcs_size; ++i) {
             funcs[i].handler(funcs[i].irq, funcs[i].dev);
         }
-#else
+#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 &&
+         CONFIG_QNX_INTERRUPT_ATTACH != 1 */
+
+        /* Just spend some time doing nothing so the loop doesn't hard-lock */
         sleep(60);
 #endif
     }

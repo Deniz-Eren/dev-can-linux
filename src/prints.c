@@ -33,6 +33,8 @@ void print_configs (void) {
     print_version();
 
     printf("CONFIG_HZ=%d\n", CONFIG_HZ);
+    printf("CONFIG_QNX_INTERRUPT_ATTACH=%d\n",
+            CONFIG_QNX_INTERRUPT_ATTACH);
     printf("CONFIG_QNX_INTERRUPT_ATTACH_EVENT=%d\n",
             CONFIG_QNX_INTERRUPT_ATTACH_EVENT);
 
