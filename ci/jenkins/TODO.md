@@ -53,8 +53,6 @@ The crash presents:
     ==778262== probably kill your program.
     Illegal instruction
 
-This is to be investigated, hypothesis:
-
-- Could be related to hardware IRQ interrupt handling code.
-- Could be related to Assembler code written in Linux Kernel code.
-- Could be related to QEmu CPU hardware emulation parameters.
+It turned out to be missing _#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1_ in
+_/src/fixed.c_. Now we have crash saying _Memory fault_ with core dump to be
+investigated.

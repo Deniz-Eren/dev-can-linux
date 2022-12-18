@@ -22,7 +22,13 @@
 #define SRC_FIXED_H_
 
 #include <string.h>
+
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
 #include <sys/neutrino.h>
+#else
+#include <pthread.h>
+#include <unistd.h>
+#endif
 
 /*
  * All users must check the types they are allocating are with the block-size
@@ -41,7 +47,12 @@
 
 extern void* volatile FixedArray[FIXED_MAX_NUM_BLOCKS];
 extern volatile int FixedArrayIndex;
+
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
 extern intrspin_t FixedArraySpin;
+#else
+extern pthread_mutex_t FixedArrayMutex;
+#endif
 
 
 /*

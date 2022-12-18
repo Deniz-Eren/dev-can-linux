@@ -21,13 +21,17 @@
 #include <stdlib.h>
 
 #include <fixed.h>
+#include <logs.h>
 
 
 void* volatile FixedArray[FIXED_MAX_NUM_BLOCKS];
 volatile int FixedArrayIndex = 0;
 
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
 intrspin_t FixedArraySpin;
-
+#else
+pthread_mutex_t FixedArrayMutex = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 int fixed_memory_init (void) {
     int result = 0;
@@ -45,7 +49,9 @@ int fixed_memory_init (void) {
         }
     }
 
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
     memset(&FixedArraySpin, 0, sizeof(intrspin_t));
+#endif
 
     return result;
 }
@@ -53,18 +59,68 @@ int fixed_memory_init (void) {
 void* fixed_malloc (size_t size) {
     void* result = NULL;
 
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
     InterruptLock(&FixedArraySpin);
+#else
+    int ret_code;
+
+    do {
+        ret_code = pthread_mutex_lock(&FixedArrayMutex);
+
+        if (ret_code != EOK) {
+            log_dbg("fixed_malloc: mutex lock error (%s)\n", strerror(ret_code));
+
+            usleep(1);
+        }
+
+    } while (ret_code != EOK);
+#endif
+
     if (FixedArrayIndex < FIXED_MAX_NUM_BLOCKS) {
         result = FixedArray[FixedArrayIndex++];
     }
+
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
     InterruptUnlock(&FixedArraySpin);
+#else
+    ret_code = pthread_mutex_unlock(&FixedArrayMutex);
+
+    if (ret_code != EOK) {
+        log_dbg("fixed_malloc: mutex unlock error (%s)\n", strerror(ret_code));
+    }
+#endif
 
     memset(result, 0, size);
     return result;
 }
 
 void fixed_free (void* ptr) {
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
     InterruptLock(&FixedArraySpin);
+#else
+    int ret_code;
+
+    do {
+        ret_code = pthread_mutex_lock(&FixedArrayMutex);
+
+        if (ret_code != EOK) {
+            log_dbg("fixed_free: mutex lock error (%s)\n", strerror(ret_code));
+
+            usleep(1);
+        }
+
+    } while (ret_code != EOK);
+#endif
+
     FixedArray[--FixedArrayIndex] = ptr;
+
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
     InterruptUnlock(&FixedArraySpin);
+#else
+    ret_code = pthread_mutex_unlock(&FixedArrayMutex);
+
+    if (ret_code != EOK) {
+        log_dbg("fixed_free: mutex unlock error (%s)\n", strerror(ret_code));
+    }
+#endif
 }
