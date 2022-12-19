@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # \file     integration-testing.sh
-# \brief    Bash script for integration testing.
+# \brief    Bash script for Jenkins integration testing.
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -20,6 +20,60 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
+optb=""
+optd="mioe3680_pci" # default device selection
+opti=""
+optp=""
+optr="10"           # default run duration
+optt="Release"      # default build type
+optv=""
+
+while getopts b:d:p:i:r:t:v opt; do
+    case ${opt} in
+    b )
+        optb=$OPTARG
+        ;;
+    d )
+        optd=$OPTARG
+        ;;
+    i )
+        opti=$OPTARG
+        ;;
+    p )
+        optp=$OPTARG
+        ;;
+    r )
+        optr=$OPTARG
+        ;;
+    t )
+        optt=$OPTARG
+        ;;
+    v )
+        optv="-vvvvv"
+        ;;
+    \?)
+        echo "Usage: integration-testing.sh [options]"
+        echo "  -b build full path to use"
+        echo "  -d device selection (default: mioe3680_pci)" 
+        echo "  -i local file full path to store images"
+        echo "  -p special run command that will be placed as prefix to running"
+        echo "     dev-can-linux executable" 
+        echo "  -r run duration in seconds (default: 10)"
+        echo "  -t build type (default: Release)" 
+        echo "  -v for verbose mode"
+        echo ""
+        exit
+        ;;
+    esac
+done
+
+docker run -d --name=qemu_env \
+    --network host \
+    --device=/dev/kvm \
+    localhost/dev-can-linux-qemu tail -f /dev/null
+
+docker cp $opti qemu_env:/root/Images
+
 docker exec -d --user root --workdir /root qemu_env \
     qemu-system-x86_64 \
         -k en-us \
@@ -29,7 +83,7 @@ docker exec -d --user root --workdir /root qemu_env \
         -boot d \
         -object can-bus,id=c0 \
         -object can-bus,id=c1 \
-        -device mioe3680_pci,canbus0=c0,canbus1=c1 \
+        -device $optd,canbus0=c0,canbus1=c1 \
         -object can-host-socketcan,id=h0,if=c0,canbus=c0,if=vcan0 \
         -object can-host-socketcan,id=h1,if=c1,canbus=c1,if=vcan1 \
         -m size=4096 \
@@ -49,11 +103,9 @@ docker exec --user root --workdir /root dev_env \
 docker exec --user root --workdir /root dev_env bash -c \
     "source .profile \
     && /root/dev-can-linux/dev/setup-profile.sh \
-    && mkdir -p /data/home/root \
-    && cd /data/home/root \
-    && mkdir -p build_qcc_coverage \
-    && cd build_qcc_coverage \
-    && cmake -DCMAKE_BUILD_TYPE=Coverage \
+    && mkdir -p $optb \
+    && cd $optb \
+    && cmake -DCMAKE_BUILD_TYPE=$optt \
         /root/dev-can-linux \
     && make -j8 \
     && cpack"
@@ -62,21 +114,21 @@ docker exec --user root --workdir /root dev_env bash -c \
 docker exec --user root --workdir /root dev_env bash -c \
     "source .profile \
     && sshpass -p 'root' scp -o 'StrictHostKeyChecking=no' \
-        -r -P6022 /data/home/root/build_qcc_coverage \
-        root@localhost:/data/home/root/"
+        -r -P6022 $optb \
+        root@localhost:$optb"
 
 docker exec --user root --workdir /root dev_env bash -c \
     "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
         -p6022 root@localhost \
-        \"tar -xf /data/home/root/build_qcc_coverage/dev-can-linux-*-cov.tar.gz \
+        \"tar -xf $optb/dev-can-linux-*.tar.gz \
             -C /opt/\""
 
 docker exec -d --user root --workdir /root dev_env bash -c \
     "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
         -p6022 root@localhost \
-        \"dev-can-linux -vvvvv\""
+        \"cd $optb ; $optp dev-can-linux $optv\""
 
-sleep 10
+sleep $optr
 
 docker exec --user root --workdir /root dev_env bash -c \
     "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
@@ -88,23 +140,8 @@ docker exec --user root --workdir /root dev_env bash -c \
     "source .profile \
     && sshpass -p 'root' scp -o 'StrictHostKeyChecking=no' \
         -r -P6022 \
-        root@localhost:/data/home/root/build_qcc_coverage \
+        root@localhost:$optb \
         /data/home/root/"
 
-docker exec --user root --workdir /root dev_env bash -c \
-    "source .profile \
-    && /root/dev-can-linux/dev/setup-profile.sh \
-    && cd /data/home/root/build_qcc_coverage \
-    && lcov --gcov-tool=\$QNX_HOST/usr/bin/ntox86_64-gcov \
-        -t \"test_coverage_results\" -o tests.info \
-        -c -d /data/home/root/build_qcc_coverage \
-        --base-directory=/root/dev-can-linux \
-        --no-external --quiet \
-    && genhtml -o /data/home/root/build_qcc_coverage/cov-html \
-        tests.info --quiet"
-
-rm -rf $WORKSPACE/test-coverage-qcc
-
-docker cp \
-    dev_env:/data/home/root/build_qcc_coverage/cov-html \
-        $WORKSPACE/test-coverage-qcc
+docker stop qemu_env
+docker rm qemu_env

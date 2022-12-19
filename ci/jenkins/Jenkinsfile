@@ -24,7 +24,7 @@ node('jenkins_agent') {
     def buildpath = "/var/tmp/$NODE_NAME";
 
     try {
-        stage('checkout and setup containers') {
+        stage('checkout and setup dev environment') {
             sh(script: """
                 rm -rf $buildpath
                 mkdir -p $buildpath
@@ -46,47 +46,41 @@ node('jenkins_agent') {
             publisher.publishLastChanges()
 
             sh(script: """
-                cd /opt/dev-can-linux/dev
-
-                docker build \
-                    -f /opt/dev-can-linux/dev/qnx.Dockerfile \
-                    -t localhost/dev-can-linux-dev .
-
-                docker run -d --name=dev_env \
-                    --network host \
-                    localhost/dev-can-linux-dev tail -f /dev/null
-
-                docker cp /opt/dev-can-linux dev_env:/root/
-
-                cd /opt/dev-can-linux/tests/emulation
-
-                docker build \
-                    -f /opt/dev-can-linux/tests/emulation/qemu.Dockerfile \
-                    -t localhost/dev-can-linux-qemu .
-
-                docker run -d --name=qemu_env \
-                    --network host \
-                    --device=/dev/kvm \
-                    localhost/dev-can-linux-qemu tail -f /dev/null
-
-                docker exec --user root --workdir /root dev_env bash -c \
-                    "source .profile \
-                    && /root/dev-can-linux/dev/setup-profile.sh \
-                    && cd /root/dev-can-linux/tests/image \
-                    && ./builddisk.sh"
-
-                rm -rf /home/jenkins/Images
-
-                docker cp dev_env:/root/dev-can-linux/tests/image/output \
-                    /home/jenkins/Images
-
-                docker cp /home/jenkins/Images qemu_env:/root/Images
+                /opt/dev-can-linux/ci/jenkins/scripts/setup-dev-environment.sh \
+                    -i /home/jenkins/Images \
+                    -r /opt/dev-can-linux
             """)
         }
 
         stage('integration testing (with coverage)') {
             sh(script: """
-                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh
+                rm -rf /data/home/root/build_qcc_coverage
+
+                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh -v \
+                    -i /home/jenkins/Images \
+                    -b /data/home/root/build_qcc_coverage \
+                    -d mioe3680_pci \
+                    -t Coverage \
+                    -r 10
+
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && cd /data/home/root/build_qcc_coverage \
+                    && lcov --gcov-tool=\\\$QNX_HOST/usr/bin/ntox86_64-gcov \
+                        -t \"test_coverage_results\" -o tests.info \
+                        -c -d /data/home/root/build_qcc_coverage \
+                        --base-directory=/root/dev-can-linux \
+                        --no-external --quiet \
+                    && genhtml -o /data/home/root/build_qcc_coverage/cov-html \
+                        tests.info --quiet"
+
+                rm -rf $WORKSPACE/test-coverage-qcc
+
+                docker cp \
+                    dev_env:/data/home/root/build_qcc_coverage/cov-html \
+                        $WORKSPACE/test-coverage-qcc
+
             """)
 
             publishHTML(target : [allowMissing: false,
@@ -127,9 +121,6 @@ node('jenkins_agent') {
             sh(script: """
                 docker stop dev_env
                 docker rm dev_env
-
-                docker stop qemu_env
-                docker rm qemu_env
 
                 rm -rf $buildpath
             """)
