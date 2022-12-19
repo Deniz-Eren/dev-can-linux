@@ -41,3 +41,6 @@ set( CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY )
 
 # set gcov executable
 set( QNX_GCOV_EXE $ENV{QNX_HOST}/usr/bin/ntox86-gcov )
+
+# set profiling library
+set( QNX_PROFILING_LIBRARY $ENV{QNX_TARGET}/x86/usr/lib/libprofilingS.a )

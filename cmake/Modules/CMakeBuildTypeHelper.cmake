@@ -21,6 +21,8 @@
 
 if( CMAKE_BUILD_TYPE MATCHES Coverage )
     set( BUILD_TYPE_NAME "-cov" )
+elseif( CMAKE_BUILD_TYPE MATCHES Profiling )
+    set( BUILD_TYPE_NAME "-pro" )
 elseif( CMAKE_BUILD_TYPE MATCHES Debug )
     set( BUILD_TYPE_NAME "-g" )
 else()

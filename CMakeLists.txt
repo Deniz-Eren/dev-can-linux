@@ -91,16 +91,22 @@ target_include_directories( dev-can-linux PUBLIC
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include/uapi>
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/arch/x86/include> )
 
-target_link_libraries( dev-can-linux -lpci )
+if( CMAKE_BUILD_TYPE MATCHES Profiling )
+    target_link_libraries( dev-can-linux -lpci ${QNX_PROFILING_LIBRARY} )
+else()
+    target_link_libraries( dev-can-linux -lpci )
+endif()
 
 install( TARGETS dev-can-linux
         DESTINATION bin/
         COMPONENT ${CMAKE_PROJECT_NAME} )
 
-include( CMakeCodeCoverageRunHelper )
+include( CMakeCoverageHelper )
+include( CMakeProfilingHelper )
 include( CMakeBuildTypeHelper )
 
 code_coverage_flags()
+code_profiling_flags()
 
 # Package settings
 set( CPACK_GENERATOR "TGZ" )

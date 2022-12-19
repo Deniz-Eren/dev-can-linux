@@ -1,6 +1,6 @@
 ##
-# \file     CMakeCodeCoverageRunHelper.cmake
-# \brief    Code coverage run helper CMake module file
+# \file     CMakeCoverageHelper.cmake
+# \brief    CMake code coverage helper module file
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
