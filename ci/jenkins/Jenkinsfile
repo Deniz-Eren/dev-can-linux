@@ -98,7 +98,11 @@ node('jenkins_agent') {
                 rm -rf /data/home/root/build_qcc_profiling
 
                 export QNX_PREFIX_CMD="valgrind \
-                    --tool=memcheck --leak-check=yes \
+                    --tool=memcheck \
+                    --leak-check=full \
+                    --show-leak-kinds=all \
+                    --track-origins=yes \
+                    --verbose \
                     --xml=yes --xml-file=valgrind-memcheck.xml"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
