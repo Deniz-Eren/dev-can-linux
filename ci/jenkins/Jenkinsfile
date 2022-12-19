@@ -56,11 +56,13 @@ node('jenkins_agent') {
             sh(script: """
                 rm -rf /data/home/root/build_qcc_coverage
 
+                /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
+                    -i /home/jenkins/Images \
+                    -d mioe3680_pci
+
                 /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
                     -v \
-                    -i /home/jenkins/Images \
                     -b /data/home/root/build_qcc_coverage \
-                    -d mioe3680_pci \
                     -t Coverage \
                     -r 10
 
@@ -75,6 +77,8 @@ node('jenkins_agent') {
                         --no-external --quiet \
                     && genhtml -o /data/home/root/build_qcc_coverage/cov-html \
                         tests.info --quiet"
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-emulation.sh
 
                 rm -rf $WORKSPACE/test-coverage-qcc
 
@@ -95,7 +99,16 @@ node('jenkins_agent') {
 
         stage('integration testing (with profiling)') {
             sh(script: '''
-                rm -rf /data/home/root/build_qcc_profiling
+                rm -rf $WORKSPACE/valgrind-*.xml
+
+                /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
+                    -i /home/jenkins/Images \
+                    -d mioe3680_pci
+
+                #
+                # Run Valgrind with tool memcheck
+                #
+                rm -rf /data/home/root/build_memcheck
 
                 export QNX_PREFIX_CMD="valgrind \
                     --tool=memcheck \
@@ -107,25 +120,89 @@ node('jenkins_agent') {
 
                 /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
                     -v \
-                    -i /home/jenkins/Images \
-                    -b /data/home/root/build_qcc_profiling \
-                    -d mioe3680_pci \
+                    -b /data/home/root/build_memcheck \
                     -t Profiling \
                     -k memcheck-amd64-nto \
+                    -s 1 \
                     -r 10
 
-                rm -rf $WORKSPACE/valgrind-*.xml
+                docker cp \
+                    dev_env:/data/home/root/build_memcheck/valgrind-memcheck.xml \
+                    $WORKSPACE/
+
+                #
+                # Run Valgrind with tool helgrind
+                #
+                rm -rf /data/home/root/build_helgrind
+
+                export QNX_PREFIX_CMD="valgrind \
+                    --tool=helgrind \
+                    --history-level=full \
+                    --conflict-cache-size=5000000 \
+                    --verbose \
+                    --xml=yes --xml-file=valgrind-helgrind.xml"
+
+                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                    -v \
+                    -b /data/home/root/build_helgrind \
+                    -t Profiling \
+                    -k helgrind-amd64-nto \
+                    -s 1 \
+                    -r 10
 
                 docker cp \
-                    dev_env:/data/home/root/build_qcc_profiling \
+                    dev_env:/data/home/root/build_helgrind/valgrind-helgrind.xml \
                     $WORKSPACE/
 
-                mv $WORKSPACE/build_qcc_profiling/valgrind-*.xml \
+                #
+                # Run Valgrind with tool drd
+                #
+                rm -rf /data/home/root/build_drd
+
+                export QNX_PREFIX_CMD="valgrind \
+                    --tool=drd \
+                    --verbose \
+                    --xml=yes --xml-file=valgrind-drd.xml"
+
+                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                    -v \
+                    -b /data/home/root/build_drd \
+                    -t Profiling \
+                    -k drd-amd64-nto \
+                    -s 1 \
+                    -r 10
+
+                docker cp \
+                    dev_env:/data/home/root/build_drd/valgrind-drd.xml \
                     $WORKSPACE/
 
-                rm -rf $WORKSPACE/build_qcc_profiling
+                #
+                # Run Valgrind with tool exp-sgcheck
+                #
+                rm -rf /data/home/root/build_exp-sgcheck
+
+                export QNX_PREFIX_CMD="valgrind \
+                    --tool=exp-sgcheck \
+                    --verbose \
+                    --xml=yes --xml-file=valgrind-exp-sgcheck.xml"
+
+                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                    -v \
+                    -b /data/home/root/build_exp-sgcheck \
+                    -t Profiling \
+                    -k exp-sgcheck-amd64-nto \
+                    -s 1 \
+                    -r 10
+
+                docker cp \
+                    dev_env:/data/home/root/build_exp-sgcheck/valgrind-exp-sgcheck.xml \
+                    $WORKSPACE/
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-emulation.sh
+
+                # Have a copy of the repository in the workspace so Valgrind
+                # source-code displays works
                 rm -rf $WORKSPACE/dev-can-linux
-
                 cp -r /opt/dev-can-linux $WORKSPACE/
             ''')
 

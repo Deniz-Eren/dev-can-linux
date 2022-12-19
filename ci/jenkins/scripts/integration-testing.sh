@@ -21,29 +21,25 @@
 #
 
 optb=""
-optd="mioe3680_pci"     # default device selection
-opti=""
 optk="dev-can-linux"    # default slay command target
 optr="10"               # default run duration
+opts=""
 optt="Release"          # default build type
 optv=""
 
-while getopts b:d:i:k:r:t:v opt; do
+while getopts b:k:r:s:t:v opt; do
     case ${opt} in
     b )
         optb=$OPTARG
-        ;;
-    d )
-        optd=$OPTARG
-        ;;
-    i )
-        opti=$OPTARG
         ;;
     k )
         optk=$OPTARG
         ;;
     r )
         optr=$OPTARG
+        ;;
+    s )
+        opts=$OPTARG
         ;;
     t )
         optt=$OPTARG
@@ -54,11 +50,10 @@ while getopts b:d:i:k:r:t:v opt; do
     \?)
         echo "Usage: integration-testing.sh [options]"
         echo "  -b build full path to use"
-        echo "  -d device selection (default: mioe3680_pci)" 
-        echo "  -i local file full path to store images"
         echo "  -k what process to slay when stopping testing"
         echo "     (default: dev-can-linux)"
         echo "  -r run duration in seconds (default: 10)"
+        echo "  -s if not empty then copy debug symbols for libc.so"
         echo "  -t build type (default: Release)" 
         echo "  -v for verbose mode"
         echo " Environment variable QNX_PREFIX_CMD is placed as prefix to"
@@ -68,31 +63,6 @@ while getopts b:d:i:k:r:t:v opt; do
         ;;
     esac
 done
-
-docker run -d --name=qemu_env \
-    --network host \
-    --device=/dev/kvm \
-    localhost/dev-can-linux-qemu tail -f /dev/null
-
-docker cp $opti qemu_env:/root/Images
-
-docker exec -d --user root --workdir /root qemu_env \
-    qemu-system-x86_64 \
-        -k en-us \
-        -drive id=disk,file=/root/Images/disk-raw,format=raw,if=none \
-        -device ahci,id=ahci \
-        -device ide-hd,drive=disk,bus=ahci.1 \
-        -boot d \
-        -object can-bus,id=c0 \
-        -object can-bus,id=c1 \
-        -device $optd,canbus0=c0,canbus1=c1 \
-        -object can-host-socketcan,id=h0,if=c0,canbus=c0,if=vcan0 \
-        -object can-host-socketcan,id=h1,if=c1,canbus=c1,if=vcan1 \
-        -m size=4096 \
-        -nic user,hostfwd=tcp::6022-:22,hostfwd=tcp::8000-:8000 \
-        -smp 4 \
-        -enable-kvm \
-        -nographic
 
 docker exec --user root --workdir /root dev_env \
     bash -c "source .profile \
@@ -130,9 +100,19 @@ docker exec --user root --workdir /root dev_env bash -c \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
         -p6022 root@localhost \
-        \"tar -xf $optb/dev-can-linux-*.tar.gz \
-                -C /opt/ ; \
-            cp /proc/boot/libc.so.5* /opt/lib/\""
+        \"tar -xf $optb/dev-can-linux-*.tar.gz -C /opt/\""
+
+if [ ! -z "$opts" ]; then
+    docker exec --user root --workdir /root dev_env bash -c \
+        "sshpass -p 'root' ssh \
+            -o 'StrictHostKeyChecking=no' \
+            -o 'UserKnownHostsFile=/dev/null' \
+            -o 'LogLevel=ERROR' \
+            -p6022 root@localhost \
+            \"cp /proc/boot/libc.so.5* /opt/lib/ ; \
+                ln -s /opt/bin/dev-can-linux \
+                    /opt/bin/dev-can-linux$opts \""
+fi
 
 docker exec -d --user root --workdir /root dev_env bash -c \
     "sshpass -p 'root' ssh \
@@ -162,6 +142,3 @@ docker exec --user root --workdir /root dev_env bash -c \
         -r -P6022 \
         root@localhost:$optb \
         $optb/.."
-
-docker stop qemu_env
-docker rm qemu_env

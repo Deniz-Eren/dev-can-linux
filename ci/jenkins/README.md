@@ -175,6 +175,26 @@ You should be able to click on _DEV-CAN-LINUX_ from the _Dashboard_ and then
 click _Build Now_ to start the pipeline.
 
 
+## Tips and Tricks
+
+### Restart Jenkins
+
+Jenkins can be restart by navigating your browser to
+_http://localhost:8080/restart_.
+
+
+### Delete All Jenkins Builds
+
+To delete all builds click _Manage Jenkins_ and select _Script Console_, then
+type and run the following script:
+
+    def jobName = "DEV-CAN-LINUX"
+    def job = Jenkins.instance.getItem(jobName)
+    job.getBuilds().each { it.delete() }
+    job.nextBuildNumber = 1
+    job.save()
+
+
 ## Special Notice
 
 To run Jenkins plug-in _HTML Publisher_ we have introduced a
