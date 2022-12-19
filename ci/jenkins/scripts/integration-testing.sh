@@ -21,14 +21,14 @@
 #
 
 optb=""
-optd="mioe3680_pci" # default device selection
+optd="mioe3680_pci"     # default device selection
 opti=""
-optp=""
-optr="10"           # default run duration
-optt="Release"      # default build type
+optk="dev-can-linux"    # default slay command target
+optr="10"               # default run duration
+optt="Release"          # default build type
 optv=""
 
-while getopts b:d:p:i:r:t:v opt; do
+while getopts b:d:i:k:r:t:v opt; do
     case ${opt} in
     b )
         optb=$OPTARG
@@ -39,8 +39,8 @@ while getopts b:d:p:i:r:t:v opt; do
     i )
         opti=$OPTARG
         ;;
-    p )
-        optp=$OPTARG
+    k )
+        optk=$OPTARG
         ;;
     r )
         optr=$OPTARG
@@ -56,11 +56,13 @@ while getopts b:d:p:i:r:t:v opt; do
         echo "  -b build full path to use"
         echo "  -d device selection (default: mioe3680_pci)" 
         echo "  -i local file full path to store images"
-        echo "  -p special run command that will be placed as prefix to running"
-        echo "     dev-can-linux executable" 
+        echo "  -k what process to slay when stopping testing"
+        echo "     (default: dev-can-linux)"
         echo "  -r run duration in seconds (default: 10)"
         echo "  -t build type (default: Release)" 
         echo "  -v for verbose mode"
+        echo " Environment variable QNX_PREFIX_CMD is placed as prefix to"
+        echo " running dev-can-linux executable"
         echo ""
         exit
         ;;
@@ -96,6 +98,8 @@ docker exec --user root --workdir /root dev_env \
     bash -c "source .profile \
         && until sshpass -p 'root' ssh \
             -o 'StrictHostKeyChecking=no' \
+            -o 'UserKnownHostsFile=/dev/null' \
+            -o 'LogLevel=ERROR' \
             -p6022 root@localhost \"uname -a\" \
             2> /dev/null; \
             do sleep 1; done"
@@ -113,35 +117,51 @@ docker exec --user root --workdir /root dev_env bash -c \
 # Copy build directory to the QNX VM
 docker exec --user root --workdir /root dev_env bash -c \
     "source .profile \
-    && sshpass -p 'root' scp -o 'StrictHostKeyChecking=no' \
+    && sshpass -p 'root' scp \
+        -o 'StrictHostKeyChecking=no' \
+        -o 'UserKnownHostsFile=/dev/null' \
+        -o 'LogLevel=ERROR' \
         -r -P6022 $optb \
         root@localhost:$optb"
 
 docker exec --user root --workdir /root dev_env bash -c \
-    "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
+    "sshpass -p 'root' ssh \
+        -o 'StrictHostKeyChecking=no' \
+        -o 'UserKnownHostsFile=/dev/null' \
+        -o 'LogLevel=ERROR' \
         -p6022 root@localhost \
         \"tar -xf $optb/dev-can-linux-*.tar.gz \
-            -C /opt/\""
+                -C /opt/ ; \
+            cp /proc/boot/libc.so.5* /opt/lib/\""
 
 docker exec -d --user root --workdir /root dev_env bash -c \
-    "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
+    "sshpass -p 'root' ssh \
+        -o 'StrictHostKeyChecking=no' \
+        -o 'UserKnownHostsFile=/dev/null' \
+        -o 'LogLevel=ERROR' \
         -p6022 root@localhost \
-        \"cd $optb ; $optp dev-can-linux $optv\""
+        \"cd $optb ; $QNX_PREFIX_CMD dev-can-linux $optv\""
 
 sleep $optr
 
 docker exec --user root --workdir /root dev_env bash -c \
-    "sshpass -p 'root' ssh -o 'StrictHostKeyChecking=no' \
+    "sshpass -p 'root' ssh \
+        -o 'StrictHostKeyChecking=no' \
+        -o 'UserKnownHostsFile=/dev/null' \
+        -o 'LogLevel=ERROR' \
         -p6022 root@localhost \
-        \"slay -s SIGINT dev-can-linux\" || (exit 0)"
+        \"slay -s SIGINT $optk\" || (exit 0)"
 
 # Copy build directory back from the QNX VM
 docker exec --user root --workdir /root dev_env bash -c \
     "source .profile \
-    && sshpass -p 'root' scp -o 'StrictHostKeyChecking=no' \
+    && sshpass -p 'root' scp \
+        -o 'StrictHostKeyChecking=no' \
+        -o 'UserKnownHostsFile=/dev/null' \
+        -o 'LogLevel=ERROR' \
         -r -P6022 \
         root@localhost:$optb \
-        /data/home/root/"
+        $optb/.."
 
 docker stop qemu_env
 docker rm qemu_env

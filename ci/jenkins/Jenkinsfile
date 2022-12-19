@@ -56,7 +56,8 @@ node('jenkins_agent') {
             sh(script: """
                 rm -rf /data/home/root/build_qcc_coverage
 
-                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh -v \
+                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                    -v \
                     -i /home/jenkins/Images \
                     -b /data/home/root/build_qcc_coverage \
                     -d mioe3680_pci \
@@ -90,6 +91,42 @@ node('jenkins_agent') {
                 reportFiles: 'index.html',
                 reportName: 'Coverage Report (QCC)',
                 reportTitles: 'Coverage Report (QCC)'])
+        }
+
+        stage('integration testing (with profiling)') {
+            sh(script: '''
+                rm -rf /data/home/root/build_qcc_profiling
+
+                export QNX_PREFIX_CMD="valgrind \
+                    --tool=memcheck --leak-check=yes \
+                    --xml=yes --xml-file=valgrind-memcheck.xml"
+
+                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                    -v \
+                    -i /home/jenkins/Images \
+                    -b /data/home/root/build_qcc_profiling \
+                    -d mioe3680_pci \
+                    -t Profiling \
+                    -k memcheck-amd64-nto \
+                    -r 10
+
+                rm -rf $WORKSPACE/valgrind-*.xml
+
+                docker cp \
+                    dev_env:/data/home/root/build_qcc_profiling \
+                    $WORKSPACE/
+
+                mv $WORKSPACE/build_qcc_profiling/valgrind-*.xml \
+                    $WORKSPACE/
+
+                rm -rf $WORKSPACE/build_qcc_profiling
+                rm -rf $WORKSPACE/dev-can-linux
+
+                cp -r /opt/dev-can-linux $WORKSPACE/
+            ''')
+
+            publishValgrind(pattern: 'valgrind-*.xml',
+                sourceSubstitutionPaths: '/root/dev-can-linux:dev-can-linux')
         }
 
         stage('release') {
