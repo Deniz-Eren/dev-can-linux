@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Deniz Eren <deniz.eren@outlook.com>
+ * Copyright (C) 2022 Harri Järvi <harri.jarvi@atostek.com>
  *
  * Parts of this software are based on (derived) the following:
  *
