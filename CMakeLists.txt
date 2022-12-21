@@ -55,7 +55,10 @@ add_compile_definitions( CONFIG_X86_64 ) # 32-bit alternative is CONFIG_X86_32
 
 project( dev-can-linux
          VERSION ${PROGRAM_VERSION}
-         LANGUAGES CXX )
+         LANGUAGES C CXX )
+
+option( DISABLE_COVERAGE_HTML_GEN
+        "Disable clang-tidy static analysis checks" OFF )
 
 # Compiler settings
 set( CMAKE_CXX_STANDARD 17 )
@@ -104,9 +107,12 @@ install( TARGETS dev-can-linux
 include( CMakeCoverageHelper )
 include( CMakeProfilingHelper )
 include( CMakeBuildTypeHelper )
+include( CTest )
 
 code_coverage_flags()
 code_profiling_flags()
+
+add_subdirectory( tests )
 
 # Package settings
 set( CPACK_GENERATOR "TGZ" )

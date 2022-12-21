@@ -28,10 +28,6 @@ function( code_profiling_flags )
 
             # Currently not handled or needed
 
-        elseif( CMAKE_COMPILER_IS_GNUCXX )
-
-            # Currently not handled or needed
-
         elseif( "${CMAKE_C_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" OR
                 "${CMAKE_CXX_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" )
 
@@ -41,6 +37,10 @@ function( code_profiling_flags )
             set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
                 -finstrument-functions -O0 -g"
                 PARENT_SCOPE )
+
+        elseif( CMAKE_COMPILER_IS_GNUCXX )
+
+            # Currently not handled or needed
 
         else()
             message( FATAL_ERROR "Code profiling requires Clang or GCC!" )

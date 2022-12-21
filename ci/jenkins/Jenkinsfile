@@ -52,7 +52,48 @@ node('jenkins_agent') {
             """)
         }
 
-        stage('integration testing (with coverage)') {
+        stage('[UTC] Unit testing (with coverage)') {
+            sh(script: """
+                /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
+                    -i /home/jenkins/Images \
+                    -d mioe3680_pci
+
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && mkdir -p build_qcc_unit \
+                    && cd build_qcc_unit \
+                    && cmake -DCMAKE_BUILD_TYPE=Coverage \
+                        /root/dev-can-linux \
+                    && make -j8 \
+                    && ctest --output-junit test_results.xml || (exit 0)"
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-emulation.sh
+
+                rm -rf $WORKSPACE/test-coverage-ut
+                rm -rf $WORKSPACE/test_results.xml
+
+                docker cp \
+                    dev_env:/root/build_qcc_unit/tests/test-coverage \
+                        $WORKSPACE/test-coverage-ut
+
+                docker cp \
+                    dev_env:/root/build_qcc_unit/test_results.xml \
+                        $WORKSPACE/test_results.xml
+            """)
+
+            junit('test_results.xml')
+
+            publishHTML(target : [allowMissing: false,
+                alwaysLinkToLastBuild: true,
+                keepAll: true,
+                reportDir: 'test-coverage-ut',
+                reportFiles: 'index.html',
+                reportName: 'UTC Report',
+                reportTitles: 'UTC Report'])
+        }
+
+        stage('[ITC] integration testing (with coverage)') {
             sh(script: """
                 rm -rf /data/home/root/build_qcc_coverage
 
@@ -85,7 +126,6 @@ node('jenkins_agent') {
                 docker cp \
                     dev_env:/data/home/root/build_qcc_coverage/cov-html \
                         $WORKSPACE/test-coverage-qcc
-
             """)
 
             publishHTML(target : [allowMissing: false,
@@ -93,11 +133,11 @@ node('jenkins_agent') {
                 keepAll: true,
                 reportDir: 'test-coverage-qcc',
                 reportFiles: 'index.html',
-                reportName: 'Coverage Report (QCC)',
-                reportTitles: 'Coverage Report (QCC)'])
+                reportName: 'ITC Report',
+                reportTitles: 'ITC Report'])
         }
 
-        stage('integration testing (with profiling)') {
+        stage('[ITP] integration testing (with profiling)') {
             sh(script: '''
                 rm -rf $WORKSPACE/valgrind-*.xml
 

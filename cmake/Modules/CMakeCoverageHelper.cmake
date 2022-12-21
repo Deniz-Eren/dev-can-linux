@@ -42,6 +42,32 @@ function( code_coverage_flags )
 
             set( LDFLAGS "${LDFLAGS} -fprofile-instr-generate" PARENT_SCOPE )
 
+        elseif( "${CMAKE_C_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" OR
+                "${CMAKE_CXX_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" )
+
+            find_program( LCOV_PATH lcov )
+            find_program( GENHTML_PATH genhtml )
+
+            if( NOT LCOV_PATH )
+                message( FATAL_ERROR "lcov not found!" )
+            endif()
+
+            if( NOT GENHTML_PATH )
+                message( FATAL_ERROR "genhtml not found!" )
+            endif()
+
+            set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} \
+                -ftest-coverage -fprofile-arcs -O0 -g -nopipe -Wc,-auxbase-strip,$@"
+                PARENT_SCOPE )
+
+            set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
+                -ftest-coverage -fprofile-arcs -O0 -g -dumpbase -dumpdir -save-temps"
+                PARENT_SCOPE )
+
+            set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
+                -ftest-coverage -fprofile-arcs -p"
+                PARENT_SCOPE )
+
         elseif( CMAKE_COMPILER_IS_GNUCXX )
             find_program( LCOV_PATH lcov )
             find_program( GENHTML_PATH genhtml )
@@ -62,32 +88,6 @@ function( code_coverage_flags )
                 --coverage -fprofile-arcs -ftest-coverage -ggdb -O0"
                 PARENT_SCOPE )
 
-        elseif( "${CMAKE_C_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" OR
-                "${CMAKE_CXX_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" )
-
-            find_program( LCOV_PATH lcov )
-            find_program( GENHTML_PATH genhtml )
-
-            if( NOT LCOV_PATH )
-                message( FATAL_ERROR "lcov not found!" )
-            endif()
-
-            if( NOT GENHTML_PATH )
-                message( FATAL_ERROR "genhtml not found!" )
-            endif()
-
-            set( CMAKE_C_FLAGS "${CMAKE_C_FLAGS} \
-                -ftest-coverage -fprofile-arcs -O0 -g -nopipe -Wc,-auxbase-strip,$@"
-                PARENT_SCOPE )
-
-            set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} \
-                -ftest-coverage -fprofile-arcs -O0 -g -nopipe -Wc,-auxbase-strip,$@"
-                PARENT_SCOPE )
-
-            set( CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} \
-                -ftest-coverage -fprofile-arcs -p"
-                PARENT_SCOPE )
-
         else()
             message( FATAL_ERROR "Code coverage requires Clang or GCC!" )
         endif()
@@ -96,7 +96,7 @@ endfunction( code_coverage_flags )
 
 
 function( code_coverage_run exec_target_name )
-    if( CMAKE_BUILD_TYPE MATCHES Coverage )
+    if( CMAKE_BUILD_TYPE MATCHES Coverage AND NOT DISABLE_COVERAGE_HTML_GEN )
         if( "${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR
             "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" )
 
@@ -116,18 +116,19 @@ function( code_coverage_run exec_target_name )
                 ${CMAKE_CURRENT_BINARY_DIR}/${exec_target_name}
                 CACHE STRING "" )
 
-        elseif( CMAKE_COMPILER_IS_GNUCXX )
-            add_custom_target( ${exec_target_name}-cov-run ALL
-                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${exec_target_name}
-                        || (exit 0)
-                DEPENDS ${exec_target_name} )
-
         elseif( "${CMAKE_C_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" OR
                 "${CMAKE_CXX_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" )
 
             # TODO: Implement remote run and copy coverage files back
             add_custom_target( ${exec_target_name}-cov-run ALL
-                COMMAND exit 0
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${exec_target_name}.sh
+                        || (exit 0)
+                DEPENDS ${exec_target_name} )
+
+        elseif( CMAKE_COMPILER_IS_GNUCXX )
+            add_custom_target( ${exec_target_name}-cov-run ALL
+                COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${exec_target_name}
+                        || (exit 0)
                 DEPENDS ${exec_target_name} )
         endif()
     endif()
@@ -135,7 +136,7 @@ endfunction( code_coverage_run )
 
 
 function( code_coverage_gen_html exec_target_name )
-    if( CMAKE_BUILD_TYPE MATCHES Coverage )
+    if( CMAKE_BUILD_TYPE MATCHES Coverage AND NOT DISABLE_COVERAGE_HTML_GEN )
         if( "${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR
             "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" )
 
@@ -154,28 +155,13 @@ function( code_coverage_gen_html exec_target_name )
                     -format="html"
                 DEPENDS test-cov-preprocessing )
 
-        elseif( CMAKE_COMPILER_IS_GNUCXX )
-
-            add_custom_target( test-cov-preprocessing ALL
-                COMMAND lcov -t "test_coverage_results" -o tests.info
-                    -c -d ${CMAKE_BINARY_DIR}
-                    --base-directory=${CMAKE_SOURCE_DIR}
-                    --no-external --quiet
-                DEPENDS ${exec_target_name}-cov-run )
-
-            add_custom_target( test-cov-html ALL
-                COMMAND genhtml
-                    -o ${CMAKE_CURRENT_BINARY_DIR}/test-coverage tests.info
-                    --quiet
-                DEPENDS test-cov-preprocessing )
-
         elseif( "${CMAKE_C_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" OR
                 "${CMAKE_CXX_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" )
 
             add_custom_target( test-cov-preprocessing ALL
                 COMMAND lcov
                     --gcov-tool=${QNX_GCOV_EXE}
-                    -t "test_coverage_results" -o tests.info
+                    -t "test_coverage_results" -o unit-tests.info
                     -c -d ${CMAKE_BINARY_DIR}
                     --base-directory=${CMAKE_SOURCE_DIR}
                     --no-external --quiet
@@ -183,7 +169,22 @@ function( code_coverage_gen_html exec_target_name )
 
             add_custom_target( test-cov-html ALL
                 COMMAND genhtml
-                    -o ${CMAKE_CURRENT_BINARY_DIR}/test-coverage tests.info
+                    -o ${CMAKE_CURRENT_BINARY_DIR}/test-coverage unit-tests.info
+                    --quiet
+                DEPENDS test-cov-preprocessing )
+
+        elseif( CMAKE_COMPILER_IS_GNUCXX )
+
+            add_custom_target( test-cov-preprocessing ALL
+                COMMAND lcov -t "test_coverage_results" -o unit-tests.info
+                    -c -d ${CMAKE_BINARY_DIR}
+                    --base-directory=${CMAKE_SOURCE_DIR}
+                    --no-external --quiet
+                DEPENDS ${exec_target_name}-cov-run )
+
+            add_custom_target( test-cov-html ALL
+                COMMAND genhtml
+                    -o ${CMAKE_CURRENT_BINARY_DIR}/test-coverage unit-tests.info
                     --quiet
                 DEPENDS test-cov-preprocessing )
         endif()

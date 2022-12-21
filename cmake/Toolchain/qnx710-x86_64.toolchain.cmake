@@ -22,8 +22,10 @@
 set( CMAKE_SYSTEM_NAME qnx710 )
 
 # which compilers to use for C and C++
-set( CMAKE_C_COMPILER   $ENV{QNX_HOST}/usr/bin/qcc )
-set( CMAKE_CXX_COMPILER $ENV{QNX_HOST}/usr/bin/q++ )
+set( CMAKE_C_COMPILER   $ENV{QNX_HOST}/usr/bin/qcc -Vgcc_ntox86_64 )
+set( CMAKE_CXX_COMPILER $ENV{QNX_HOST}/usr/bin/ntox86_64-c++ )
+# TODO: investigate why q++ -Vgcc_ntox86_64_cxx doesn't work
+#set( CMAKE_CXX_COMPILER $ENV{QNX_HOST}/usr/bin/q++ -Vgcc_ntox86_64_cxx )
 
 # where is the target environment located
 set( CMAKE_FIND_ROOT_PATH
@@ -44,3 +46,7 @@ set( QNX_GCOV_EXE $ENV{QNX_HOST}/usr/bin/ntox86_64-gcov )
 
 # set profiling library
 set( QNX_PROFILING_LIBRARY $ENV{QNX_TARGET}/x86_64/usr/lib/libprofilingS.a )
+
+# Googletest
+set( ENV{GTEST_ROOT} $ENV{QNX_TARGET}/x86_64/usr/ )
+set( GTEST_MAIN_LIBRARY $ENV{QNX_TARGET}/x86_64/usr/lib/libgtestS.a )

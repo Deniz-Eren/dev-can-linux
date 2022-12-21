@@ -58,6 +58,7 @@
     procmgr_symlink /data/var/etc /etc
     procmgr_symlink /data/var/opt /opt
     procmgr_symlink /data/var /var
+    procmgr_symlink /data/home/root /root
 
     TERM=qansi
     PATH=/opt/bin:/proc/boot:/system/xbin

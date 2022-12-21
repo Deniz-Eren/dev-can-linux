@@ -106,6 +106,7 @@ lib/libxml2.so.2=usr/lib/libxml2.so.2
 [dperms=755 type=dir] etc/terminfo/q
 [perms=444] etc/terminfo/q/qansi = usr/lib/terminfo/q/qansi
 [perms=444] etc/termcap=etc/termcap
+lib/libgtest.so.1.7=usr/lib/libgtest.so.1.7
 
 #############################################
 ### Utilities

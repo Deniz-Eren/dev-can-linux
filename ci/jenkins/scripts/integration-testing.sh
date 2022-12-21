@@ -64,22 +64,13 @@ while getopts b:k:r:s:t:v opt; do
     esac
 done
 
-docker exec --user root --workdir /root dev_env \
-    bash -c "source .profile \
-        && until sshpass -p 'root' ssh \
-            -o 'StrictHostKeyChecking=no' \
-            -o 'UserKnownHostsFile=/dev/null' \
-            -o 'LogLevel=ERROR' \
-            -p6022 root@localhost \"uname -a\" \
-            2> /dev/null; \
-            do sleep 1; done"
-
 docker exec --user root --workdir /root dev_env bash -c \
     "source .profile \
     && /root/dev-can-linux/dev/setup-profile.sh \
     && mkdir -p $optb \
     && cd $optb \
     && cmake -DCMAKE_BUILD_TYPE=$optt \
+        -DDISABLE_COVERAGE_HTML_GEN=ON \
         /root/dev-can-linux \
     && make -j8 \
     && cpack"

@@ -65,3 +65,14 @@ docker exec -d --user root --workdir /root qemu_env \
         -smp 4 \
         -enable-kvm \
         -nographic
+
+# Wait until emulator SSH port is ready
+docker exec --user root --workdir /root dev_env \
+    bash -c "source .profile \
+        && until sshpass -p 'root' ssh \
+            -o 'StrictHostKeyChecking=no' \
+            -o 'UserKnownHostsFile=/dev/null' \
+            -o 'LogLevel=ERROR' \
+            -p6022 root@localhost \"uname -a\" \
+            2> /dev/null; \
+            do sleep 1; done"
