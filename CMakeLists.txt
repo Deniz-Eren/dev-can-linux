@@ -27,7 +27,7 @@ cmake_minimum_required( VERSION 3.22 )
 
 # Set the toolchain file to QNX 7.1
 set( CMAKE_TOOLCHAIN_FILE
-        ${CMAKE_SOURCE_DIR}/cmake/Toolchain/qnx710-x86_64.toolchain.cmake )
+    ${CMAKE_SOURCE_DIR}/cmake/Toolchain/qnx710-x86_64.toolchain.cmake )
 
 project( dev-can-linux )
 
@@ -38,16 +38,18 @@ list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/Modules )
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/PROGRAM_VERSION" PROGRAM_VERSION )
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_HZ" CONFIG_HZ )
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_QNX_INTERRUPT_ATTACH"
-        CONFIG_QNX_INTERRUPT_ATTACH )
+    CONFIG_QNX_INTERRUPT_ATTACH )
+
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_QNX_INTERRUPT_ATTACH_EVENT"
-        CONFIG_QNX_INTERRUPT_ATTACH_EVENT )
+    CONFIG_QNX_INTERRUPT_ATTACH_EVENT )
 
 add_compile_definitions( PROGRAM_VERSION="${PROGRAM_VERSION}" )
 add_compile_definitions( CONFIG_HZ=${CONFIG_HZ} )
 add_compile_definitions(
-        CONFIG_QNX_INTERRUPT_ATTACH=${CONFIG_QNX_INTERRUPT_ATTACH} )
+    CONFIG_QNX_INTERRUPT_ATTACH=${CONFIG_QNX_INTERRUPT_ATTACH} )
+
 add_compile_definitions(
-        CONFIG_QNX_INTERRUPT_ATTACH_EVENT=${CONFIG_QNX_INTERRUPT_ATTACH_EVENT} )
+    CONFIG_QNX_INTERRUPT_ATTACH_EVENT=${CONFIG_QNX_INTERRUPT_ATTACH_EVENT} )
 
 # Always enable the following
 add_compile_definitions( CONFIG_CAN_CALC_BITTIMING )
@@ -68,15 +70,23 @@ set( CMAKE_CXX_STANDARD_REQUIRED True )
 set( CMAKE_EXPORT_COMPILE_COMMANDS ON )
 
 install( FILES ${CMAKE_SOURCE_DIR}/README.md
-        DESTINATION share/dev-can-linux/
-        COMPONENT ${CMAKE_PROJECT_NAME} )
+    DESTINATION share/dev-can-linux/
+    COMPONENT ${CMAKE_PROJECT_NAME} )
 
 install( FILES ${CMAKE_SOURCE_DIR}/LICENSE
-        DESTINATION share/dev-can-linux/
-        COMPONENT ${CMAKE_PROJECT_NAME} )
+    DESTINATION share/dev-can-linux/
+    COMPONENT ${CMAKE_PROJECT_NAME} )
 
-aux_source_directory(
-    ${CMAKE_SOURCE_DIR}/src/ C_SOURCE_FILES )
+list( APPEND C_SOURCE_FILES
+    ${CMAKE_SOURCE_DIR}/src/config.c
+    ${CMAKE_SOURCE_DIR}/src/fixed.c
+    ${CMAKE_SOURCE_DIR}/src/interrupt.c
+    ${CMAKE_SOURCE_DIR}/src/logs.c
+    ${CMAKE_SOURCE_DIR}/src/netif.c
+    ${CMAKE_SOURCE_DIR}/src/pci.c
+    ${CMAKE_SOURCE_DIR}/src/prints.c
+    ${CMAKE_SOURCE_DIR}/src/resmgr.c
+    ${CMAKE_SOURCE_DIR}/src/timer.c )
 
 aux_source_directory(
     ${CMAKE_SOURCE_DIR}/src/kernel/drivers/net/can/sja1000 C_SOURCE_FILES )
@@ -84,15 +94,17 @@ aux_source_directory(
 aux_source_directory(
     ${CMAKE_SOURCE_DIR}/src/kernel/drivers/net/can/dev C_SOURCE_FILES )
 
-add_executable( dev-can-linux ${C_SOURCE_FILES} )
+add_executable( dev-can-linux
+    ${CMAKE_SOURCE_DIR}/src/main.c
+    ${C_SOURCE_FILES} )
 
 target_include_directories( dev-can-linux PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel>
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include>
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include/uapi>
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/arch/x86/include> )
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include/uapi>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/arch/x86/include> )
 
 if( CMAKE_BUILD_TYPE MATCHES Profiling )
     target_link_libraries( dev-can-linux -lpci ${QNX_PROFILING_LIBRARY} )
@@ -101,8 +113,8 @@ else()
 endif()
 
 install( TARGETS dev-can-linux
-        DESTINATION bin/
-        COMPONENT ${CMAKE_PROJECT_NAME} )
+    DESTINATION bin/
+    COMPONENT ${CMAKE_PROJECT_NAME} )
 
 include( CMakeCoverageHelper )
 include( CMakeProfilingHelper )

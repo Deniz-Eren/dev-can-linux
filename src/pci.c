@@ -26,7 +26,6 @@
 
 #include "config.h"
 #include "pci.h"
-#include "main.h"
 
 struct pci_driver *detected_driver = NULL;
 

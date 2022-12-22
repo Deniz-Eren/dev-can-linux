@@ -20,7 +20,6 @@
 
 #include "config.h"
 #include "pci.h"
-#include "main.h"
 
 
 void print_version (void) {

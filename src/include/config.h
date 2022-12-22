@@ -32,6 +32,17 @@
 
 
 /*
+ * Program options
+ */
+
+extern int optv;
+extern int optl;
+extern int optq;
+extern int optd;
+extern int opt_vid;
+extern int opt_did;
+
+/*
  * Linux Kernel platform and architecture macros
  */
 

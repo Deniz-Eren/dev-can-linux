@@ -18,14 +18,24 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-add_executable( timer-tests timer-tests.cpp )
+add_executable( timer-tests ${C_SOURCE_FILES} timer-tests.cpp )
+
+target_include_directories( timer-tests PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include/uapi>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/arch/x86/include> )
 
 if( CMAKE_BUILD_TYPE MATCHES Profiling )
     target_link_libraries( timer-tests PRIVATE
+        -lpci
         ${GTEST_LIBRARIES}
         ${QNX_PROFILING_LIBRARY} )
 else()
     target_link_libraries( timer-tests PRIVATE
+        -lpci
         ${GTEST_LIBRARIES} )
 endif()
 

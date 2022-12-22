@@ -1,5 +1,5 @@
 /*
- * \file    main.h
+ * \file    config.c
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,19 +18,14 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SRC_MAIN_H_
-#define SRC_MAIN_H_
+#include <config.h>
 
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 && \
+    CONFIG_QNX_INTERRUPT_ATTACH == 1
+#error Cannot set (CONFIG_QNX_) *INTERRUPT_ATTACH_EVENT and *INTERRUPT_ATTACH
+#endif
 
-/*
- * Program options
- */
-
-extern int optv;
-extern int optl;
-extern int optq;
-extern int optd;
-extern int opt_vid;
-extern int opt_did;
-
-#endif /* SRC_MAIN_H_ */
+int optv = 0;
+int optl = 0;
+int optq = 0;
+int optd = 0, opt_vid = -1, opt_did = -1;

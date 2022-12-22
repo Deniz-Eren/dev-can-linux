@@ -20,6 +20,7 @@
  */
 
 #include <gtest/gtest.h>
+#include <timer.h>
 
 
 // Demonstrate some basic assertions.

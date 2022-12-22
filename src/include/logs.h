@@ -24,7 +24,7 @@
 #include <stdio.h>
 #include <syslog.h>
 
-#include "main.h"
+#include "config.h"
 
 
 /*

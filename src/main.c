@@ -28,22 +28,11 @@
 
 #include <linux/can/dev.h>
 
-#include <main.h>
 #include <config.h>
 #include <pci.h>
 #include <interrupt.h>
 #include <resmgr.h>
 #include <prints.h>
-
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 && \
-    CONFIG_QNX_INTERRUPT_ATTACH == 1
-#error Cannot set (CONFIG_QNX_) *INTERRUPT_ATTACH_EVENT and *INTERRUPT_ATTACH
-#endif
-
-int optv = 0;
-int optl = 0;
-int optq = 0;
-int optd = 0, opt_vid = -1, opt_did = -1;
 
 struct pci_dev pdev = {
         .ba = NULL,
