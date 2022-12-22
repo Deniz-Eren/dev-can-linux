@@ -23,11 +23,23 @@
 
 #include "timer.h"
 
-/* check custom timer shutdown pulse code is valid */
-#if _PULSE_CODE_SHUTDOWN_PROGRAM < _PULSE_CODE_MINAVAIL || \
-    _PULSE_CODE_SHUTDOWN_PROGRAM >= _PULSE_CODE_MAXAVAIL
-#error Invalid (_PULSE_CODE_SHUTDOWN_PROGRAM) safe range of pulse values is \
+/* check custom timer pulse codes are within safe range */
+#if _PULSE_CODE_SHUTDOWN_TIMER < _PULSE_CODE_MINAVAIL || \
+    _PULSE_CODE_SHUTDOWN_TIMER >= _PULSE_CODE_MAXAVAIL
+#error Invalid (_PULSE_CODE_SHUTDOWN_TIMER) safe range of pulse values is \
     _PULSE_CODE_MINAVAIL through _PULSE_CODE_MAXAVAIL
+#endif
+
+#if _PULSE_CODE_TIMER_TRIGGER < _PULSE_CODE_MINAVAIL || \
+    _PULSE_CODE_TIMER_TRIGGER >= _PULSE_CODE_MAXAVAIL
+#error Invalid (_PULSE_CODE_TIMER_TRIGGER) safe range of pulse values is \
+    _PULSE_CODE_MINAVAIL through _PULSE_CODE_MAXAVAIL
+#endif
+
+/* check custom timer pulse codes are unique */
+#if _PULSE_CODE_TIMER_TRIGGER == _PULSE_CODE_SHUTDOWN_TIMER
+#error _PULSE_CODE_SHUTDOWN_TIMER and _PULSE_CODE_TIMER_TRIGGER must have \
+    unique values
 #endif
 
 
@@ -62,8 +74,8 @@ void create (int i) {
     timer[i].chid = ChannelCreate(0);
 
     if (timer[i].chid == -1) {
-        log_err( "setup_timer ChannelCreate error; %s\n",
-                strerror(errno) );
+        log_err( "create(%d) ChannelCreate error; %s\n",
+                i, strerror(errno) );
     }
 
     /* Get our priority. */
@@ -79,15 +91,15 @@ void create (int i) {
         ConnectAttach(ND_LOCAL_NODE, 0, timer[i].chid, _NTO_SIDE_CHANNEL, 0);
 
     if (timer[i].event.sigev_coid == -1) {
-        log_err( "setup_timer ConnectAttach error; %s\n",
-                strerror(errno) );
+        log_err( "create(%d) ConnectAttach error; %s\n",
+                i, strerror(errno) );
     }
 
     timer[i].event.sigev_priority = prio;
-    timer[i].event.sigev_code = TIMER_PULSE_CODE;
+    timer[i].event.sigev_code = _PULSE_CODE_TIMER_TRIGGER;
 
     if (timer_create(CLOCK_MONOTONIC, &timer[i].event, timer[i].id) == -1) {
-        log_err( "timer_loop (%d) timer_create error; %s\n",
+        log_err( "create(%d) timer_create error; %s\n",
                 i, strerror(errno) );
     }
 
@@ -106,24 +118,24 @@ void destroy (int i) {
 
     if (MsgSendPulse(
         timer[i].event.sigev_coid,
-        -1, _PULSE_CODE_SHUTDOWN_PROGRAM, 0 ) == -1)
+        -1, _PULSE_CODE_SHUTDOWN_TIMER, 0 ) == -1)
     {
-        log_err( "shutdown_all_timers MsgSendPulse error; %s\n",
-                strerror(errno) );
+        log_err( "destroy(%d) MsgSendPulse error; %s\n",
+                i, strerror(errno) );
     }
 
     if (timer_delete(*timer[i].id) == -1) {
-        log_err( "cancel_delayed_work_sync (%d) timer_delete error; %s\n",
+        log_err( "destroy(%d) timer_delete error; %s\n",
                 i, strerror(errno) );
     }
 
     if (ConnectDetach(timer[i].event.sigev_coid) == -1) {
-        log_err( "cancel_delayed_work_sync (%d) ConnectDetach error; %s\n",
+        log_err( "destroy(%d) ConnectDetach error; %s\n",
                 i, strerror(errno) );
     }
 
     if (ChannelDestroy(timer[i].chid) == -1) {
-        log_err( "cancel_delayed_work_sync (%d) ChannelDestroy error; %s\n",
+        log_err( "destroy(%d) ChannelDestroy error; %s\n",
                 i, strerror(errno) );
     }
 
@@ -159,11 +171,11 @@ static void* timer_loop (void* arg) {
     for (;;) {
         rcvid = MsgReceive(timer[i].chid, &pulse, sizeof(struct _pulse), NULL);
         if (rcvid == 0) { /* we got a pulse */
-            if (pulse.code == _PULSE_CODE_SHUTDOWN_PROGRAM) {
-                break;
-            }
-            else if (pulse.code == TIMER_PULSE_CODE) {
+            if (pulse.code == _PULSE_CODE_TIMER_TRIGGER) {
                 timer[i].callback(timer[i].data);
+            }
+	        else if (pulse.code == _PULSE_CODE_SHUTDOWN_TIMER) {
+                break;
             } /* else other pulses ... */
         } /* else other messages ... */
     }
@@ -259,4 +271,14 @@ void schedule_delayed_work (timer_t* timer_id, int ticks) {
     }
 
     timer[i].created = 1;
+}
+
+uint64_t get_clock_time_us () {
+    static uint64_t cycles_per_us = 0;
+
+    if (cycles_per_us == 0) {
+        cycles_per_us = SYSPAGE_ENTRY(qtime)->cycles_per_sec / MILLION;
+    }
+
+    return ClockCycles() / cycles_per_us;
 }

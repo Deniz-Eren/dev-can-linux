@@ -21,20 +21,24 @@
 #ifndef SRC_TIMER_H_
 #define SRC_TIMER_H_
 
-#include <time.h>
+#include <sys/syspage.h>
 #include <linux/types.h>
 
 
 /* Timer shutdown pulse */
-#define _PULSE_CODE_SHUTDOWN_PROGRAM _PULSE_CODE_MINAVAIL
+#define _PULSE_CODE_SHUTDOWN_TIMER  (_PULSE_CODE_MINAVAIL+0)
+#define _PULSE_CODE_TIMER_TRIGGER   (_PULSE_CODE_MINAVAIL+1)
+
+/* some scaling factors */
+#define MILLION	1e6 
+#define BILLION 1e9
 
 /*
  * SJA1000 Bus-off recovery timer
  */
 #define HZ                  CONFIG_HZ // Internal kernel timer frequency
-#define TIMER_INTERVAL_NS   (1000000000UL / (HZ)) // Timer interval nanoseconds
+#define TIMER_INTERVAL_NS   ((BILLION) / (HZ)) // Timer interval nanoseconds
 #define jiffies             0
-#define TIMER_PULSE_CODE    _PULSE_CODE_MINAVAIL
 
 /*
  * Functions needed by the Linux Kernel source "drivers/net/can/dev.c" to
@@ -45,5 +49,8 @@ extern void setup_timer (timer_t* timer_id, void (*callback)(void*),
 
 extern void cancel_delayed_work_sync (timer_t* timer_id);
 extern void schedule_delayed_work (timer_t* timer_id, int ticks);
+
+/* accurate relative time function in us */
+extern uint64_t get_clock_time_us();
 
 #endif /* SRC_TIMER_H_ */
