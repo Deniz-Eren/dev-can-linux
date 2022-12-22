@@ -20,6 +20,7 @@
 
 #include <config.h>
 
+/* check configuration macros are valid */
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 && \
     CONFIG_QNX_INTERRUPT_ATTACH == 1
 #error Cannot set (CONFIG_QNX_) *INTERRUPT_ATTACH_EVENT and *INTERRUPT_ATTACH

@@ -18,12 +18,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifdef COVERAGE
-#include <signal.h>
-#endif
 #include <stdio.h>
-#include <unistd.h>
-#include <hw/inout.h>
+#include <signal.h>
 #include <pthread.h>
 
 #include <linux/can/dev.h>
@@ -75,32 +71,12 @@ void* test_tx (void*  arg) {
     return (0);
 }
 
-#ifdef COVERAGE
-
-void __gcov_flush(void);
-
-void gcov_flush_signal (int sig_no) {
-    log_enabled = false;
-
-    /*
-     * In practice the program runs forever or until the user terminates it;
-     * thus we can never reach here.
-     */
-    adv_pci_driver.remove(&pdev);
-
-    /*
-     * Flush GCov buffers so we have *.gcda files generated
-     */
-    __gcov_flush();
+void sigint_signal_handler (int sig_no) {
+    terminate_run_wait();
 }
-#endif
 
 int main (int argc, char* argv[]) {
     int opt;
-
-#ifdef COVERAGE
-    signal(SIGINT, gcov_flush_signal);
-#endif
 
     while ((opt = getopt(argc, argv, "d:vqlVCwc?h")) != -1) {
         switch (opt) {
@@ -162,6 +138,8 @@ int main (int argc, char* argv[]) {
     log_info("driver start (version: %s)\n", PROGRAM_VERSION);
 
     ThreadCtl(_NTO_TCTL_IO, 0);
+
+    signal(SIGINT, sigint_signal_handler);
 
     struct driver_selection_t ds;
 

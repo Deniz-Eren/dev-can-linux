@@ -25,5 +25,6 @@
 
 
 extern void run_wait();
+extern void terminate_run_wait();
 
 #endif /* SRC_INTERRUPT_H_ */

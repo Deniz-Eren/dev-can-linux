@@ -19,6 +19,7 @@
  */
 
 #include <unistd.h>
+#include <atomic.h>
 
 #include "interrupt.h"
 
@@ -43,6 +44,23 @@ struct func_t {
 
 struct func_t funcs[16];
 int funcs_size = 0;
+
+/* atomic shutdown check */
+volatile unsigned shutdown_program = 0x0; // 0x0 = running, 0x1 = shutdown
+
+void terminate_run_wait () {
+    atomic_set_value(&shutdown_program, 0x01);
+
+#if CONFIG_QNX_INTERRUPT_ATTACH == 1 || \
+    CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
+
+    if (MsgDeliverEvent(0, &event) == -1) {
+        log_err("irq_trigger_event error; %s\n", strerror(errno));
+    }
+#else
+    sleep(2);
+#endif
+}
 
 #if CONFIG_QNX_INTERRUPT_ATTACH == 1
 /*
@@ -133,20 +151,20 @@ void free_irq (unsigned int irq, void *dev) {
 
 void run_wait() {
     while (1) {
-#if CONFIG_QNX_INTERRUPT_ATTACH == 1
+#if CONFIG_QNX_INTERRUPT_ATTACH == 1 || \
+    CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
         int i;
         InterruptWait(0, NULL);
 
-        for (i = 0; i < funcs_size; ++i) {
-            funcs[i].handler(funcs[i].irq, funcs[i].dev);
+        if (shutdown_program) {
+            return;
         }
-#elif CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-        int i;
-        InterruptWait(0, NULL);
 
+# if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
         if (funcs_size) {
             InterruptUnmask(funcs[0].irq, id);
         }
+# endif
 
         for (i = 0; i < funcs_size; ++i) {
             funcs[i].handler(funcs[i].irq, funcs[i].dev);
@@ -154,8 +172,12 @@ void run_wait() {
 #else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 &&
          CONFIG_QNX_INTERRUPT_ATTACH != 1 */
 
+        if (shutdown_program) {
+            return;
+        }
+
         /* Just spend some time doing nothing so the loop doesn't hard-lock */
-        sleep(60);
+        sleep(1);
 #endif
     }
 }

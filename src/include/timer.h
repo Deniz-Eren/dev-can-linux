@@ -25,6 +25,9 @@
 #include <linux/types.h>
 
 
+/* Timer shutdown pulse */
+#define _PULSE_CODE_SHUTDOWN_PROGRAM _PULSE_CODE_MINAVAIL
+
 /*
  * SJA1000 Bus-off recovery timer
  */

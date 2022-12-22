@@ -23,6 +23,13 @@
 
 #include "timer.h"
 
+/* check custom timer shutdown pulse code is valid */
+#if _PULSE_CODE_SHUTDOWN_PROGRAM < _PULSE_CODE_MINAVAIL || \
+    _PULSE_CODE_SHUTDOWN_PROGRAM >= _PULSE_CODE_MAXAVAIL
+#error Invalid (_PULSE_CODE_SHUTDOWN_PROGRAM) safe range of pulse values is \
+    _PULSE_CODE_MINAVAIL through _PULSE_CODE_MAXAVAIL
+#endif
+
 
 static struct timer_record_t {
     timer_t* id;
@@ -44,48 +51,106 @@ static int n_timers = 0;
 static void* timer_loop (void* arg);
 
 
-void setup_timer (timer_t* timer_id, void (*callback)(void*), void *data) {
-    int i = n_timers;
-
-    timer[i].id = timer_id;
-    timer[i].callback = callback;
-    timer[i].data = data;
-
-    timer_delete(*timer_id);
-
+void create (int i) {
     struct sched_param scheduling_params;
     int prio;
 
+    if (timer[i].created) {
+        return;
+    }
+
     timer[i].chid = ChannelCreate(0);
 
+    if (timer[i].chid == -1) {
+        log_err( "setup_timer ChannelCreate error; %s\n",
+                strerror(errno) );
+    }
+
     /* Get our priority. */
-    if (SchedGet( 0, 0, &scheduling_params) != -1)
-    {
+    if (SchedGet(0, 0, &scheduling_params) != -1) {
        prio = scheduling_params.sched_priority;
     }
-    else
-    {
+    else {
        prio = 10;
     }
 
-    timer[i].created = 0;
     timer[i].event.sigev_notify = SIGEV_PULSE;
-    timer[i].event.sigev_coid = ConnectAttach(ND_LOCAL_NODE, 0,
-                                     timer[i].chid,
-                                     _NTO_SIDE_CHANNEL, 0);
+    timer[i].event.sigev_coid =
+        ConnectAttach(ND_LOCAL_NODE, 0, timer[i].chid, _NTO_SIDE_CHANNEL, 0);
+
+    if (timer[i].event.sigev_coid == -1) {
+        log_err( "setup_timer ConnectAttach error; %s\n",
+                strerror(errno) );
+    }
+
     timer[i].event.sigev_priority = prio;
     timer[i].event.sigev_code = TIMER_PULSE_CODE;
-    timer_create(CLOCK_MONOTONIC, &timer[i].event, timer_id);
+
+    if (timer_create(CLOCK_MONOTONIC, &timer[i].event, timer[i].id) == -1) {
+        log_err( "timer_loop (%d) timer_create error; %s\n",
+                i, strerror(errno) );
+    }
 
     /* Start the timer thread */
     pthread_attr_init(&timer[i].attr);
     pthread_attr_setdetachstate(&timer[i].attr, PTHREAD_CREATE_DETACHED);
     pthread_create(NULL, &timer[i].attr, &timer_loop, &n_timers);
 
+    timer[i].created = 1;
+}
+
+void destroy (int i) {
+    if (!timer[i].created) {
+        return;
+    }
+
+    if (MsgSendPulse(
+        timer[i].event.sigev_coid,
+        -1, _PULSE_CODE_SHUTDOWN_PROGRAM, 0 ) == -1)
+    {
+        log_err( "shutdown_all_timers MsgSendPulse error; %s\n",
+                strerror(errno) );
+    }
+
+    if (timer_delete(*timer[i].id) == -1) {
+        log_err( "cancel_delayed_work_sync (%d) timer_delete error; %s\n",
+                i, strerror(errno) );
+    }
+
+    if (ConnectDetach(timer[i].event.sigev_coid) == -1) {
+        log_err( "cancel_delayed_work_sync (%d) ConnectDetach error; %s\n",
+                i, strerror(errno) );
+    }
+
+    if (ChannelDestroy(timer[i].chid) == -1) {
+        log_err( "cancel_delayed_work_sync (%d) ChannelDestroy error; %s\n",
+                i, strerror(errno) );
+    }
+
+    timer[i].created = 0;
+}
+
+void setup_timer (timer_t* timer_id, void (*callback)(void*), void *data) {
+    int i = n_timers;
+
+    if (i >= MAX_DEVICES) {
+        log_err("setup_timer (%d:%x) fail; max devices reached\n", i, timer_id);
+        return;
+    }
+
+    log_trace("setup_timer (%d:%x)\n", i, timer_id);
+
+    timer[i].created = 0;
+    timer[i].id = timer_id;
+    timer[i].callback = callback;
+    timer[i].data = data;
+
+    create(i);
+
     ++n_timers;
 }
 
-static void* timer_loop (void*  arg) {
+static void* timer_loop (void* arg) {
     int i = *(int*)arg;
 
     int             rcvid;
@@ -94,22 +159,21 @@ static void* timer_loop (void*  arg) {
     for (;;) {
         rcvid = MsgReceive(timer[i].chid, &pulse, sizeof(struct _pulse), NULL);
         if (rcvid == 0) { /* we got a pulse */
-             if (pulse.code == TIMER_PULSE_CODE) {
-                 timer[i].callback(timer[i].data);
-             } /* else other pulses ... */
+            if (pulse.code == _PULSE_CODE_SHUTDOWN_PROGRAM) {
+                break;
+            }
+            else if (pulse.code == TIMER_PULSE_CODE) {
+                timer[i].callback(timer[i].data);
+            } /* else other pulses ... */
         } /* else other messages ... */
     }
 
-    return EXIT_SUCCESS;
+    log_trace("timer_loop (%d) shutdow\n", i);
+
+    pthread_exit(NULL);
 }
 
-void cancel_delayed_work_sync (timer_t* timer_id)
-{
-    timer_delete(*timer_id);
-}
-
-void schedule_delayed_work (timer_t* timer_id, int ticks)
-{
+void cancel_delayed_work_sync (timer_t* timer_id) {
     int i = -1, j;
 
     for (j = 0; j < n_timers; ++j) {
@@ -119,14 +183,63 @@ void schedule_delayed_work (timer_t* timer_id, int ticks)
         }
     }
 
+    log_trace("cancel_delayed_work_sync (%d:%x)\n", i, timer_id);
+
+    if (i == -1) {
+        log_err("cancel_delayed_work_sync unknown timer\n");
+        return;
+    }
+
+    destroy(i);
+
+/*
+ * Important!
+ * Linux CAN-bus driver calls the following 3 functions to handle scheduled timer
+ * workloads:
+ *      setup( callback function, data )
+ *      schedule_delayed_work()
+ *      cancel_delayed_work_sync()
+ *
+ * It does this by calling setup() in the begining and then
+ * schedule_delayed_work() everytime works needs to be scheduled. At the very end
+ * it calls cancel_delayed_work_sync() to shutdown. However, there seems to be
+ * code that is open to the possibility of calling schedule_delayed_work() after
+ * cancel_delayed_work_sync() was called.
+ * For this reason, and since setup() is only called in the begining, we cannot
+ * lose our records of the "callback function" and "data".
+ * Also keeping in mind this timer based workload scheduler isn't a completely
+ * dynamic one, and that a fixed number of timers are expected per executable
+ * application.
+ * For these reasons, we will not perform the following "maintain timer
+ * inventory" section, however it is left here in commented out form for this
+ * illustrate this explanation.
+ */
+//    /* maintain timer inventory */
+//    for (j = i; j < n_timers; ++j) {
+//        timer[j] = timer[j+1];
+//    }
+//
+//    --n_timers;
+}
+
+void schedule_delayed_work (timer_t* timer_id, int ticks) {
+    int i = -1, j;
+
+    for (j = 0; j < n_timers; ++j) {
+        if (timer[j].id == timer_id) {
+            i = j;
+            break;
+        }
+    }
+
+    log_trace("schedule_delayed_work (%d:%x)\n", i, timer_id);
+
     if (i == -1) {
         log_err("mod_timer unknown timer\n");
         return;
     }
 
-    if (timer[i].created) {
-        timer_delete(*timer[i].id);
-    }
+    create(i);
 
     struct itimerspec       itime;
 
@@ -139,7 +252,11 @@ void schedule_delayed_work (timer_t* timer_id, int ticks)
     itime.it_interval.tv_sec = 0;
     // interval between triggers, nanoseconds:
     itime.it_interval.tv_nsec = 0;
-    timer_settime(*timer[i].id, 0, &itime, NULL);
+
+    if (timer_settime(*timer[i].id, 0, &itime, NULL) == -1) {
+        log_err( "timer_loop (%d) timer_settime error; %s\n",
+                i, strerror(errno) );
+    }
 
     timer[i].created = 1;
 }
