@@ -20,21 +20,25 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-optd="mioe3680_pci"     # default device selection
-opti=""
+DEVICE="mioe3680_pci"   # default device selection
+SSH_PORT="6022"         # default SSH port number
 
-while getopts d:i: opt; do
+while getopts d:i:p: opt; do
     case ${opt} in
     d )
-        optd=$OPTARG
+        DEVICE=$OPTARG
         ;;
     i )
-        opti=$OPTARG
+        IMAGE_DIR=$OPTARG
+        ;;
+    p )
+        SSH_PORT=$OPTARG
         ;;
     \?)
         echo "Usage: integration-testing.sh [options]"
         echo "  -d device selection (default: mioe3680_pci)" 
         echo "  -i local file full path to store images"
+        echo "  -p ssh port number"
         echo ""
         exit
         ;;
@@ -46,7 +50,7 @@ docker run -d --name=qemu_env \
     --device=/dev/kvm \
     localhost/dev-can-linux-qemu tail -f /dev/null
 
-docker cp $opti qemu_env:/root/Images
+docker cp $IMAGE_DIR qemu_env:/root/Images
 
 docker exec -d --user root --workdir /root qemu_env \
     qemu-system-x86_64 \
@@ -57,12 +61,12 @@ docker exec -d --user root --workdir /root qemu_env \
         -boot d \
         -object can-bus,id=c0 \
         -object can-bus,id=c1 \
-        -device $optd,canbus0=c0,canbus1=c1 \
+        -device $DEVICE,canbus0=c0,canbus1=c1 \
         -object can-host-socketcan,id=h0,if=c0,canbus=c0,if=vcan0 \
         -object can-host-socketcan,id=h1,if=c1,canbus=c1,if=vcan1 \
         -m size=4096 \
-        -nic user,hostfwd=tcp::6022-:22,hostfwd=tcp::8000-:8000 \
-        -smp 4 \
+        -nic user,hostfwd=tcp::$SSH_PORT-:22 \
+        -smp 2 \
         -enable-kvm \
         -nographic
 
@@ -73,6 +77,6 @@ docker exec --user root --workdir /root dev_env \
             -o 'StrictHostKeyChecking=no' \
             -o 'UserKnownHostsFile=/dev/null' \
             -o 'LogLevel=ERROR' \
-            -p6022 root@localhost \"uname -a\" \
+            -p$SSH_PORT root@localhost \"uname -a\" \
             2> /dev/null; \
             do sleep 1; done"

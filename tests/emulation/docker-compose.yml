@@ -69,6 +69,6 @@ services:
                 -object can-host-socketcan,id=canhost1,if=can1,canbus=canbus1,if=vcan1 \
                 -m size=4096 \
                 -nic user,hostfwd=tcp::6022-:22,hostfwd=tcp::8000-:8000 \
-                -smp 4 \
+                -smp 2 \
                 -enable-kvm &&
              tail -f /dev/null"

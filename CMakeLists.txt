@@ -62,6 +62,8 @@ project( dev-can-linux
 option( DISABLE_COVERAGE_HTML_GEN
         "Disable clang-tidy static analysis checks" OFF )
 
+set( SSH_PORT "6022" CACHE STRING "SSH port number" )
+
 # Compiler settings
 set( CMAKE_CXX_STANDARD 17 )
 set( CMAKE_CXX_STANDARD_REQUIRED True )

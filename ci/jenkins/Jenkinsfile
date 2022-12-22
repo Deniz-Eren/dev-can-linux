@@ -21,6 +21,7 @@
 
 node('jenkins_agent') {
 
+    def sshport = "9922";
     def buildpath = "/var/tmp/$NODE_NAME";
 
     try {
@@ -56,6 +57,7 @@ node('jenkins_agent') {
             sh(script: """
                 /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
+                    -p $sshport \
                     -d mioe3680_pci
 
                 docker exec --user root --workdir /root dev_env bash -c \
@@ -63,7 +65,7 @@ node('jenkins_agent') {
                     && /root/dev-can-linux/dev/setup-profile.sh \
                     && mkdir -p build_qcc_unit \
                     && cd build_qcc_unit \
-                    && cmake -DCMAKE_BUILD_TYPE=Coverage \
+                    && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Coverage \
                         /root/dev-can-linux \
                     && make -j8 \
                     && ctest --output-junit test_results.xml || (exit 0)"
@@ -99,12 +101,14 @@ node('jenkins_agent') {
 
                 /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
+                    -p $sshport \
                     -d mioe3680_pci
 
                 /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
                     -v \
                     -b /data/home/root/build_qcc_coverage \
                     -t Coverage \
+                    -p $sshport \
                     -r 10
 
                 docker exec --user root --workdir /root dev_env bash -c \
@@ -138,11 +142,12 @@ node('jenkins_agent') {
         }
 
         stage('[ITP] integration testing (with profiling)') {
-            sh(script: '''
+            sh(script: """
                 rm -rf $WORKSPACE/valgrind-*.xml
 
                 /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
+                    -p $sshport \
                     -d mioe3680_pci
 
                 #
@@ -164,6 +169,7 @@ node('jenkins_agent') {
                     -t Profiling \
                     -k memcheck-amd64-nto \
                     -s 1 \
+                    -p $sshport \
                     -r 10
 
                 docker cp \
@@ -188,6 +194,7 @@ node('jenkins_agent') {
                     -t Profiling \
                     -k helgrind-amd64-nto \
                     -s 1 \
+                    -p $sshport \
                     -r 10
 
                 docker cp \
@@ -210,6 +217,7 @@ node('jenkins_agent') {
                     -t Profiling \
                     -k drd-amd64-nto \
                     -s 1 \
+                    -p $sshport \
                     -r 10
 
                 docker cp \
@@ -232,6 +240,7 @@ node('jenkins_agent') {
                     -t Profiling \
                     -k exp-sgcheck-amd64-nto \
                     -s 1 \
+                    -p $sshport \
                     -r 10
 
                 docker cp \
@@ -244,7 +253,7 @@ node('jenkins_agent') {
                 # source-code displays works
                 rm -rf $WORKSPACE/dev-can-linux
                 cp -r /opt/dev-can-linux $WORKSPACE/
-            ''')
+            """)
 
             publishValgrind(pattern: 'valgrind-*.xml',
                 sourceSubstitutionPaths: '/root/dev-can-linux:dev-can-linux')
@@ -257,7 +266,7 @@ node('jenkins_agent') {
                         && /root/dev-can-linux/dev/setup-profile.sh \
                         && mkdir -p build_release \
                         && cd build_release \
-                        && cmake -DCMAKE_BUILD_TYPE=Release \
+                        && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
                                 ../dev-can-linux \
                         && make -j8 \
                         && cpack \
@@ -277,8 +286,8 @@ node('jenkins_agent') {
     finally {
         stage('clean-up') {
             sh(script: """
-                docker stop dev_env
-                docker rm dev_env
+                docker stop dev_env qemu_env || (exit 0)
+                docker rm dev_env qemu_env || (exit 0)
 
                 rm -rf $buildpath
             """)

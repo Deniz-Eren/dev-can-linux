@@ -20,38 +20,40 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-optb=""
-optk="dev-can-linux"    # default slay command target
-optr="10"               # default run duration
-opts=""
-optt="Release"          # default build type
-optv=""
+SLAY_TARGET="dev-can-linux"    # default slay command target
+RUN_DURATION="10"               # default run duration
+CMAKE_BUILD_TYPE="Release"          # default build type
+SSH_PORT="6022"         # default SSH port number
 
-while getopts b:k:r:s:t:v opt; do
+while getopts b:k:p:r:s:t:v opt; do
     case ${opt} in
     b )
-        optb=$OPTARG
+        BUILD_PATH=$OPTARG
         ;;
     k )
-        optk=$OPTARG
+        SLAY_TARGET=$OPTARG
+        ;;
+    p )
+        SSH_PORT=$OPTARG
         ;;
     r )
-        optr=$OPTARG
+        RUN_DURATION=$OPTARG
         ;;
     s )
-        opts=$OPTARG
+        COPY_DEBUG_SYMS=$OPTARG
         ;;
     t )
-        optt=$OPTARG
+        CMAKE_BUILD_TYPE=$OPTARG
         ;;
     v )
-        optv="-vvvvv"
+        VERBOSE="-vvvvv"
         ;;
     \?)
         echo "Usage: integration-testing.sh [options]"
         echo "  -b build full path to use"
         echo "  -k what process to slay when stopping testing"
         echo "     (default: dev-can-linux)"
+        echo "  -p ssh port number"
         echo "  -r run duration in seconds (default: 10)"
         echo "  -s if not empty then copy debug symbols for libc.so"
         echo "  -t build type (default: Release)" 
@@ -67,9 +69,9 @@ done
 docker exec --user root --workdir /root dev_env bash -c \
     "source .profile \
     && /root/dev-can-linux/dev/setup-profile.sh \
-    && mkdir -p $optb \
-    && cd $optb \
-    && cmake -DCMAKE_BUILD_TYPE=$optt \
+    && mkdir -p $BUILD_PATH \
+    && cd $BUILD_PATH \
+    && cmake -DSSH_PORT=$SSH_PORT -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
         -DDISABLE_COVERAGE_HTML_GEN=ON \
         /root/dev-can-linux \
     && make -j8 \
@@ -82,27 +84,25 @@ docker exec --user root --workdir /root dev_env bash -c \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -r -P6022 $optb \
-        root@localhost:$optb"
+        -r -P$SSH_PORT $BUILD_PATH \
+        root@localhost:$BUILD_PATH"
 
 docker exec --user root --workdir /root dev_env bash -c \
     "sshpass -p 'root' ssh \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -p6022 root@localhost \
-        \"tar -xf $optb/dev-can-linux-*.tar.gz -C /opt/\""
+        -p$SSH_PORT root@localhost \
+        \"tar -xf $BUILD_PATH/dev-can-linux-*.tar.gz -C /opt/\""
 
-if [ ! -z "$opts" ]; then
+if [ ! -z "$COPY_DEBUG_SYMS" ]; then
     docker exec --user root --workdir /root dev_env bash -c \
         "sshpass -p 'root' ssh \
             -o 'StrictHostKeyChecking=no' \
             -o 'UserKnownHostsFile=/dev/null' \
             -o 'LogLevel=ERROR' \
-            -p6022 root@localhost \
-            \"cp /proc/boot/libc.so.5* /opt/lib/ ; \
-                ln -s /opt/bin/dev-can-linux \
-                    /opt/bin/dev-can-linux$opts \""
+            -p$SSH_PORT root@localhost \
+            \"cp /proc/boot/libc.so.5* /opt/lib/\""
 fi
 
 docker exec -d --user root --workdir /root dev_env bash -c \
@@ -110,18 +110,18 @@ docker exec -d --user root --workdir /root dev_env bash -c \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -p6022 root@localhost \
-        \"cd $optb ; $QNX_PREFIX_CMD dev-can-linux $optv\""
+        -p$SSH_PORT root@localhost \
+        \"cd $BUILD_PATH ; $QNX_PREFIX_CMD dev-can-linux $VERBOSE\""
 
-sleep $optr
+sleep $RUN_DURATION
 
 docker exec --user root --workdir /root dev_env bash -c \
     "sshpass -p 'root' ssh \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -p6022 root@localhost \
-        \"slay -s SIGINT $optk\" || (exit 0)"
+        -p$SSH_PORT root@localhost \
+        \"slay -s SIGINT $SLAY_TARGET\" || (exit 0)"
 
 # Copy build directory back from the QNX VM
 docker exec --user root --workdir /root dev_env bash -c \
@@ -130,6 +130,6 @@ docker exec --user root --workdir /root dev_env bash -c \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -r -P6022 \
-        root@localhost:$optb \
-        $optb/.."
+        -r -P$SSH_PORT \
+        root@localhost:$BUILD_PATH \
+        $BUILD_PATH/.."

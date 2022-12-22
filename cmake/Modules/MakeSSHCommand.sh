@@ -20,14 +20,15 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-opto=""
-optr=""
-opts=""
+SSH_PORT="6022"
 
-while getopts o:r:s: opt; do
+while getopts o:p:r:s: opt; do
     case ${opt} in
     o )
         SCRIPT_OUTPUT_PATH=$OPTARG
+        ;;
+    p )
+        SSH_PORT=$OPTARG
         ;;
     r )
         BUILD_ROOT=$OPTARG
@@ -38,6 +39,7 @@ while getopts o:r:s: opt; do
     \?)
         echo "Usage: MakeSSHCommand.sh [options]"
         echo "  -n script name to create"
+        echo "  -p ssh port number"
         echo "  -r project root directory path"
         echo "  -s source and destination directory path of executable"
         echo ""
@@ -65,14 +67,14 @@ sshpass -p 'root' ssh \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -p6022 root@localhost \
+        -p$SSH_PORT root@localhost \
         "mkdir -p $DIRNAME"
 
 sshpass -p 'root' scp \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -r -P6022 $FILE_SRC_PATH \
+        -r -P$SSH_PORT $FILE_SRC_PATH \
         root@localhost:$DIRNAME/
 
 PROGRAM_ARGS=\$@
@@ -81,7 +83,7 @@ sshpass -p 'root' ssh \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -p6022 root@localhost \
+        -p$SSH_PORT root@localhost \
         "$FILE_DST_PATH \$PROGRAM_ARGS"
 
 EXITCODE=\$?
@@ -91,7 +93,7 @@ sshpass -p 'root' scp \
         -o 'StrictHostKeyChecking=no' \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
-        -r -P6022 root@localhost:$BUILD_ROOT $BUILD_ROOT/..
+        -r -P$SSH_PORT root@localhost:$BUILD_ROOT $BUILD_ROOT/..
 
 exit \$EXITCODE
 END
