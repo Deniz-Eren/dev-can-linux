@@ -146,11 +146,15 @@ void setup_timer (timer_t* timer_id, void (*callback)(void*), void *data) {
     int i = n_timers;
 
     if (i >= MAX_DEVICES) {
-        log_err("setup_timer (%d:%x) fail; max devices reached\n", i, timer_id);
+        log_err( "setup_timer (%d:%x%x) fail; max devices reached\n", i,
+                (u32)(~(u32)0 & ((u64)timer_id >> 32)),
+                (u32)(~(u32)0 & (u64)timer_id) );
         return;
     }
 
-    log_trace("setup_timer (%d:%x)\n", i, timer_id);
+    log_trace( "setup_timer (%d:%x%x)\n", i,
+            (u32)(~(u32)0 & ((u64)timer_id >> 32)),
+            (u32)(~(u32)0 & (u64)timer_id) );
 
     timer[i].created = 0;
     timer[i].id = timer_id;
@@ -175,14 +179,14 @@ static void* timer_loop (void* arg) {
                 timer[i].callback(timer[i].data);
             }
 	        else if (pulse.code == _PULSE_CODE_SHUTDOWN_TIMER) {
-                break;
+	            log_trace("timer_loop (%d) shutdow\n", i);
+
+	            pthread_exit(NULL);
             } /* else other pulses ... */
         } /* else other messages ... */
     }
 
-    log_trace("timer_loop (%d) shutdow\n", i);
-
-    pthread_exit(NULL);
+    return NULL;
 }
 
 void cancel_delayed_work_sync (timer_t* timer_id) {
@@ -195,7 +199,9 @@ void cancel_delayed_work_sync (timer_t* timer_id) {
         }
     }
 
-    log_trace("cancel_delayed_work_sync (%d:%x)\n", i, timer_id);
+    log_trace( "cancel_delayed_work_sync (%d:%x%x)\n", i,
+            (u32)(~(u32)0 & ((u64)timer_id >> 32)),
+            (u32)(~(u32)0 & (u64)timer_id) );
 
     if (i == -1) {
         log_err("cancel_delayed_work_sync unknown timer\n");
@@ -244,7 +250,9 @@ void schedule_delayed_work (timer_t* timer_id, int ticks) {
         }
     }
 
-    log_trace("schedule_delayed_work (%d:%x)\n", i, timer_id);
+    log_trace( "schedule_delayed_work (%d:%x%x)\n", i,
+            (u32)(~(u32)0 & ((u64)timer_id >> 32)),
+            (u32)(~(u32)0 & (u64)timer_id) );
 
     if (i == -1) {
         log_err("mod_timer unknown timer\n");
