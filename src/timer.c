@@ -46,14 +46,12 @@
 static struct timer_record_t {
     timer_t* id;
 
+    int created, index, chid;
+
     void (*callback)(void*);
     void *data;
-    int num_callbacks;
 
     struct sigevent event;
-    int chid;
-
-    int created;
 
     pthread_attr_t attr;
 } timer[MAX_DEVICES];
@@ -71,6 +69,7 @@ void create (int i) {
         return;
     }
 
+    timer[i].index = i;
     timer[i].chid = ChannelCreate(0);
 
     if (timer[i].chid == -1) {
@@ -106,7 +105,7 @@ void create (int i) {
     /* Start the timer thread */
     pthread_attr_init(&timer[i].attr);
     pthread_attr_setdetachstate(&timer[i].attr, PTHREAD_CREATE_DETACHED);
-    pthread_create(NULL, &timer[i].attr, &timer_loop, &n_timers);
+    pthread_create(NULL, &timer[i].attr, &timer_loop, &timer[i].index);
 
     timer[i].created = 1;
 }
@@ -143,13 +142,24 @@ void destroy (int i) {
 }
 
 void setup_timer (timer_t* timer_id, void (*callback)(void*), void *data) {
-    int i = n_timers;
+    int i = -1, j;
 
-    if (i >= MAX_DEVICES) {
-        log_err( "setup_timer (%d:%x%x) fail; max devices reached\n", i,
-                (u32)(~(u32)0 & ((u64)timer_id >> 32)),
-                (u32)(~(u32)0 & (u64)timer_id) );
-        return;
+    for (j = 0; j < n_timers; ++j) {
+        if (timer[j].id == timer_id) {
+            i = j;
+            break;
+        }
+    }
+
+    if (i == -1) {
+    	i = n_timers;
+
+        if (i >= MAX_DEVICES) {
+            log_err( "setup_timer (%d:%x%x) fail; max devices reached\n", i,
+                    (u32)(~(u32)0 & ((u64)timer_id >> 32)),
+                    (u32)(~(u32)0 & (u64)timer_id) );
+            return;
+        }
     }
 
     log_trace( "setup_timer (%d:%x%x)\n", i,

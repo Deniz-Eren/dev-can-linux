@@ -53,7 +53,7 @@ node('jenkins_agent') {
             """)
         }
 
-        stage('[UTC] Unit testing (with coverage)') {
+        stage('Unit testing with coverage') {
             sh(script: """
                 /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
@@ -91,11 +91,11 @@ node('jenkins_agent') {
                 keepAll: true,
                 reportDir: 'test-coverage-ut',
                 reportFiles: 'index.html',
-                reportName: 'UTC Report',
-                reportTitles: 'UTC Report'])
+                reportName: 'Unit Testing Coverage Report',
+                reportTitles: 'Unit Testing Coverage Report'])
         }
 
-        stage('[ITC] integration testing (with coverage)') {
+        stage('Integration testing with coverage') {
             sh(script: """
                 rm -rf /data/home/root/build_qcc_coverage
 
@@ -137,11 +137,11 @@ node('jenkins_agent') {
                 keepAll: true,
                 reportDir: 'test-coverage-qcc',
                 reportFiles: 'index.html',
-                reportName: 'ITC Report',
-                reportTitles: 'ITC Report'])
+                reportName: 'Integration Testing Coverage Report',
+                reportTitles: 'Integration Testing Coverage Report'])
         }
 
-        stage('[ITP] integration testing (with profiling)') {
+        stage('Integration testing with Valgrind') {
             sh(script: """
                 rm -rf $WORKSPACE/valgrind-*.xml
 
