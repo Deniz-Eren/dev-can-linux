@@ -160,4 +160,5 @@ Actual hardware tested currently are:
 
 - Advantech PCI (vendor: 13fe, device: c302)
 
-Please report back your findings with any hardware you are testing with - greatly appreciated.
+Please report back findings from any hardware you test so we can update this
+list, your help is much appreciated.
