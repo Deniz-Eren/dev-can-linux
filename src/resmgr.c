@@ -47,13 +47,18 @@ struct net_device* device[MAX_DEVICES];
 
 static int io_created = 0;
 
-static dispatch_t *dpp[MAX_DEVICES][MAX_MAILBOXES*2];
-static resmgr_attr_t rattr[MAX_DEVICES][MAX_MAILBOXES*2];
-static dispatch_context_t *ctp[MAX_DEVICES][MAX_MAILBOXES*2];
-static iofunc_attr_t ioattr[MAX_DEVICES][MAX_MAILBOXES*2];
+static struct can_resmgr_t {
+    struct net_device* device;
 
-static int pathID[MAX_DEVICES][MAX_MAILBOXES*2];
-static pthread_attr_t attr[MAX_DEVICES][MAX_MAILBOXES*2];
+    dispatch_t *dispatch;
+    resmgr_attr_t resmgr_attr;
+    dispatch_context_t *dispatch_context;
+    iofunc_attr_t iofunc_attr;
+
+    int pathID;
+    pthread_attr_t thread_attr;
+    pthread_t thread;
+} can_resmgr[MAX_DEVICES][MAX_MAILBOXES*2];
 
 /* A resource manager mainly consists of callbacks for POSIX
  * functions a client could call. In the example, we have
@@ -116,8 +121,8 @@ int register_netdev(struct net_device *dev) {
          * I/O functions to their defaults (system fallback
          * routines) and then override the defaults with the
          * functions that we are providing. */
-        iofunc_func_init (_RESMGR_CONNECT_NFUNCS, &connect_funcs,
-                _RESMGR_IO_NFUNCS, &io_funcs);
+        iofunc_func_init( _RESMGR_CONNECT_NFUNCS, &connect_funcs,
+                _RESMGR_IO_NFUNCS, &io_funcs );
 
         /* Now we override the default function pointers with
          * some of our own coded functions: */
@@ -133,13 +138,18 @@ int register_netdev(struct net_device *dev) {
 
     for (i = 0; i < 1; ++i) { // default number of channels
         for (j = 0; j < 2; ++j) { // 2 for rx & tx
+            struct can_resmgr_t* resmgr = &can_resmgr[dev->dev_id][i*2+j];
+
+            resmgr->device = dev;
+
             /* Allocate and initialize a dispatch structure for use
              * by our main loop. This is for the resource manager
              * framework to use. It will receive messages for us,
              * analyze the message type integer and call the matching
              * handler callback function (i.e. io_open, io_read, etc.) */
-            dpp[dev->dev_id][i*2+j] = dispatch_create ();
-            if (dpp == NULL) {
+            resmgr->dispatch = dispatch_create();
+
+            if (resmgr->dispatch == NULL) {
                 log_err("couldn't dispatch_create: %s\n", strerror(errno));
 
                 return -1;
@@ -153,7 +163,9 @@ int register_netdev(struct net_device *dev) {
              * are possible for the reply.
              * For now, we'll just use defaults by setting the
              * attribute structure to zeroes. */
-            memset (&rattr[dev->dev_id][i*2+j], 0, sizeof(resmgr_attr_t));
+            memset(&resmgr->resmgr_attr, 0, sizeof(resmgr_attr_t));
+            resmgr->resmgr_attr.nparts_max = 256;
+            resmgr->resmgr_attr.msg_max_size = 8192;
 
             if (j == 0) {
                 snprintf(name, MAX_NAME_SIZE, "/dev/can%d/rx%d", dev->dev_id, i);
@@ -162,14 +174,15 @@ int register_netdev(struct net_device *dev) {
                 snprintf(name, MAX_NAME_SIZE, "/dev/can%d/tx%d", dev->dev_id, i);
             }
 
-            iofunc_attr_init(&ioattr[dev->dev_id][i*2+j], S_IFCHR | 0666, NULL, NULL);
+            iofunc_attr_init(&resmgr->iofunc_attr, S_IFCHR | 0666, NULL, NULL);
 
-            pathID[dev->dev_id][i*2+j] = resmgr_attach (dpp[dev->dev_id][i*2+j], &rattr[dev->dev_id][i*2+j], name,
-                                     _FTYPE_ANY, 0,
-                                     &connect_funcs, &io_funcs, &ioattr[dev->dev_id][i*2+j]);
+            resmgr->pathID = resmgr_attach(
+                    resmgr->dispatch, &resmgr->resmgr_attr, name,
+                    _FTYPE_ANY, 0, &connect_funcs, &io_funcs,
+                    &resmgr->iofunc_attr );
 
-            if (pathID[dev->dev_id][i*2+j] == -1) {
-                log_err("couldn't attach pathname: %s\n", strerror(errno));
+            if (resmgr->pathID == -1) {
+                log_err("resmgr_attach fail: %s\n", strerror(errno));
 
                 return -1;
             }
@@ -177,13 +190,23 @@ int register_netdev(struct net_device *dev) {
             /* Now we allocate some memory for the dispatch context
              * structure, which will later be used when we receive
              * messages. */
-            ctp[dev->dev_id][i*2+j] = dispatch_context_alloc(dpp[dev->dev_id][i*2+j]);
+            resmgr->dispatch_context = dispatch_context_alloc(resmgr->dispatch);
 
-            pthread_attr_init(&attr[dev->dev_id][i*2+j]);
-            pthread_attr_setdetachstate(&attr[dev->dev_id][i*2+j], PTHREAD_CREATE_DETACHED);
-            pthread_create(NULL, &attr[dev->dev_id][i*2+j], &receive_loop, ctp[dev->dev_id][i*2+j]);
+            if (resmgr->dispatch_context == NULL) {
+                log_err("dispatch_context_alloc fail: %s\n", strerror(errno));
 
-            log_trace("resmgr_attach -> %d\n", pathID[dev->dev_id][i*2+j]);
+                return -1;
+            }
+
+            pthread_attr_init(&resmgr->thread_attr);
+            pthread_attr_setdetachstate(
+                    &resmgr->thread_attr, PTHREAD_CREATE_DETACHED );
+
+            pthread_create( &resmgr->thread, &resmgr->thread_attr,
+                    &receive_loop, resmgr );
+
+            log_trace("resmgr_attach -> %d\n", resmgr->pathID);
+
 		    dev->flags |= IFF_UP;
         }
     }
@@ -192,13 +215,37 @@ int register_netdev(struct net_device *dev) {
 }
 
 void unregister_netdev(struct net_device *dev) {
+    int i, j;
+
     log_trace("unregister_netdev: %s\n", dev->name);
+
+    dev->flags &= ~IFF_UP;
 
     if (dev->netdev_ops->ndo_stop(dev)) {
         log_err("internal error; ndo_stop failure\n");
     }
 
-    dev->flags &= ~IFF_UP;
+    for (i = 0; i < 1; ++i) { // default number of channels
+        for (j = 0; j < 2; ++j) { // 2 for rx & tx
+            struct can_resmgr_t* resmgr = &can_resmgr[dev->dev_id][i*2+j];
+
+            if (resmgr_detach(resmgr->dispatch, resmgr->pathID, 0) == -1) {
+                log_err( "internal error; resmgr_detach failure (%d, %d)\n",
+                        i, j );
+            }
+
+            pthread_join(resmgr->thread, NULL);
+
+            // TODO: investigate if dispatch_context_free() is needed and why
+            //       we get SIGSEGV when following code is uncommented.
+            //dispatch_context_free(resmgr->dispatch_context);
+
+            if (dispatch_destroy(resmgr->dispatch) == -1) {
+                log_err( "internal error; dispatch_destroy failure (%d, %d)\n",
+                        i, j );
+            }
+        }
+    }
 }
 
 
@@ -208,8 +255,10 @@ void unregister_netdev(struct net_device *dev) {
  * Message thread and callback functions for connection and IO
  */
 
-void* receive_loop (void*  arg) {
-    dispatch_context_t* ctp = (dispatch_context_t*)arg;
+void* receive_loop (void* arg) {
+    struct can_resmgr_t* resmgr = (struct can_resmgr_t*)arg;
+
+    dispatch_context_t* ctp = resmgr->dispatch_context;
 
     /* Done! We can now go into our "receive loop" and wait
      * for messages. The dispatch_block() function is calling
@@ -217,10 +266,12 @@ void* receive_loop (void*  arg) {
      * The dispatch_handler() function analyzes the message
      * for us and calls the appropriate callback function. */
     while (1) {
-        if ((ctp = dispatch_block (ctp)) == NULL) {
-            log_err("dispatch_block failed: %s\n", strerror(errno));
+        if ((ctp = dispatch_block(ctp)) == NULL) {
+            if (resmgr->device->flags & IFF_UP) {
+                log_err("dispatch_block failed: %s\n", strerror(errno));
+            }
 
-            return (0);
+            pthread_exit(NULL);
         }
         /* Call the correct callback function for the message
          * received. This is a single-threaded resource manager,
@@ -230,7 +281,7 @@ void* receive_loop (void*  arg) {
         dispatch_handler(ctp);
     }
 
-    return (0);
+    return NULL;
 }
 
 /*
