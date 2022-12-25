@@ -50,6 +50,8 @@ static int io_created = 0;
 static struct can_resmgr_t {
     struct net_device* device;
 
+    char name[MAX_NAME_SIZE];
+
     dispatch_t *dispatch;
     resmgr_attr_t resmgr_attr;
     dispatch_context_t *dispatch_context;
@@ -59,6 +61,8 @@ static struct can_resmgr_t {
     pthread_attr_t thread_attr;
     pthread_t thread;
 } can_resmgr[MAX_DEVICES][MAX_MAILBOXES*2];
+
+static struct can_resmgr_t* _can_resmgr[MAX_DEVICES*MAX_MAILBOXES*2];
 
 /* A resource manager mainly consists of callbacks for POSIX
  * functions a client could call. In the example, we have
@@ -133,7 +137,6 @@ int register_netdev(struct net_device *dev) {
         io_funcs.devctl = io_devctl;
     }
 
-    char name[MAX_NAME_SIZE];
     int i, j;
 
     for (i = 0; i < 1; ++i) { // default number of channels
@@ -168,16 +171,18 @@ int register_netdev(struct net_device *dev) {
             resmgr->resmgr_attr.msg_max_size = 8192;
 
             if (j == 0) {
-                snprintf(name, MAX_NAME_SIZE, "/dev/can%d/rx%d", dev->dev_id, i);
+                snprintf( resmgr->name, MAX_NAME_SIZE,
+                        "/dev/can%d/rx%d", dev->dev_id, i );
             }
             else {
-                snprintf(name, MAX_NAME_SIZE, "/dev/can%d/tx%d", dev->dev_id, i);
+                snprintf( resmgr->name, MAX_NAME_SIZE,
+                        "/dev/can%d/tx%d", dev->dev_id, i );
             }
 
             iofunc_attr_init(&resmgr->iofunc_attr, S_IFCHR | 0666, NULL, NULL);
 
             resmgr->pathID = resmgr_attach(
-                    resmgr->dispatch, &resmgr->resmgr_attr, name,
+                    resmgr->dispatch, &resmgr->resmgr_attr, resmgr->name,
                     _FTYPE_ANY, 0, &connect_funcs, &io_funcs,
                     &resmgr->iofunc_attr );
 
@@ -186,6 +191,8 @@ int register_netdev(struct net_device *dev) {
 
                 return -1;
             }
+
+            _can_resmgr[resmgr->pathID] = resmgr;
 
             /* Now we allocate some memory for the dispatch context
              * structure, which will later be used when we receive
@@ -609,14 +616,24 @@ io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, RESMGR_OCB_T *ocb)
                 data->canmsg.dat[7]);
         break;
     }
-    case CAN_DEVCTL_WRITE_CANMSG_EXT: // e.g. canctl -u0,rx0 -w0x22,1,0x55 # canctl not working with this option!
+    case CAN_DEVCTL_WRITE_CANMSG_EXT: // e.g. canctl -u0,rx0 -w0x22,1,0x55
+    // case -2141977334: // TODO: raise to QNX
+                      // Instead of the above macro, this command ID seems to be
+                      // sent by canctl program. Perhaps canctl hasn't been
+                      // recompiled after some changes made to 'sys/can_dcmd.h'
+                      // by QNX? However the data is all scrambled and yields
+                      // incorrect results. Thus custom verion of canctl needs to
+                      // be made.
     {
         struct can_msg canmsg = data->canmsg;
         nbytes = 0;
 
-        log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; MID: %x, TS: %x, LEN: %x, DAT: %2x %2x %2x %2x %2x %2x %2x %2x\n",
-                canmsg.mid,
+        log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
+                  "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                _can_resmgr[ctp->id]->name,
                 canmsg.ext.timestamp,
+                canmsg.ext.is_extended_mid ? "EFF" : "SFF",
+                canmsg.mid,
                 canmsg.len,
                 canmsg.dat[0],
                 canmsg.dat[1],
@@ -626,6 +643,36 @@ io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, RESMGR_OCB_T *ocb)
                 canmsg.dat[5],
                 canmsg.dat[6],
                 canmsg.dat[7]);
+
+        struct sk_buff *skb;
+        struct can_frame *cf;
+
+        /* create zero'ed CAN frame buffer */
+        skb = alloc_can_skb(device[1], &cf);
+
+        if (skb == NULL) {
+            log_err("alloc_can_skb error\n");
+
+            break;
+        }
+
+        skb->len = CAN_MTU;
+        cf->can_id = canmsg.mid;
+        cf->can_dlc = canmsg.len;
+
+        if (canmsg.ext.is_extended_mid) {
+            cf->can_id |= CAN_EFF_FLAG;
+        }
+
+        int i;
+        for (i = 0; i < canmsg.len; ++i) {
+            cf->data[i] = canmsg.dat[i];
+        }
+
+        struct net_device* _device = _can_resmgr[ctp->id]->device;
+
+        _device->netdev_ops->ndo_start_xmit(skb, _device);
+
         break;
     }
     case CAN_DEVCTL_ERROR: // e.g. canctl -u0,rx0 -e
@@ -689,7 +736,11 @@ io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, RESMGR_OCB_T *ocb)
     case CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK:
     case CAN_DEVCTL_RX_FRAME_RAW_BLOCK:
     case CAN_DEVCTL_TX_FRAME_RAW:
+        return(ENOSYS);
+
     default:
+        log_trace("io_devctl unknown command: %d\n", msg->i.dcmd);
+
         return(ENOSYS);
     }
 

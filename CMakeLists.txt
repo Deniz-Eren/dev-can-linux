@@ -127,6 +127,7 @@ code_coverage_flags()
 code_profiling_flags()
 
 add_subdirectory( tests )
+add_subdirectory( tools )
 
 # Package settings
 set( CPACK_GENERATOR "TGZ" )
