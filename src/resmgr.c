@@ -20,7 +20,12 @@
 
 #include <stdio.h>
 #include <string.h>
+
+struct can_ocb;
+
+#define IOFUNC_OCB_T struct can_ocb
 #include <sys/iofunc.h>
+
 #include <sys/resmgr.h>
 #include <sys/dispatch.h>
 #include <sys/can_dcmd.h>
@@ -31,6 +36,13 @@
 #include <pci.h>
 
 struct net_device* device[MAX_DEVICES];
+
+typedef struct can_ocb {
+    iofunc_ocb_t core;
+} can_ocb_t;
+
+IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t *ctp, IOFUNC_ATTR_T *attr);
+void can_ocb_free (IOFUNC_OCB_T *ocb);
 
 
 /*
@@ -58,6 +70,10 @@ static struct can_resmgr_t {
     iofunc_attr_t iofunc_attr;
 
     int pathID;
+
+    iofunc_mount_t mount;
+    iofunc_funcs_t mount_funcs;
+
     pthread_attr_t thread_attr;
     pthread_t thread;
 } can_resmgr[MAX_DEVICES][MAX_MAILBOXES*2];
@@ -181,6 +197,24 @@ int register_netdev(struct net_device *dev) {
 
             iofunc_attr_init(&resmgr->iofunc_attr, S_IFCHR | 0666, NULL, NULL);
 
+            // set up the mount functions structure
+            // with our allocate/deallocate functions
+
+            // _IOFUNC_NFUNCS is from the .h file
+            resmgr->mount_funcs.nfuncs = _IOFUNC_NFUNCS;
+
+            // your new OCB allocator
+            resmgr->mount_funcs.ocb_calloc = can_ocb_calloc;
+
+            // your new OCB deallocator
+            resmgr->mount_funcs.ocb_free = can_ocb_free;
+
+            // set up the mount structure
+            memset(&resmgr->mount, 0, sizeof (mount));
+
+            resmgr->mount.funcs = &resmgr->mount_funcs;
+            resmgr->iofunc_attr.mount = &resmgr->mount;
+
             resmgr->pathID = resmgr_attach(
                     resmgr->dispatch, &resmgr->resmgr_attr, resmgr->name,
                     _FTYPE_ANY, 0, &connect_funcs, &io_funcs,
@@ -256,6 +290,21 @@ void unregister_netdev(struct net_device *dev) {
 }
 
 
+IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t *ctp, IOFUNC_ATTR_T *attr) {
+    struct can_ocb* ocb;
+
+    if (!(ocb = calloc(1, sizeof(*ocb)))) {
+        return NULL;
+    }
+
+    return ocb;
+}
+
+void can_ocb_free (IOFUNC_OCB_T *ocb) {
+    free(ocb);
+}
+
+
 /*
  * Resource Manager
  *
@@ -302,8 +351,8 @@ void* receive_loop (void* arg) {
  * the hardware is available, for example.
  */
 
-int
-io_open (resmgr_context_t *ctp, io_open_t *msg, RESMGR_HANDLE_T *handle, void *extra)
+int io_open (resmgr_context_t* ctp, io_open_t* msg,
+        RESMGR_HANDLE_T* handle, void* extra)
 {
     log_trace("in io_open -> %d\n", ctp->id);
 
@@ -316,8 +365,10 @@ io_open (resmgr_context_t *ctp, io_open_t *msg, RESMGR_HANDLE_T *handle, void *e
  * for more info.
  */
 
-int io_close_ocb (resmgr_context_t *ctp, void *reserved, RESMGR_OCB_T *ocb) {
+int io_close_ocb (resmgr_context_t* ctp, void* reserved, RESMGR_OCB_T* _ocb) {
     log_trace("in io_close_ocb -> %d\n", ctp->id);
+
+    iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
     return iofunc_close_ocb_default(ctp, reserved, ocb);
 }
@@ -336,10 +387,10 @@ int io_close_ocb (resmgr_context_t *ctp, void *reserved, RESMGR_OCB_T *ocb) {
  * read is the *ocb. The *ctp pointer points to a context
  * structure that is used by the resource manager framework
  * to determine whom to reply to, and more. */
-int
-io_read (resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb)
-{
+int io_read (resmgr_context_t* ctp, io_read_t* msg, RESMGR_OCB_T* _ocb) {
     int status;
+
+    iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
     log_trace("in io_read -> %d\n", ctp->id);
 
@@ -396,11 +447,11 @@ io_read (resmgr_context_t *ctp, io_read_t *msg, RESMGR_OCB_T *ocb)
  *  work -- they just go into Deep Outer Space.
  */
 
-int
-io_write (resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb)
-{
+int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
     int status;
     char *buf;
+
+    iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
     log_trace("in io_write -> %d\n", ctp->id);
 
@@ -462,10 +513,10 @@ io_write (resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb)
     return (_RESMGR_NPARTS (0));
 }
 
-int
-io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, RESMGR_OCB_T *ocb)
-{
+int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     int nbytes, status;
+
+    iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
     union data_t {
         // CAN_DEVCTL_DEBUG_INFO:
