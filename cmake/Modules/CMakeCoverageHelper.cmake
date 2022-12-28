@@ -135,7 +135,7 @@ function( code_coverage_run exec_target_name )
 endfunction( code_coverage_run )
 
 
-function( code_coverage_gen_html exec_target_name )
+function( code_coverage_gen_html all_cov_runs )
     if( CMAKE_BUILD_TYPE MATCHES Coverage AND NOT DISABLE_COVERAGE_HTML_GEN )
         if( "${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR
             "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" )
@@ -144,7 +144,7 @@ function( code_coverage_gen_html exec_target_name )
                 COMMAND llvm-profdata merge
                     -sparse ${LLVM_PROFRAW_FILES}
                     -o ${CMAKE_CURRENT_BINARY_DIR}/tests.profdata
-                DEPENDS ${exec_target_name}-cov-run )
+                DEPENDS ${all_cov_runs} )
 
             add_custom_target( test-cov-html ALL
                 COMMAND llvm-cov show ${LLVM_TEST_COV_OBJECTS}
@@ -165,7 +165,7 @@ function( code_coverage_gen_html exec_target_name )
                     -c -d ${CMAKE_BINARY_DIR}
                     --base-directory=${CMAKE_SOURCE_DIR}
                     --no-external --quiet
-                DEPENDS ${exec_target_name}-cov-run )
+                DEPENDS ${all_cov_runs} )
 
             add_custom_target( test-cov-html ALL
                 COMMAND genhtml
@@ -180,7 +180,7 @@ function( code_coverage_gen_html exec_target_name )
                     -c -d ${CMAKE_BINARY_DIR}
                     --base-directory=${CMAKE_SOURCE_DIR}
                     --no-external --quiet
-                DEPENDS ${exec_target_name}-cov-run )
+                DEPENDS ${all_cov_runs} )
 
             add_custom_target( test-cov-html ALL
                 COMMAND genhtml

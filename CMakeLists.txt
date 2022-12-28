@@ -87,7 +87,9 @@ list( APPEND C_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/src/netif.c
     ${CMAKE_SOURCE_DIR}/src/pci.c
     ${CMAKE_SOURCE_DIR}/src/prints.c
+    ${CMAKE_SOURCE_DIR}/src/queue.c
     ${CMAKE_SOURCE_DIR}/src/resmgr.c
+    ${CMAKE_SOURCE_DIR}/src/session.c
     ${CMAKE_SOURCE_DIR}/src/timer.c )
 
 aux_source_directory(

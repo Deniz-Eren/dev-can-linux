@@ -30,8 +30,14 @@ if( GTest_FOUND )
     include_directories( SYSTEM ${GTEST_INCLUDE_DIRS} )
 endif()
 
+add_subdirectory( queue )
 add_subdirectory( timer )
 
-# TODO: this works because there is only one test binary, need to make this more
-#       generic.
-code_coverage_gen_html( ssh-timer-tests )
+if( CMAKE_BUILD_TYPE MATCHES Coverage AND NOT DISABLE_COVERAGE_HTML_GEN )
+    add_custom_target( all-cov-runs ALL
+        DEPENDS # list all coverage run targets here:
+            ssh-queue-tests-cov-run
+            ssh-timer-tests-cov-run )
+
+    code_coverage_gen_html( all-cov-runs )
+endif()
