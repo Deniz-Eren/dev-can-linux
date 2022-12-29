@@ -20,3 +20,35 @@
 
 #include "session.h"
 
+device_sessions_t device_sessions[MAX_DEVICES];
+
+
+int create_session (session_t* S, struct net_device* dev,
+        const queue_attr_t* rx_attr,
+        const queue_attr_t* tx_attr)
+{
+    int result;
+
+    if (S == NULL) {
+        return EFAULT; // Bad address
+    }
+
+    if ((result = create_queue(&S->rx, rx_attr)) != EOK) {
+    }
+
+    if ((result = create_queue(&S->tx, tx_attr)) != EOK) {
+    }
+
+    S->device = dev;
+
+    return EOK;
+}
+
+void destroy_session (session_t* S) {
+    if (S == NULL) {
+        return;
+    }
+
+    destroy_queue(&S->rx);
+    destroy_queue(&S->tx);
+}

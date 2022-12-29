@@ -21,7 +21,29 @@
 #ifndef SRC_SESSION_H_
 #define SRC_SESSION_H_
 
-#include "queue.h"
+#include <config.h>
+#include <queue.h>
 
+#define MAX_SESSIONS 256
+
+typedef struct session {
+    struct net_device* device;
+
+    queue_t rx, tx;
+} session_t;
+
+typedef struct device_sessions {
+    session_t sessions[MAX_SESSIONS];
+
+    int num_sessions;
+} device_sessions_t;
+
+extern device_sessions_t device_sessions[MAX_DEVICES];
+
+extern int create_session (session_t* S, struct net_device* dev,
+        const queue_attr_t* rx_attr,
+        const queue_attr_t* tx_attr);
+
+extern void destroy_session (session_t* S);
 
 #endif /* SRC_SESSION_H_ */

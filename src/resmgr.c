@@ -34,15 +34,21 @@ struct can_ocb;
 #include <resmgr.h>
 #include <config.h>
 #include <pci.h>
+#include <session.h>
 
 struct net_device* device[MAX_DEVICES];
 
 typedef struct can_ocb {
     iofunc_ocb_t core;
+
+    struct can_resmgr_t* resmgr;
+
+    int session_index;
+    session_t *session;
 } can_ocb_t;
 
-IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t *ctp, IOFUNC_ATTR_T *attr);
-void can_ocb_free (IOFUNC_OCB_T *ocb);
+IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr);
+void can_ocb_free (IOFUNC_OCB_T* ocb);
 
 
 /*
@@ -59,10 +65,16 @@ void can_ocb_free (IOFUNC_OCB_T *ocb);
 
 static int io_created = 0;
 
+typedef enum channel_type {
+    RX_CHANNEL = 0,
+    TX_CHANNEL
+} channel_type_t;
+
 static struct can_resmgr_t {
     struct net_device* device;
 
     char name[MAX_NAME_SIZE];
+    channel_type_t channel_type;
 
     dispatch_t *dispatch;
     resmgr_attr_t resmgr_attr;
@@ -189,10 +201,14 @@ int register_netdev(struct net_device *dev) {
             if (j == 0) {
                 snprintf( resmgr->name, MAX_NAME_SIZE,
                         "/dev/can%d/rx%d", dev->dev_id, i );
+
+                resmgr->channel_type = RX_CHANNEL;
             }
             else {
                 snprintf( resmgr->name, MAX_NAME_SIZE,
                         "/dev/can%d/tx%d", dev->dev_id, i );
+
+                resmgr->channel_type = TX_CHANNEL;
             }
 
             iofunc_attr_init(&resmgr->iofunc_attr, S_IFCHR | 0666, NULL, NULL);
@@ -246,6 +262,8 @@ int register_netdev(struct net_device *dev) {
             pthread_create( &resmgr->thread, &resmgr->thread_attr,
                     &receive_loop, resmgr );
 
+            device_sessions[dev->dev_id].num_sessions = 0;
+
             log_trace("resmgr_attach -> %d\n", resmgr->pathID);
 
 		    dev->flags |= IFF_UP;
@@ -290,17 +308,63 @@ void unregister_netdev(struct net_device *dev) {
 }
 
 
-IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t *ctp, IOFUNC_ATTR_T *attr) {
+IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
+    log_trace("can_ocb_calloc -> %s\n", _can_resmgr[ctp->id]->name);
+
     struct can_ocb* ocb;
 
     if (!(ocb = calloc(1, sizeof(*ocb)))) {
         return NULL;
     }
 
+    ocb->resmgr = _can_resmgr[ctp->id];
+
+    struct net_device* device = ocb->resmgr->device;
+    int dev_id = device->dev_id;
+    int num_sessions = device_sessions[dev_id].num_sessions;
+
+    ocb->session_index = num_sessions;
+    ocb->session = &device_sessions[dev_id].sessions[ocb->session_index];
+
+    if (num_sessions + 1 == MAX_SESSIONS) {
+    }
+
+    queue_attr_t rx_attr = { .size = 0 };
+    queue_attr_t tx_attr = { .size = 0 };
+
+    if (ocb->resmgr->channel_type == RX_CHANNEL) {
+        rx_attr.size = 1024;
+    }
+    else if (ocb->resmgr->channel_type == TX_CHANNEL) {
+        tx_attr.size = device->tx_queue_len = 16;
+    }
+
+    if (create_session(ocb->session, device, &rx_attr, &tx_attr) != EOK) {
+        log_err("create_session failed: %s\n", ocb->resmgr->name);
+    }
+
+    device_sessions[dev_id].num_sessions++;
+
     return ocb;
 }
 
-void can_ocb_free (IOFUNC_OCB_T *ocb) {
+void can_ocb_free (IOFUNC_OCB_T* ocb) {
+    log_trace("can_ocb_free -> %s\n", ocb->resmgr->name);
+
+    struct net_device* device = ocb->resmgr->device;
+    int dev_id = device->dev_id;
+    int num_sessions = device_sessions[dev_id].num_sessions;
+
+    destroy_session(ocb->session);
+
+    device_sessions[dev_id].num_sessions--;
+
+    int i;
+    for (i = ocb->session_index; i < num_sessions; ++i) {
+        device_sessions[dev_id].sessions[i] =
+            device_sessions[dev_id].sessions[i+1];
+    }
+
     free(ocb);
 }
 
@@ -354,7 +418,7 @@ void* receive_loop (void* arg) {
 int io_open (resmgr_context_t* ctp, io_open_t* msg,
         RESMGR_HANDLE_T* handle, void* extra)
 {
-    log_trace("in io_open -> %d\n", ctp->id);
+    log_trace("io_open -> %s\n", _can_resmgr[ctp->id]->name);
 
     return (iofunc_open_default (ctp, msg, handle, extra));
 }
@@ -366,7 +430,7 @@ int io_open (resmgr_context_t* ctp, io_open_t* msg,
  */
 
 int io_close_ocb (resmgr_context_t* ctp, void* reserved, RESMGR_OCB_T* _ocb) {
-    log_trace("in io_close_ocb -> %d\n", ctp->id);
+    log_trace("io_close_ocb -> %s\n", _can_resmgr[ctp->id]->name);
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
@@ -392,7 +456,7 @@ int io_read (resmgr_context_t* ctp, io_read_t* msg, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("in io_read -> %d\n", ctp->id);
+    log_trace("io_read -> %s\n", _can_resmgr[ctp->id]->name);
 
     /* Here we verify if the client has the access
      * rights needed to read from our device */
@@ -453,7 +517,7 @@ int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("in io_write -> %d\n", ctp->id);
+    log_trace("io_write -> %s\n", _can_resmgr[ctp->id]->name);
 
     /* Check the access permissions of the client */
     if ((status = iofunc_write_verify(ctp, msg, ocb, NULL)) != EOK) {
@@ -553,7 +617,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         struct can_devctl_timing    timing;
     } *data;
 
-    log_trace("in io_devctl -> %d\n", ctp->id);
+    log_trace("io_devctl -> %s\n", _can_resmgr[ctp->id]->name);
 
     /*
      Let common code handle DCMD_ALL_* cases.
@@ -643,28 +707,33 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     {
         int i;
 
-        data->canmsg.mid = 0x0; // set MID
-        data->canmsg.ext.timestamp = 0x0; // set TIMESTAMP
-        data->canmsg.len = 0x0; // set LEN
+        struct can_msg* canmsg = dequeue(&_ocb->session->rx);
 
-        for (i = 0; i < CAN_MSG_DATA_MAX; ++i) {
-            data->canmsg.dat[i] = i; // Set DAT
+        if (canmsg != NULL) { // Could be a zero size rx queue, i.e. a tx queue
+            data->canmsg = *canmsg;
+
+            nbytes = sizeof(data->canmsg);
+
+            log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
+                      "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                    _can_resmgr[ctp->id]->name,
+                    canmsg->ext.timestamp,
+                    canmsg->ext.is_extended_mid ? "EFF" : "SFF",
+                    canmsg->mid,
+                    canmsg->len,
+                    canmsg->dat[0],
+                    canmsg->dat[1],
+                    canmsg->dat[2],
+                    canmsg->dat[3],
+                    canmsg->dat[4],
+                    canmsg->dat[5],
+                    canmsg->dat[6],
+                    canmsg->dat[7]);
+        }
+        else {
+            nbytes = 0;
         }
 
-        nbytes = sizeof(data->canmsg);
-
-        log_trace("CAN_DEVCTL_READ_CANMSG_EXT; MID: %x, TS: %x, LEN: %x, DAT: %2x %2x %2x %2x %2x %2x %2x %2x\n",
-                data->canmsg.mid,
-                data->canmsg.ext.timestamp,
-                data->canmsg.len,
-                data->canmsg.dat[0],
-                data->canmsg.dat[1],
-                data->canmsg.dat[2],
-                data->canmsg.dat[3],
-                data->canmsg.dat[4],
-                data->canmsg.dat[5],
-                data->canmsg.dat[6],
-                data->canmsg.dat[7]);
         break;
     }
     case CAN_DEVCTL_WRITE_CANMSG_EXT: // e.g. canctl -u0,rx0 -w0x22,1,0x55

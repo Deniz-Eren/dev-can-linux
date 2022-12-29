@@ -36,6 +36,8 @@ int main (int argc, char* argv[]) {
     int opt;
     char buffer[1024];
 
+    int optr = 0;
+
     int optu_unit;
     char optu_mailbox_str[8];
     int optu_mailbox_is_tx = 0;
@@ -46,8 +48,12 @@ int main (int argc, char* argv[]) {
     int optw_mid_type = 0;
     char optw_data_str[32];
 
-    while ((opt = getopt(argc, argv, "u:w:?h")) != -1) {
+    while ((opt = getopt(argc, argv, "ru:w:?h")) != -1) {
         switch (opt) {
+        case 'r':
+            optr = 1;
+            break;
+
         case 'u':
             sscanf(optarg, "%d,%s", &optu_unit, &optu_mailbox_str);
             strncpy(buffer, optu_mailbox_str, 8);
@@ -87,6 +93,47 @@ int main (int argc, char* argv[]) {
             printf("invalid option %c\n", opt);
             break;
         }
+    }
+
+    if (optr) {
+        int     fd, ret;
+        struct  can_msg canmsg;
+
+        char OPEN_FILE[16];
+
+        snprintf( OPEN_FILE, 16, "/dev/can%d/%s%d",
+                optu_unit,
+                (optu_mailbox_is_tx ? "tx" : "rx"), optu_mailbox );
+
+        if ((fd = open(OPEN_FILE, O_RDWR)) == -1) {
+            exit(EXIT_FAILURE);
+        }
+
+        if (EOK != (ret = devctl(
+                fd, CAN_DEVCTL_READ_CANMSG_EXT,
+                &canmsg, sizeof(struct can_msg), NULL )))
+        {
+            fprintf(stderr, "devctl CAN_DEVCTL_READ_CANMSG_EXT: %s\n", strerror(ret));
+        }
+        else {
+            printf("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
+                      "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                    OPEN_FILE,
+                    canmsg.ext.timestamp,
+                    canmsg.ext.is_extended_mid ? "EFF" : "SFF",
+                    canmsg.mid,
+                    canmsg.len,
+                    canmsg.dat[0],
+                    canmsg.dat[1],
+                    canmsg.dat[2],
+                    canmsg.dat[3],
+                    canmsg.dat[4],
+                    canmsg.dat[5],
+                    canmsg.dat[6],
+                    canmsg.dat[7]);
+        }
+
+        return EXIT_SUCCESS;
     }
 
     if (optw) {

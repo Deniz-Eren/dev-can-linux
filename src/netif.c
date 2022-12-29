@@ -23,6 +23,7 @@
 #include <linux/netdevice.h>
 #include <linux/can.h>
 #include <linux/can/error.h>
+#include <session.h>
 
 
 void netif_wake_queue(struct net_device *dev)
@@ -88,6 +89,33 @@ int netif_rx(struct sk_buff *skb)
         log_trace("netif_rx; CAN_RTR_FLAG\n");
 
         return NET_RX_SUCCESS;
+    }
+
+    struct can_msg canmsg;
+
+    /* set MID; omit EFF, RTR, ERR flags */
+    canmsg.mid = (msg->can_id & CAN_ERR_MASK);
+
+    if (msg->can_id & CAN_EFF_FLAG) {
+        canmsg.ext.is_extended_mid = 1; // EFF
+    }
+    else {
+        canmsg.ext.is_extended_mid = 0; // SFF
+    }
+
+    canmsg.ext.timestamp = 0x0; // set TIMESTAMP
+    canmsg.len = msg->len; // set LEN
+
+    int i;
+    for (i = 0; i < CAN_MSG_DATA_MAX; ++i) {
+        canmsg.dat[i] = msg->data[i]; // Set DAT
+    }
+
+    device_sessions_t* ds = &device_sessions[skb->dev->dev_id];
+
+    for (i = 0; i < ds->num_sessions; ++i) {
+        if (enqueue(&ds->sessions[i].rx, &canmsg) != EOK) {
+        }
     }
 
     log_trace("netif_rx; can%d [%s] %X [%d] %2X %2X %2X %2X %2X %2X %2X %2X\n",

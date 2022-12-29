@@ -40,30 +40,30 @@ TEST( Queue, ZeroQueueSize ) {
 
     int create_queue_code = create_queue(&queue, &attr);
 
-    EXPECT_EQ(create_queue_code, EINVAL /* Invalid argument */);
-    EXPECT_EQ(queue.begin, -1);
-    EXPECT_EQ(queue.end, -1);
+    EXPECT_EQ(create_queue_code, EOK /* OK to have null queue */);
+    EXPECT_EQ(queue.begin, 0);
+    EXPECT_EQ(queue.end, 0);
     EXPECT_EQ(queue.attr.size, 0);
-    EXPECT_EQ(queue.session_up, 0);
+    EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
     can_msg msg;
     int enqueue_code = enqueue(&queue, &msg);
 
-    EXPECT_EQ(enqueue_code, EPIPE /* Broken pipe */);
-    EXPECT_EQ(queue.begin, -1);
-    EXPECT_EQ(queue.end, -1);
+    EXPECT_EQ(enqueue_code, EDOM /* Domain error */);
+    EXPECT_EQ(queue.begin, 0);
+    EXPECT_EQ(queue.end, 0);
     EXPECT_EQ(queue.attr.size, 0);
-    EXPECT_EQ(queue.session_up, 0);
+    EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
     struct can_msg* dequeue_can_msg = dequeue(&queue);
 
     EXPECT_EQ(dequeue_can_msg, nullptr);
-    EXPECT_EQ(queue.begin, -1);
-    EXPECT_EQ(queue.end, -1);
+    EXPECT_EQ(queue.begin, 0);
+    EXPECT_EQ(queue.end, 0);
     EXPECT_EQ(queue.attr.size, 0);
-    EXPECT_EQ(queue.session_up, 0);
+    EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
     destroy_queue(&queue);

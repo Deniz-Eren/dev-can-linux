@@ -37,10 +37,6 @@ int create_queue (queue_t* Q, const queue_attr_t* attr) {
     Q->session_up = 0;
     Q->dequeue_waiting = 0;
 
-    if (attr->size == 0) {
-	return EINVAL; // Invalid argument
-    }
-
     if ((result = pthread_mutex_init(&Q->mutex, NULL)) != EOK) {
         return result;
     }
@@ -54,11 +50,13 @@ int create_queue (queue_t* Q, const queue_attr_t* attr) {
     Q->attr = *attr;
     Q->begin = Q->end = 0;
 
-    if ((Q->data = malloc(Q->attr.size*sizeof(struct can_msg))) == NULL) {
-        pthread_mutex_destroy(&Q->mutex);
-        pthread_cond_destroy(&Q->cond);
+    if (attr->size != 0) {
+        if ((Q->data = malloc(Q->attr.size*sizeof(struct can_msg))) == NULL) {
+            pthread_mutex_destroy(&Q->mutex);
+            pthread_cond_destroy(&Q->cond);
 
-        return ENOMEM; // Not enough memory
+            return ENOMEM; // Not enough memory
+        }
     }
 
     Q->session_up = 1;
@@ -84,7 +82,10 @@ void destroy_queue (queue_t* Q) {
         pthread_cond_wait(&Q->cond, &Q->mutex);
     }
 
-    free(Q->data);
+    if (Q->attr.size != 0) {
+        free(Q->data);
+    }
+
     Q->attr.size = 0;
     Q->begin = Q->end = 0;
 
@@ -103,6 +104,10 @@ int enqueue (queue_t* Q, struct can_msg* msg) {
 
     if (Q->session_up == 0) {
         return EPIPE; // Broken pipe
+    }
+
+    if (Q->attr.size == 0) {
+        return EDOM; // Domain error
     }
 
     pthread_mutex_lock(&Q->mutex);
@@ -147,6 +152,11 @@ struct can_msg* dequeue (queue_t* Q) {
 
     if (Q->session_up == 0) {
         return NULL;
+    }
+
+    if (Q->attr.size == 0) {
+        return NULL; // Zero size queue cannot store anything and this response
+                     // is OK for such a queue created knowing this fact.
     }
 
     struct can_msg* result = NULL;
