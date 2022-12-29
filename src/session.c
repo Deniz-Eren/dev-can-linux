@@ -18,6 +18,8 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <linux/netdevice.h>
+
 #include "session.h"
 
 device_sessions_t device_sessions[MAX_DEVICES];
@@ -51,4 +53,23 @@ void destroy_session (session_t* S) {
 
     destroy_queue(&S->rx);
     destroy_queue(&S->tx);
+}
+
+int number_of_tx_sessions (struct net_device* dev) {
+    if (dev == NULL) {
+        return 0;
+    }
+
+    device_sessions_t* ds = &device_sessions[dev->dev_id];
+
+    int tx_session_count = 0;
+
+    int i;
+    for (i = 0; i < ds->num_sessions; ++i) {
+        if (ds->sessions[i].tx.attr.size) {
+            ++tx_session_count;
+        }
+    }
+
+    return tx_session_count;
 }

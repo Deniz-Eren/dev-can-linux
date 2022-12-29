@@ -26,6 +26,14 @@ extern "C" {
     #include <queue.h>
 }
 
+void* receive_loop (void* arg) {
+    queue_t* queue = (queue_t*)arg;
+
+    struct can_msg* dequeue_can_msg = dequeue(queue);
+
+    pthread_exit(dequeue_can_msg);
+}
+
 TEST( Queue, ZeroQueueSize ) {
     queue_t queue = {
         .begin = -1,
@@ -57,14 +65,36 @@ TEST( Queue, ZeroQueueSize ) {
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
-    struct can_msg* dequeue_can_msg = dequeue(&queue);
+    pthread_attr_t thread_attr;
+    pthread_t thread;
 
-    EXPECT_EQ(dequeue_can_msg, nullptr);
+    pthread_create(&thread, NULL, &receive_loop, &queue);
+
+    usleep(5000);
+    EXPECT_EQ(queue.begin, 0);
+    EXPECT_EQ(queue.end, 0);
+    EXPECT_EQ(queue.attr.size, 0);
+    EXPECT_EQ(queue.session_up, 1);
+    EXPECT_EQ(queue.dequeue_waiting, 1);
+
+    msg.mid = 0x112233;
+    msg.len = 0;
+
+    enqueue_code = enqueue(&queue, &msg);
+
+    void* value_ptr;
+    pthread_join(thread, &value_ptr);
+
+    EXPECT_EQ(enqueue_code, EDOM /* Domain error */);
     EXPECT_EQ(queue.begin, 0);
     EXPECT_EQ(queue.end, 0);
     EXPECT_EQ(queue.attr.size, 0);
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
+
+    struct can_msg* dequeue_can_msg = (struct can_msg*)value_ptr;
+
+    EXPECT_EQ(dequeue_can_msg, nullptr);
 
     destroy_queue(&queue);
 
@@ -330,14 +360,6 @@ TEST( Queue, WrapAfterSomeDequeue ) {
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
     destroy_queue(&queue);
-}
-
-void* receive_loop (void* arg) {
-    queue_t* queue = (queue_t*)arg;
-
-    struct can_msg* dequeue_can_msg = dequeue(queue);
-
-    pthread_exit(dequeue_can_msg);
 }
 
 TEST( Queue, BlockingDequeue ) {

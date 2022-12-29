@@ -106,11 +106,16 @@ int enqueue (queue_t* Q, struct can_msg* msg) {
         return EPIPE; // Broken pipe
     }
 
+    pthread_mutex_lock(&Q->mutex);
+
     if (Q->attr.size == 0) {
+        Q->dequeue_waiting = 0; // Force wake up since queue size is zero
+
+        pthread_cond_signal(&Q->cond);
+        pthread_mutex_unlock(&Q->mutex);
+
         return EDOM; // Domain error
     }
-
-    pthread_mutex_lock(&Q->mutex);
 
     // handle data insertion to queue here
 
@@ -154,17 +159,12 @@ struct can_msg* dequeue (queue_t* Q) {
         return NULL;
     }
 
-    if (Q->attr.size == 0) {
-        return NULL; // Zero size queue cannot store anything and this response
-                     // is OK for such a queue created knowing this fact.
-    }
-
     struct can_msg* result = NULL;
 
     pthread_mutex_lock(&Q->mutex);
 
     Q->dequeue_waiting = 1;
-    while (Q->session_up == 1 && Q->begin == Q->end) {
+    while (Q->dequeue_waiting && Q->session_up == 1 && Q->begin == Q->end) {
         pthread_cond_wait(&Q->cond, &Q->mutex);
     }
     Q->dequeue_waiting = 0;
@@ -174,6 +174,14 @@ struct can_msg* dequeue (queue_t* Q) {
         pthread_mutex_unlock(&Q->mutex);
 
         return NULL;
+    }
+
+    if (Q->attr.size == 0) {
+        pthread_cond_signal(&Q->cond);
+        pthread_mutex_unlock(&Q->mutex);
+
+        return NULL; // Zero size queue cannot store anything and this response
+                     // is OK for such a queue created knowing this fact.
     }
 
     // handle data in queue here, i.e. when Q->begin != Q-end

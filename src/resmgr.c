@@ -36,6 +36,9 @@ struct can_ocb;
 #include <pci.h>
 #include <session.h>
 
+#include "netif.h"
+
+
 struct net_device* device[MAX_DEVICES];
 
 typedef struct can_ocb {
@@ -86,8 +89,11 @@ static struct can_resmgr_t {
     iofunc_mount_t mount;
     iofunc_funcs_t mount_funcs;
 
-    pthread_attr_t thread_attr;
-    pthread_t thread;
+    pthread_attr_t dispatch_thread_attr;
+    pthread_t dispatch_thread;
+
+    pthread_attr_t tx_thread_attr;
+    pthread_t tx_thread;
 } can_resmgr[MAX_DEVICES][MAX_MAILBOXES*2];
 
 static struct can_resmgr_t* _can_resmgr[MAX_DEVICES*MAX_MAILBOXES*2];
@@ -110,7 +116,8 @@ int io_read  (resmgr_context_t *ctp, io_read_t  *msg, RESMGR_OCB_T *ocb);
 int io_write (resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb);
 int io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, RESMGR_OCB_T *ocb);
 
-void* receive_loop (void*  arg);
+void* tx_loop (void* arg);
+void* dispatch_receive_loop (void* arg);
 
 /*
  * Our connect and I/O functions - we supply two tables
@@ -255,12 +262,13 @@ int register_netdev(struct net_device *dev) {
                 return -1;
             }
 
-            pthread_attr_init(&resmgr->thread_attr);
+            pthread_attr_init(&resmgr->dispatch_thread_attr);
             pthread_attr_setdetachstate(
-                    &resmgr->thread_attr, PTHREAD_CREATE_DETACHED );
+                    &resmgr->dispatch_thread_attr, PTHREAD_CREATE_DETACHED );
 
-            pthread_create( &resmgr->thread, &resmgr->thread_attr,
-                    &receive_loop, resmgr );
+            pthread_create( &resmgr->dispatch_thread,
+                    &resmgr->dispatch_thread_attr,
+                    &dispatch_receive_loop, resmgr );
 
             device_sessions[dev->dev_id].num_sessions = 0;
 
@@ -293,7 +301,7 @@ void unregister_netdev(struct net_device *dev) {
                         i, j );
             }
 
-            pthread_join(resmgr->thread, NULL);
+            pthread_join(resmgr->dispatch_thread, NULL);
 
             // TODO: investigate if dispatch_context_free() is needed and why
             //       we get SIGSEGV when following code is uncommented.
@@ -321,10 +329,11 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
 
     struct net_device* device = ocb->resmgr->device;
     int dev_id = device->dev_id;
-    int num_sessions = device_sessions[dev_id].num_sessions;
+    device_sessions_t* ds = &device_sessions[dev_id];
+    int num_sessions = ds->num_sessions;
 
     ocb->session_index = num_sessions;
-    ocb->session = &device_sessions[dev_id].sessions[ocb->session_index];
+    ocb->session = &ds->sessions[ocb->session_index];
 
     if (num_sessions + 1 == MAX_SESSIONS) {
     }
@@ -343,7 +352,20 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
         log_err("create_session failed: %s\n", ocb->resmgr->name);
     }
 
-    device_sessions[dev_id].num_sessions++;
+    ds->num_sessions++;
+
+    // If this is the first tx session for the device create the tx thread
+    if (ocb->resmgr->channel_type == TX_CHANNEL &&
+        number_of_tx_sessions(device) == 1)
+    {
+        pthread_attr_init(&ocb->resmgr->tx_thread_attr);
+        pthread_attr_setdetachstate(
+                &ocb->resmgr->tx_thread_attr, PTHREAD_CREATE_DETACHED );
+
+        pthread_create( &ocb->resmgr->tx_thread,
+                &ocb->resmgr->tx_thread_attr,
+                &tx_loop, ocb->resmgr );
+    }
 
     return ocb;
 }
@@ -353,21 +375,49 @@ void can_ocb_free (IOFUNC_OCB_T* ocb) {
 
     struct net_device* device = ocb->resmgr->device;
     int dev_id = device->dev_id;
-    int num_sessions = device_sessions[dev_id].num_sessions;
+    device_sessions_t* ds = &device_sessions[dev_id];
+    int num_sessions = ds->num_sessions;
 
     destroy_session(ocb->session);
 
-    device_sessions[dev_id].num_sessions--;
+    // If this is the last tx session for the device wait for tx thread to exit
+    if (ocb->resmgr->channel_type == TX_CHANNEL &&
+        number_of_tx_sessions(device) == 1)
+    {
+        pthread_join(ocb->resmgr->tx_thread, NULL);
+    }
+
+    ds->num_sessions--;
 
     int i;
     for (i = ocb->session_index; i < num_sessions; ++i) {
-        device_sessions[dev_id].sessions[i] =
-            device_sessions[dev_id].sessions[i+1];
+        ds->sessions[i] = ds->sessions[i+1];
     }
 
     free(ocb);
 }
 
+
+void* tx_loop (void* arg) {
+    struct can_resmgr_t* resmgr = (struct can_resmgr_t*)arg;
+    device_sessions_t* ds = &device_sessions[resmgr->device->dev_id];
+
+    int tx_session_count = 1; // Created when first tx session is opened
+
+    while (1) {
+        if (!(resmgr->device->flags & IFF_UP) || tx_session_count == 0) {
+            log_trace("tx_loop exit: %s\n", resmgr->name);
+
+            pthread_exit(NULL);
+        }
+
+        if (netif_tx(resmgr->device)) {
+            tx_session_count = number_of_tx_sessions(resmgr->device);
+        }
+    }
+
+    return NULL;
+}
 
 /*
  * Resource Manager
@@ -375,7 +425,7 @@ void can_ocb_free (IOFUNC_OCB_T* ocb) {
  * Message thread and callback functions for connection and IO
  */
 
-void* receive_loop (void* arg) {
+void* dispatch_receive_loop (void* arg) {
     struct can_resmgr_t* resmgr = (struct can_resmgr_t*)arg;
 
     dispatch_context_t* ctp = resmgr->dispatch_context;
@@ -748,6 +798,14 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         struct can_msg canmsg = data->canmsg;
         nbytes = 0;
 
+        device_sessions_t* ds = &device_sessions[_ocb->resmgr->device->dev_id];
+
+        int i;
+        for (i = 0; i < ds->num_sessions; ++i) {
+            if (enqueue(&ds->sessions[i].tx, &canmsg) != EOK) {
+            }
+        }
+
         log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
                   "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                 _can_resmgr[ctp->id]->name,
@@ -763,35 +821,6 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                 canmsg.dat[5],
                 canmsg.dat[6],
                 canmsg.dat[7]);
-
-        struct sk_buff *skb;
-        struct can_frame *cf;
-
-        /* create zero'ed CAN frame buffer */
-        skb = alloc_can_skb(device[1], &cf);
-
-        if (skb == NULL) {
-            log_err("alloc_can_skb error\n");
-
-            break;
-        }
-
-        skb->len = CAN_MTU;
-        cf->can_id = canmsg.mid;
-        cf->can_dlc = canmsg.len;
-
-        if (canmsg.ext.is_extended_mid) {
-            cf->can_id |= CAN_EFF_FLAG;
-        }
-
-        int i;
-        for (i = 0; i < canmsg.len; ++i) {
-            cf->data[i] = canmsg.dat[i];
-        }
-
-        struct net_device* _device = _can_resmgr[ctp->id]->device;
-
-        _device->netdev_ops->ndo_start_xmit(skb, _device);
 
         break;
     }

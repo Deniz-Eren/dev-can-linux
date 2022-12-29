@@ -23,12 +23,66 @@
 #include <linux/netdevice.h>
 #include <linux/can.h>
 #include <linux/can/error.h>
+#include <linux/can/skb.h>
 #include <session.h>
 
+#include "netif.h"
 
-void netif_wake_queue(struct net_device *dev)
-{
+
+void netif_wake_queue (struct net_device* dev) {
     log_trace("netif_wake_queue\n");
+}
+
+int netif_tx (struct net_device *dev) {
+    device_sessions_t* ds = &device_sessions[dev->dev_id];
+
+    int i;
+    struct can_msg* canmsg;
+
+    int any_sessions = 0;
+
+    for (i = 0; i < ds->num_sessions; ++i) {
+        if ((canmsg = dequeue(&ds->sessions[i].tx)) == NULL) {
+            continue;
+        }
+
+        log_trace("netif_tx received!\n");
+
+        any_sessions = 1;
+
+        struct sk_buff *skb;
+        struct can_frame *cf;
+
+        /* create zero'ed CAN frame buffer */
+        skb = alloc_can_skb(dev, &cf);
+
+        if (skb == NULL) {
+            log_err("alloc_can_skb error\n");
+
+            break;
+        }
+
+        skb->len = CAN_MTU;
+        cf->can_id = canmsg->mid;
+        cf->can_dlc = canmsg->len;
+
+        if (canmsg->ext.is_extended_mid) {
+            cf->can_id |= CAN_EFF_FLAG;
+        }
+
+        int i;
+        for (i = 0; i < canmsg->len; ++i) {
+            cf->data[i] = canmsg->dat[i];
+        }
+
+        dev->netdev_ops->ndo_start_xmit(skb, dev);
+    }
+
+    if (!any_sessions) {
+        return 1;
+    }
+
+    return 0;
 }
 
 /*
@@ -36,8 +90,7 @@ void netif_wake_queue(struct net_device *dev)
  *      cansend vcan0 1F334455#1122334455667788
  *      cansend vcan0 123#1122334455667788
  */
-int netif_rx(struct sk_buff *skb)
-{
+int netif_rx (struct sk_buff* skb) {
     struct can_frame* msg = (struct can_frame*)skb->data;
 
     /* handle error message frame */

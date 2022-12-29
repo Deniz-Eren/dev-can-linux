@@ -189,7 +189,7 @@ static void* timer_loop (void* arg) {
                 timer[i].callback(timer[i].data);
             }
 	        else if (pulse.code == _PULSE_CODE_SHUTDOWN_TIMER) {
-	            log_trace("timer_loop (%d) shutdow\n", i);
+	            log_trace("timer_loop (%d) shutdown\n", i);
 
 	            pthread_exit(NULL);
             } /* else other pulses ... */
