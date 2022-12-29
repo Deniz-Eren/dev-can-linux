@@ -20,12 +20,32 @@
 
 #include <config.h>
 
-/* check configuration macros are valid */
+/*
+ * Check configuration macros are valid
+ */
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 && \
     CONFIG_QNX_INTERRUPT_ATTACH == 1
 #error Cannot set (CONFIG_QNX_) *INTERRUPT_ATTACH_EVENT and *INTERRUPT_ATTACH
 #endif
 
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 0 && \
+    CONFIG_QNX_INTERRUPT_ATTACH == 0
+#error Must set (CONFIG_QNX_) *INTERRUPT_ATTACH_EVENT or *INTERRUPT_ATTACH
+#endif
+
+#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1 && \
+    CONFIG_QNX_RESMGR_THREAD_POOL == 1
+#error Cannot set (CONFIG_QNX_RESMGR_) *SINGLE_THREAD and *THREAD_POOL
+#endif
+
+#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 0 && \
+    CONFIG_QNX_RESMGR_THREAD_POOL == 0
+#error Must set (CONFIG_QNX_RESMGR_) *SINGLE_THREAD or *THREAD_POOL
+#endif
+
+/*
+ * Program options, initial values
+ */
 int optv = 0;
 int optl = 0;
 int optq = 0;

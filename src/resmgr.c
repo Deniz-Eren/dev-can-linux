@@ -23,7 +23,19 @@
 
 struct can_ocb;
 
+#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
+/*
+ * Define THREAD_POOL_PARAM_T such that we can avoid a compiler
+ * warning when we use the dispatch_*() functions below
+ */
+#define THREAD_POOL_PARAM_T dispatch_context_t
+#endif
+
+/*
+ * Extending the OCB the attribute structure
+ */
 #define IOFUNC_OCB_T struct can_ocb
+
 #include <sys/iofunc.h>
 
 #include <sys/resmgr.h>
@@ -79,18 +91,23 @@ static struct can_resmgr_t {
     char name[MAX_NAME_SIZE];
     channel_type_t channel_type;
 
-    dispatch_t *dispatch;
+    dispatch_t* dispatch;
     resmgr_attr_t resmgr_attr;
-    dispatch_context_t *dispatch_context;
+    dispatch_context_t* dispatch_context;
     iofunc_attr_t iofunc_attr;
+
+#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
+    thread_pool_attr_t thread_pool_attr;
+    thread_pool_t* thread_pool;
+#elif CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
+    pthread_attr_t dispatch_thread_attr;
+    pthread_t dispatch_thread;
+#endif
 
     int pathID;
 
     iofunc_mount_t mount;
     iofunc_funcs_t mount_funcs;
-
-    pthread_attr_t dispatch_thread_attr;
-    pthread_t dispatch_thread;
 
     pthread_attr_t tx_thread_attr;
     pthread_t tx_thread;
@@ -180,12 +197,17 @@ int register_netdev(struct net_device *dev) {
 
             resmgr->device = dev;
 
+#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
+            /* initialize dispatch interface */
+            resmgr->dispatch = dispatch_create_channel(-1, DISPATCH_FLAG_NOLOCK);
+#elif CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
             /* Allocate and initialize a dispatch structure for use
              * by our main loop. This is for the resource manager
              * framework to use. It will receive messages for us,
              * analyze the message type integer and call the matching
              * handler callback function (i.e. io_open, io_read, etc.) */
             resmgr->dispatch = dispatch_create();
+#endif
 
             if (resmgr->dispatch == NULL) {
                 log_err("couldn't dispatch_create: %s\n", strerror(errno));
@@ -262,6 +284,34 @@ int register_netdev(struct net_device *dev) {
                 return -1;
             }
 
+#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
+            /* initialize thread pool attributes */
+            memset(&resmgr->thread_pool_attr, 0, sizeof(thread_pool_attr_t));
+            resmgr->thread_pool_attr.handle = resmgr->dispatch;
+            resmgr->thread_pool_attr.context_alloc = dispatch_context_alloc;
+            resmgr->thread_pool_attr.block_func = dispatch_block; 
+            resmgr->thread_pool_attr.unblock_func = dispatch_unblock;
+            resmgr->thread_pool_attr.handler_func = dispatch_handler;
+            resmgr->thread_pool_attr.context_free = dispatch_context_free;
+            resmgr->thread_pool_attr.lo_water = 4;
+            resmgr->thread_pool_attr.hi_water = 8;
+            resmgr->thread_pool_attr.increment = 1;
+            resmgr->thread_pool_attr.maximum = 50;
+
+            /* allocate a thread pool handle */
+            if (( resmgr->thread_pool =
+                    thread_pool_create(&resmgr->thread_pool_attr, 0) ) == NULL)
+            {
+                log_err( "thread_pool_create fail: " \
+                         "Unable to initialize thread pool.\n");
+
+                return -1;
+            }
+
+            /* Start the threads. This function doesn't return. */
+            thread_pool_start(resmgr->thread_pool);
+
+#elif CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
             pthread_attr_init(&resmgr->dispatch_thread_attr);
             pthread_attr_setdetachstate(
                     &resmgr->dispatch_thread_attr, PTHREAD_CREATE_DETACHED );
@@ -269,6 +319,7 @@ int register_netdev(struct net_device *dev) {
             pthread_create( &resmgr->dispatch_thread,
                     &resmgr->dispatch_thread_attr,
                     &dispatch_receive_loop, resmgr );
+#endif
 
             device_sessions[dev->dev_id].num_sessions = 0;
 
@@ -296,16 +347,29 @@ void unregister_netdev(struct net_device *dev) {
         for (j = 0; j < 2; ++j) { // 2 for rx & tx
             struct can_resmgr_t* resmgr = &can_resmgr[dev->dev_id][i*2+j];
 
+#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
+            if (thread_pool_destroy(resmgr->thread_pool) == -1) {
+                log_err( "internal error; thread_pool_destroy failure " \
+                         "(%d, %d)\n", i, j );
+            }
+#endif
+
             if (resmgr_detach(resmgr->dispatch, resmgr->pathID, 0) == -1) {
                 log_err( "internal error; resmgr_detach failure (%d, %d)\n",
                         i, j );
             }
 
+#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
             pthread_join(resmgr->dispatch_thread, NULL);
+#endif
 
+#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
+            dispatch_context_free(resmgr->dispatch_context);
+#elif CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
             // TODO: investigate if dispatch_context_free() is needed and why
             //       we get SIGSEGV when following code is uncommented.
             //dispatch_context_free(resmgr->dispatch_context);
+#endif
 
             if (dispatch_destroy(resmgr->dispatch) == -1) {
                 log_err( "internal error; dispatch_destroy failure (%d, %d)\n",
@@ -419,6 +483,7 @@ void* tx_loop (void* arg) {
     return NULL;
 }
 
+#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
 /*
  * Resource Manager
  *
@@ -453,6 +518,7 @@ void* dispatch_receive_loop (void* arg) {
 
     return NULL;
 }
+#endif
 
 /*
  *  io_open

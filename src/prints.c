@@ -36,6 +36,10 @@ void print_configs (void) {
             CONFIG_QNX_INTERRUPT_ATTACH);
     printf("CONFIG_QNX_INTERRUPT_ATTACH_EVENT=%d\n",
             CONFIG_QNX_INTERRUPT_ATTACH_EVENT);
+    printf("CONFIG_QNX_RESMGR_SINGLE_THREAD=%d\n",
+            CONFIG_QNX_RESMGR_SINGLE_THREAD);
+    printf("CONFIG_QNX_RESMGR_THREAD_POOL=%d\n",
+            CONFIG_QNX_RESMGR_THREAD_POOL);
 
     return;
 }
