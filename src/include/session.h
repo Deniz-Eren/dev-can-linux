@@ -29,11 +29,12 @@
 typedef struct session {
     struct net_device* device;
 
-    queue_t rx, tx;
+    queue_t rx_queue;
 } session_t;
 
 typedef struct device_sessions {
     session_t sessions[MAX_SESSIONS];
+    queue_t tx_queue;
 
     int num_sessions;
 } device_sessions_t;
@@ -41,11 +42,8 @@ typedef struct device_sessions {
 extern device_sessions_t device_sessions[MAX_DEVICES];
 
 extern int create_session (session_t* S, struct net_device* dev,
-        const queue_attr_t* rx_attr,
-        const queue_attr_t* tx_attr);
+        const queue_attr_t* attr);
 
 extern void destroy_session (session_t* S);
-
-extern int number_of_tx_sessions (struct net_device* dev);
 
 #endif /* SRC_SESSION_H_ */

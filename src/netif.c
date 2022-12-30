@@ -33,22 +33,24 @@ void netif_wake_queue (struct net_device* dev) {
     log_trace("netif_wake_queue\n");
 }
 
-int netif_tx (struct net_device *dev) {
-    device_sessions_t* ds = &device_sessions[dev->dev_id];
-
-    int i;
+void* netif_tx (void* arg) {
+    struct net_device* dev = (struct net_device*)arg;
     struct can_msg* canmsg;
 
-    int any_sessions = 0;
+    device_sessions_t* ds = &device_sessions[dev->dev_id];
 
-    for (i = 0; i < ds->num_sessions; ++i) {
-        if ((canmsg = dequeue(&ds->sessions[i].tx)) == NULL) {
-            continue;
+    while (1) {
+        if (ds->tx_queue.attr.size == 0) {
+            log_trace("netif_tx exit: %s\n", dev->name);
+
+            return NULL;
         }
 
-        log_trace("netif_tx received!\n");
+        if ((canmsg = dequeue(&ds->tx_queue)) == NULL) {
+            log_trace("netif_tx exit: %s\n", dev->name);
 
-        any_sessions = 1;
+            return NULL;
+        }
 
         struct sk_buff *skb;
         struct can_frame *cf;
@@ -57,9 +59,9 @@ int netif_tx (struct net_device *dev) {
         skb = alloc_can_skb(dev, &cf);
 
         if (skb == NULL) {
-            log_err("alloc_can_skb error\n");
+            log_err("netif_tx exit: alloc_can_skb error\n");
 
-            break;
+            return NULL;
         }
 
         skb->len = CAN_MTU;
@@ -76,10 +78,6 @@ int netif_tx (struct net_device *dev) {
         }
 
         dev->netdev_ops->ndo_start_xmit(skb, dev);
-    }
-
-    if (!any_sessions) {
-        return 1;
     }
 
     return 0;
@@ -167,7 +165,7 @@ int netif_rx (struct sk_buff* skb) {
     device_sessions_t* ds = &device_sessions[skb->dev->dev_id];
 
     for (i = 0; i < ds->num_sessions; ++i) {
-        if (enqueue(&ds->sessions[i].rx, &canmsg) != EOK) {
+        if (enqueue(&ds->sessions[i].rx_queue, &canmsg) != EOK) {
         }
     }
 

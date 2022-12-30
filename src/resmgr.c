@@ -50,8 +50,10 @@ struct can_ocb;
 
 #include "netif.h"
 
+static pthread_attr_t tx_thread_attr[MAX_DEVICES];
+static pthread_t tx_thread[MAX_DEVICES];
 
-struct net_device* device[MAX_DEVICES];
+static pthread_mutex_t rx_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct can_ocb {
     iofunc_ocb_t core;
@@ -60,6 +62,15 @@ typedef struct can_ocb {
 
     int session_index;
     session_t *session;
+
+    struct rx_t {
+        pthread_attr_t thread_attr;
+        pthread_t thread;
+        pthread_cond_t cond;
+        resmgr_context_t* ctp;
+        int rcvid;
+        queue_t* queue;
+    } rx;
 } can_ocb_t;
 
 IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr);
@@ -93,13 +104,13 @@ static struct can_resmgr_t {
 
     dispatch_t* dispatch;
     resmgr_attr_t resmgr_attr;
-    dispatch_context_t* dispatch_context;
     iofunc_attr_t iofunc_attr;
 
 #if CONFIG_QNX_RESMGR_THREAD_POOL == 1
     thread_pool_attr_t thread_pool_attr;
     thread_pool_t* thread_pool;
 #elif CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
+    dispatch_context_t* dispatch_context;
     pthread_attr_t dispatch_thread_attr;
     pthread_t dispatch_thread;
 #endif
@@ -109,8 +120,7 @@ static struct can_resmgr_t {
     iofunc_mount_t mount;
     iofunc_funcs_t mount_funcs;
 
-    pthread_attr_t tx_thread_attr;
-    pthread_t tx_thread;
+    queue_t* tx_queue;
 } can_resmgr[MAX_DEVICES][MAX_MAILBOXES*2];
 
 static struct can_resmgr_t* _can_resmgr[MAX_DEVICES*MAX_MAILBOXES*2];
@@ -133,7 +143,7 @@ int io_read  (resmgr_context_t *ctp, io_read_t  *msg, RESMGR_OCB_T *ocb);
 int io_write (resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb);
 int io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, RESMGR_OCB_T *ocb);
 
-void* tx_loop (void* arg);
+void* rx_loop (void* arg);
 void* dispatch_receive_loop (void* arg);
 
 /*
@@ -156,8 +166,6 @@ int register_netdev(struct net_device *dev) {
         log_err("device id (%d) exceeds max (%d)\n", dev->dev_id, MAX_DEVICES);
     }
 
-    device[dev->dev_id] = dev;
-
     log_trace("register_netdev: %s\n", dev->name);
 
     struct user_dev_setup user = {
@@ -169,6 +177,18 @@ int register_netdev(struct net_device *dev) {
     if (dev->netdev_ops->ndo_open(dev)) {
         return -1;
     }
+
+    int id = dev->dev_id;
+
+    const queue_attr_t tx_attr = { .size = 15 };
+
+    if (create_queue(&device_sessions[id].tx_queue, &tx_attr) != EOK) {
+    }
+
+    pthread_attr_init(&tx_thread_attr[id]);
+    pthread_attr_setdetachstate(&tx_thread_attr[id], PTHREAD_CREATE_DETACHED);
+
+    pthread_create(&tx_thread[id], &tx_thread_attr[id], &netif_tx, dev);
 
     if (!io_created) {
         io_created = 1;
@@ -193,7 +213,7 @@ int register_netdev(struct net_device *dev) {
 
     for (i = 0; i < 1; ++i) { // default number of channels
         for (j = 0; j < 2; ++j) { // 2 for rx & tx
-            struct can_resmgr_t* resmgr = &can_resmgr[dev->dev_id][i*2+j];
+            struct can_resmgr_t* resmgr = &can_resmgr[id][i*2+j];
 
             resmgr->device = dev;
 
@@ -229,13 +249,13 @@ int register_netdev(struct net_device *dev) {
 
             if (j == 0) {
                 snprintf( resmgr->name, MAX_NAME_SIZE,
-                        "/dev/can%d/rx%d", dev->dev_id, i );
+                        "/dev/can%d/rx%d", id, i );
 
                 resmgr->channel_type = RX_CHANNEL;
             }
             else {
                 snprintf( resmgr->name, MAX_NAME_SIZE,
-                        "/dev/can%d/tx%d", dev->dev_id, i );
+                        "/dev/can%d/tx%d", id, i );
 
                 resmgr->channel_type = TX_CHANNEL;
             }
@@ -271,18 +291,9 @@ int register_netdev(struct net_device *dev) {
                 return -1;
             }
 
+            resmgr->tx_queue = &device_sessions[id].tx_queue;
+
             _can_resmgr[resmgr->pathID] = resmgr;
-
-            /* Now we allocate some memory for the dispatch context
-             * structure, which will later be used when we receive
-             * messages. */
-            resmgr->dispatch_context = dispatch_context_alloc(resmgr->dispatch);
-
-            if (resmgr->dispatch_context == NULL) {
-                log_err("dispatch_context_alloc fail: %s\n", strerror(errno));
-
-                return -1;
-            }
 
 #if CONFIG_QNX_RESMGR_THREAD_POOL == 1
             /* initialize thread pool attributes */
@@ -312,6 +323,17 @@ int register_netdev(struct net_device *dev) {
             thread_pool_start(resmgr->thread_pool);
 
 #elif CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
+            /* Now we allocate some memory for the dispatch context
+             * structure, which will later be used when we receive
+             * messages. */
+            resmgr->dispatch_context = dispatch_context_alloc(resmgr->dispatch);
+
+            if (resmgr->dispatch_context == NULL) {
+                log_err("dispatch_context_alloc fail: %s\n", strerror(errno));
+
+                return -1;
+            }
+
             pthread_attr_init(&resmgr->dispatch_thread_attr);
             pthread_attr_setdetachstate(
                     &resmgr->dispatch_thread_attr, PTHREAD_CREATE_DETACHED );
@@ -321,7 +343,7 @@ int register_netdev(struct net_device *dev) {
                     &dispatch_receive_loop, resmgr );
 #endif
 
-            device_sessions[dev->dev_id].num_sessions = 0;
+            device_sessions[id].num_sessions = 0;
 
             log_trace("resmgr_attach -> %d\n", resmgr->pathID);
 
@@ -337,7 +359,11 @@ void unregister_netdev(struct net_device *dev) {
 
     log_trace("unregister_netdev: %s\n", dev->name);
 
+    int id = dev->dev_id;
+
     dev->flags &= ~IFF_UP;
+
+    destroy_queue(&device_sessions[id].tx_queue);
 
     if (dev->netdev_ops->ndo_stop(dev)) {
         log_err("internal error; ndo_stop failure\n");
@@ -345,7 +371,7 @@ void unregister_netdev(struct net_device *dev) {
 
     for (i = 0; i < 1; ++i) { // default number of channels
         for (j = 0; j < 2; ++j) { // 2 for rx & tx
-            struct can_resmgr_t* resmgr = &can_resmgr[dev->dev_id][i*2+j];
+            struct can_resmgr_t* resmgr = &can_resmgr[id][i*2+j];
 
 #if CONFIG_QNX_RESMGR_THREAD_POOL == 1
             if (thread_pool_destroy(resmgr->thread_pool) == -1) {
@@ -363,9 +389,7 @@ void unregister_netdev(struct net_device *dev) {
             pthread_join(resmgr->dispatch_thread, NULL);
 #endif
 
-#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
-            dispatch_context_free(resmgr->dispatch_context);
-#elif CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
+#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
             // TODO: investigate if dispatch_context_free() is needed and why
             //       we get SIGSEGV when following code is uncommented.
             //dispatch_context_free(resmgr->dispatch_context);
@@ -402,33 +426,31 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
     if (num_sessions + 1 == MAX_SESSIONS) {
     }
 
-    queue_attr_t rx_attr = { .size = 0 };
-    queue_attr_t tx_attr = { .size = 0 };
+    queue_attr_t rx_attr = { .size = 1024 };
 
-    if (ocb->resmgr->channel_type == RX_CHANNEL) {
-        rx_attr.size = 1024;
-    }
-    else if (ocb->resmgr->channel_type == TX_CHANNEL) {
-        tx_attr.size = device->tx_queue_len = 16;
+    if (ocb->resmgr->channel_type != RX_CHANNEL) {
+        rx_attr.size = 0;
     }
 
-    if (create_session(ocb->session, device, &rx_attr, &tx_attr) != EOK) {
+    if (create_session(ocb->session, device, &rx_attr) != EOK) {
         log_err("create_session failed: %s\n", ocb->resmgr->name);
     }
 
     ds->num_sessions++;
 
-    // If this is the first tx session for the device create the tx thread
-    if (ocb->resmgr->channel_type == TX_CHANNEL &&
-        number_of_tx_sessions(device) == 1)
-    {
-        pthread_attr_init(&ocb->resmgr->tx_thread_attr);
-        pthread_attr_setdetachstate(
-                &ocb->resmgr->tx_thread_attr, PTHREAD_CREATE_DETACHED );
+    // Every rx session has it's own rx thread to call resmgr_msg_again()
+    if (ocb->resmgr->channel_type == RX_CHANNEL) {
+        ocb->rx.queue = &ocb->session->rx_queue;
 
-        pthread_create( &ocb->resmgr->tx_thread,
-                &ocb->resmgr->tx_thread_attr,
-                &tx_loop, ocb->resmgr );
+        if (pthread_cond_init(&ocb->rx.cond, NULL) != EOK) {
+        }
+
+        pthread_attr_init(&ocb->rx.thread_attr);
+        pthread_attr_setdetachstate(
+                &ocb->rx.thread_attr, PTHREAD_CREATE_DETACHED );
+
+        pthread_create( &ocb->rx.thread, &ocb->rx.thread_attr,
+                &rx_loop, ocb );
     }
 
     return ocb;
@@ -437,6 +459,11 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
 void can_ocb_free (IOFUNC_OCB_T* ocb) {
     log_trace("can_ocb_free -> %s\n", ocb->resmgr->name);
 
+    pthread_mutex_lock(&rx_mutex);
+    ocb->rx.queue = NULL;
+    pthread_cond_signal(&ocb->rx.cond);
+    pthread_mutex_unlock(&rx_mutex);
+
     struct net_device* device = ocb->resmgr->device;
     int dev_id = device->dev_id;
     device_sessions_t* ds = &device_sessions[dev_id];
@@ -444,11 +471,9 @@ void can_ocb_free (IOFUNC_OCB_T* ocb) {
 
     destroy_session(ocb->session);
 
-    // If this is the last tx session for the device wait for tx thread to exit
-    if (ocb->resmgr->channel_type == TX_CHANNEL &&
-        number_of_tx_sessions(device) == 1)
-    {
-        pthread_join(ocb->resmgr->tx_thread, NULL);
+    // Wait for rx thread to exit
+    if (ocb->resmgr->channel_type == RX_CHANNEL) {
+        pthread_join(ocb->rx.thread, NULL);
     }
 
     ds->num_sessions--;
@@ -462,21 +487,40 @@ void can_ocb_free (IOFUNC_OCB_T* ocb) {
 }
 
 
-void* tx_loop (void* arg) {
-    struct can_resmgr_t* resmgr = (struct can_resmgr_t*)arg;
-    device_sessions_t* ds = &device_sessions[resmgr->device->dev_id];
+void* rx_loop (void* arg) {
+    struct can_ocb* ocb = (struct can_ocb*)arg;
 
-    int tx_session_count = 1; // Created when first tx session is opened
+    ocb->rx.ctp = NULL;
 
     while (1) {
-        if (!(resmgr->device->flags & IFF_UP) || tx_session_count == 0) {
-            log_trace("tx_loop exit: %s\n", resmgr->name);
+        pthread_mutex_lock(&rx_mutex);
+
+        while ((ocb->resmgr->device->flags & IFF_UP)
+                && (ocb->rx.queue != NULL)
+                && (ocb->rx.ctp == NULL))
+        {
+            pthread_cond_wait(&ocb->rx.cond, &rx_mutex);
+        }
+
+        pthread_mutex_unlock(&rx_mutex);
+
+        if (!(ocb->resmgr->device->flags & IFF_UP)
+                || (ocb->rx.queue == NULL))
+        {
+            log_trace("rx_loop exit: %s\n", ocb->resmgr->name);
 
             pthread_exit(NULL);
         }
 
-        if (netif_tx(resmgr->device)) {
-            tx_session_count = number_of_tx_sessions(resmgr->device);
+        if (ocb->rx.ctp != NULL) {
+            struct can_msg* canmsg = dequeue_peek(ocb->rx.queue);
+
+            pthread_mutex_lock(&rx_mutex);
+            if (resmgr_msg_again(ocb->rx.ctp, ocb->rx.rcvid) == -1) {
+            }
+
+            ocb->rx.ctp = NULL;
+            pthread_mutex_unlock(&rx_mutex);
         }
     }
 
@@ -823,7 +867,13 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     {
         int i;
 
-        struct can_msg* canmsg = dequeue(&_ocb->session->rx);
+        if (_ocb->session->rx_queue.attr.size == 0) {
+            nbytes = 0;
+
+            break;
+        }
+
+        struct can_msg* canmsg = dequeue_nonblock(&_ocb->session->rx_queue);
 
         if (canmsg != NULL) { // Could be a zero size rx queue, i.e. a tx queue
             data->canmsg = *canmsg;
@@ -847,7 +897,15 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                     canmsg->dat[7]);
         }
         else {
-            nbytes = 0;
+            pthread_mutex_lock(&rx_mutex);
+
+            _ocb->rx.ctp = ctp;
+            _ocb->rx.rcvid = ctp->rcvid;
+
+            pthread_cond_signal(&_ocb->rx.cond);
+            pthread_mutex_unlock(&rx_mutex);
+
+            return _RESMGR_NOREPLY;
         }
 
         break;
@@ -864,12 +922,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         struct can_msg canmsg = data->canmsg;
         nbytes = 0;
 
-        device_sessions_t* ds = &device_sessions[_ocb->resmgr->device->dev_id];
-
-        int i;
-        for (i = 0; i < ds->num_sessions; ++i) {
-            if (enqueue(&ds->sessions[i].tx, &canmsg) != EOK) {
-            }
+        if (_ocb->resmgr->tx_queue != NULL) {
+            enqueue(_ocb->resmgr->tx_queue, &canmsg);
         }
 
         log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \

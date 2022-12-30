@@ -177,7 +177,6 @@ struct can_msg* dequeue (queue_t* Q) {
     }
 
     if (Q->attr.size == 0) {
-        pthread_cond_signal(&Q->cond);
         pthread_mutex_unlock(&Q->mutex);
 
         return NULL; // Zero size queue cannot store anything and this response
@@ -202,3 +201,80 @@ struct can_msg* dequeue (queue_t* Q) {
     return result;
 }
 
+struct can_msg* dequeue_nonblock (queue_t* Q) {
+    if (Q == NULL) {
+        return NULL;
+    }
+
+    if (Q->session_up == 0) {
+        return NULL;
+    }
+
+    struct can_msg* result = NULL;
+
+    pthread_mutex_lock(&Q->mutex);
+
+    if (Q->attr.size == 0 || Q->begin == Q->end) {
+        pthread_mutex_unlock(&Q->mutex);
+
+        return NULL;
+    }
+
+    // handle data in queue here, i.e. when Q->begin != Q-end
+    result = &Q->data[Q->begin];
+
+    ++Q->begin;
+
+    if (Q->begin == Q->attr.size) {
+        Q->begin = 0;
+
+        if (Q->end == Q->attr.size) {
+            Q->end = 0;
+        }
+    }
+
+    pthread_mutex_unlock(&Q->mutex);
+
+    return result;
+}
+
+struct can_msg* dequeue_peek (queue_t* Q) {
+    if (Q == NULL) {
+        return NULL;
+    }
+
+    if (Q->session_up == 0) {
+        return NULL;
+    }
+
+    struct can_msg* result = NULL;
+
+    pthread_mutex_lock(&Q->mutex);
+
+    Q->dequeue_waiting = 1;
+    while (Q->dequeue_waiting && Q->session_up == 1 && Q->begin == Q->end) {
+        pthread_cond_wait(&Q->cond, &Q->mutex);
+    }
+    Q->dequeue_waiting = 0;
+
+    if (Q->session_up == 0) {
+        pthread_cond_signal(&Q->cond);
+        pthread_mutex_unlock(&Q->mutex);
+
+        return NULL;
+    }
+
+    if (Q->attr.size == 0) {
+        pthread_mutex_unlock(&Q->mutex);
+
+        return NULL; // Zero size queue cannot store anything and this response
+                     // is OK for such a queue created knowing this fact.
+    }
+
+    // handle data in queue here, i.e. when Q->begin != Q-end
+    result = &Q->data[Q->begin];
+
+    pthread_mutex_unlock(&Q->mutex);
+
+    return result;
+}

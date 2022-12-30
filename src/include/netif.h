@@ -21,6 +21,6 @@
 #ifndef SRC_NETIF_H_
 #define SRC_NETIF_H_
 
-extern int netif_tx (struct net_device *dev);
+extern void* netif_tx (void* arg);
 
 #endif /* SRC_NETIF_H_ */

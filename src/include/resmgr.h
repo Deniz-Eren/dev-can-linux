@@ -68,6 +68,4 @@ struct resmgr_ops {
     int     (*fill_xstats)(struct sk_buff* skb, const struct net_device* dev);
 };
 
-extern struct net_device* device[MAX_DEVICES];
-
 #endif /* SRC_RESMGR_H_ */

@@ -26,8 +26,7 @@ device_sessions_t device_sessions[MAX_DEVICES];
 
 
 int create_session (session_t* S, struct net_device* dev,
-        const queue_attr_t* rx_attr,
-        const queue_attr_t* tx_attr)
+        const queue_attr_t* attr)
 {
     int result;
 
@@ -35,10 +34,7 @@ int create_session (session_t* S, struct net_device* dev,
         return EFAULT; // Bad address
     }
 
-    if ((result = create_queue(&S->rx, rx_attr)) != EOK) {
-    }
-
-    if ((result = create_queue(&S->tx, tx_attr)) != EOK) {
+    if ((result = create_queue(&S->rx_queue, attr)) != EOK) {
     }
 
     S->device = dev;
@@ -51,25 +47,5 @@ void destroy_session (session_t* S) {
         return;
     }
 
-    destroy_queue(&S->rx);
-    destroy_queue(&S->tx);
-}
-
-int number_of_tx_sessions (struct net_device* dev) {
-    if (dev == NULL) {
-        return 0;
-    }
-
-    device_sessions_t* ds = &device_sessions[dev->dev_id];
-
-    int tx_session_count = 0;
-
-    int i;
-    for (i = 0; i < ds->num_sessions; ++i) {
-        if (ds->sessions[i].tx.attr.size) {
-            ++tx_session_count;
-        }
-    }
-
-    return tx_session_count;
+    destroy_queue(&S->rx_queue);
 }
