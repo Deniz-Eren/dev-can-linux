@@ -21,127 +21,31 @@
 #include <stdio.h>
 #include <string.h>
 
-struct can_ocb;
-
-#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
-/*
- * Define THREAD_POOL_PARAM_T such that we can avoid a compiler
- * warning when we use the dispatch_*() functions below
- */
-#define THREAD_POOL_PARAM_T dispatch_context_t
-#endif
-
-/*
- * Extending the OCB the attribute structure
- */
-#define IOFUNC_OCB_T struct can_ocb
-
-#include <sys/iofunc.h>
-
-#include <sys/resmgr.h>
-#include <sys/dispatch.h>
-#include <sys/can_dcmd.h>
-#include <sys/neutrino.h>
-
 #include <resmgr.h>
 #include <config.h>
 #include <pci.h>
-#include <session.h>
 
 #include "netif.h"
+
+static can_resmgr_t* root_resmgr = NULL;
 
 static pthread_attr_t tx_thread_attr[MAX_DEVICES];
 static pthread_t tx_thread[MAX_DEVICES];
 
 static pthread_mutex_t rx_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-typedef struct can_ocb {
-    iofunc_ocb_t core;
-
-    struct can_resmgr_t* resmgr;
-
-    int session_index;
-    session_t *session;
-
-    struct rx_t {
-        pthread_attr_t thread_attr;
-        pthread_t thread;
-        pthread_cond_t cond;
-        resmgr_context_t* ctp;
-        int rcvid;
-        queue_t* queue;
-    } rx;
-} can_ocb_t;
-
 IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr);
 void can_ocb_free (IOFUNC_OCB_T* ocb);
 
-
 /*
- * Our dispatch, resource manager, and iofunc variables
- * are declared here. These are some small administrative things
- * for our resource manager.
+ * Resource manager POSIX callback functions for clients to call.
  */
-
-/*
- * We need n x MAX_MAILBOXES of the structures below since each mailbox has an
- * rx and a tx; i.e. /dev/can0/rx#, /dev/can0/tx#, where # is the mailbox id and
- * the 0 is the device id
- */
-
-static int io_created = 0;
-
-typedef enum channel_type {
-    RX_CHANNEL = 0,
-    TX_CHANNEL
-} channel_type_t;
-
-static struct can_resmgr_t {
-    struct net_device* device;
-
-    char name[MAX_NAME_SIZE];
-    channel_type_t channel_type;
-
-    dispatch_t* dispatch;
-    resmgr_attr_t resmgr_attr;
-    iofunc_attr_t iofunc_attr;
-
-#if CONFIG_QNX_RESMGR_THREAD_POOL == 1
-    thread_pool_attr_t thread_pool_attr;
-    thread_pool_t* thread_pool;
-#elif CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
-    dispatch_context_t* dispatch_context;
-    pthread_attr_t dispatch_thread_attr;
-    pthread_t dispatch_thread;
-#endif
-
-    int pathID;
-
-    iofunc_mount_t mount;
-    iofunc_funcs_t mount_funcs;
-
-    queue_t* tx_queue;
-} can_resmgr[MAX_DEVICES][MAX_MAILBOXES*2];
-
-static struct can_resmgr_t* _can_resmgr[MAX_DEVICES*MAX_MAILBOXES*2];
-
-/* A resource manager mainly consists of callbacks for POSIX
- * functions a client could call. In the example, we have
- * callbacks for the open(), read() and write() calls. More are
- * possible. If we don't supply own functions (e.g. for stat(),
- * seek(), etc.), the resource manager framework will use default
- * system functions, which in most cases return with an error
- * code to indicate that this resource manager doesn't support
- * this function.*/
-
-/* These prototypes are needed since we are using their names
- * in main(). */
-
-int io_open  (resmgr_context_t *ctp, io_open_t  *msg, RESMGR_HANDLE_T *handle, void *extra);
-int io_close_ocb (resmgr_context_t *ctp, void *reserved, RESMGR_OCB_T *ocb);
-int io_read  (resmgr_context_t *ctp, io_read_t  *msg, RESMGR_OCB_T *ocb);
-int io_write (resmgr_context_t *ctp, io_write_t *msg, RESMGR_OCB_T *ocb);
-int io_devctl (resmgr_context_t *ctp, io_devctl_t *msg, RESMGR_OCB_T *ocb);
+int io_close_ocb (resmgr_context_t* ctp, void* reserved,   RESMGR_OCB_T* ocb);
+int io_read      (resmgr_context_t* ctp, io_read_t*   msg, RESMGR_OCB_T* ocb);
+int io_write     (resmgr_context_t* ctp, io_write_t*  msg, RESMGR_OCB_T* ocb);
+int io_devctl    (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* ocb);
+int io_open      (resmgr_context_t* ctp, io_open_t*   msg,
+                    RESMGR_HANDLE_T* handle, void* extra);
 
 void* rx_loop (void* arg);
 void* dispatch_receive_loop (void* arg);
@@ -190,6 +94,8 @@ int register_netdev(struct net_device *dev) {
 
     pthread_create(&tx_thread[id], &tx_thread_attr[id], &netif_tx, dev);
 
+    static int io_created = 0;
+
     if (!io_created) {
         io_created = 1;
 
@@ -213,7 +119,9 @@ int register_netdev(struct net_device *dev) {
 
     for (i = 0; i < 1; ++i) { // default number of channels
         for (j = 0; j < 2; ++j) { // 2 for rx & tx
-            struct can_resmgr_t* resmgr = &can_resmgr[id][i*2+j];
+            can_resmgr_t* resmgr = (can_resmgr_t*)malloc(sizeof(can_resmgr_t));
+
+            store_resmgr(&root_resmgr, resmgr);
 
             resmgr->device = dev;
 
@@ -280,20 +188,18 @@ int register_netdev(struct net_device *dev) {
             resmgr->mount.funcs = &resmgr->mount_funcs;
             resmgr->iofunc_attr.mount = &resmgr->mount;
 
-            resmgr->pathID = resmgr_attach(
+            resmgr->id = resmgr_attach(
                     resmgr->dispatch, &resmgr->resmgr_attr, resmgr->name,
                     _FTYPE_ANY, 0, &connect_funcs, &io_funcs,
                     &resmgr->iofunc_attr );
 
-            if (resmgr->pathID == -1) {
+            if (resmgr->id == -1) {
                 log_err("resmgr_attach fail: %s\n", strerror(errno));
 
                 return -1;
             }
 
             resmgr->tx_queue = &device_sessions[id].tx_queue;
-
-            _can_resmgr[resmgr->pathID] = resmgr;
 
 #if CONFIG_QNX_RESMGR_THREAD_POOL == 1
             /* initialize thread pool attributes */
@@ -345,7 +251,7 @@ int register_netdev(struct net_device *dev) {
 
             device_sessions[id].num_sessions = 0;
 
-            log_trace("resmgr_attach -> %d\n", resmgr->pathID);
+            log_trace("resmgr_attach -> %d\n", resmgr->id);
 
 		    dev->flags |= IFF_UP;
         }
@@ -369,43 +275,49 @@ void unregister_netdev(struct net_device *dev) {
         log_err("internal error; ndo_stop failure\n");
     }
 
-    for (i = 0; i < 1; ++i) { // default number of channels
-        for (j = 0; j < 2; ++j) { // 2 for rx & tx
-            struct can_resmgr_t* resmgr = &can_resmgr[id][i*2+j];
+    can_resmgr_t** location = &root_resmgr;
+
+    while (*location != NULL) {
+        can_resmgr_t* resmgr = *location;
 
 #if CONFIG_QNX_RESMGR_THREAD_POOL == 1
-            if (thread_pool_destroy(resmgr->thread_pool) == -1) {
-                log_err( "internal error; thread_pool_destroy failure " \
-                         "(%d, %d)\n", i, j );
-            }
-#endif
-
-            if (resmgr_detach(resmgr->dispatch, resmgr->pathID, 0) == -1) {
-                log_err( "internal error; resmgr_detach failure (%d, %d)\n",
-                        i, j );
-            }
-
-#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
-            pthread_join(resmgr->dispatch_thread, NULL);
-#endif
-
-#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
-            // TODO: investigate if dispatch_context_free() is needed and why
-            //       we get SIGSEGV when following code is uncommented.
-            //dispatch_context_free(resmgr->dispatch_context);
-#endif
-
-            if (dispatch_destroy(resmgr->dispatch) == -1) {
-                log_err( "internal error; dispatch_destroy failure (%d, %d)\n",
-                        i, j );
-            }
+        if (thread_pool_destroy(resmgr->thread_pool) == -1) {
+            log_err( "internal error; thread_pool_destroy failure " \
+                     "(%d, %d)\n", i, j );
         }
+#endif
+
+        if (resmgr_detach(resmgr->dispatch, resmgr->id, 0) == -1) {
+            log_err( "internal error; resmgr_detach failure (%d, %d)\n",
+                    i, j );
+        }
+
+#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
+        pthread_join(resmgr->dispatch_thread, NULL);
+#endif
+
+#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
+        // TODO: investigate if dispatch_context_free() is needed and why
+        //       we get SIGSEGV when following code is uncommented.
+        //dispatch_context_free(resmgr->dispatch_context);
+#endif
+
+        if (dispatch_destroy(resmgr->dispatch) == -1) {
+            log_err( "internal error; dispatch_destroy failure (%d, %d)\n",
+                    i, j );
+        }
+
+        location = &(*location)->next;
     }
+
+    free_all_resmgrs(&root_resmgr);
 }
 
 
 IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
-    log_trace("can_ocb_calloc -> %s\n", _can_resmgr[ctp->id]->name);
+    can_resmgr_t* resmgr = get_resmgr(&root_resmgr, ctp->id);
+
+    log_trace("can_ocb_calloc -> %s (id: %d)\n", resmgr->name, ctp->id);
 
     struct can_ocb* ocb;
 
@@ -413,7 +325,7 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
         return NULL;
     }
 
-    ocb->resmgr = _can_resmgr[ctp->id];
+    ocb->resmgr = resmgr;
 
     struct net_device* device = ocb->resmgr->device;
     int dev_id = device->dev_id;
@@ -535,7 +447,7 @@ void* rx_loop (void* arg) {
  */
 
 void* dispatch_receive_loop (void* arg) {
-    struct can_resmgr_t* resmgr = (struct can_resmgr_t*)arg;
+    can_resmgr_t* resmgr = (can_resmgr_t*)arg;
 
     dispatch_context_t* ctp = resmgr->dispatch_context;
 
@@ -578,7 +490,9 @@ void* dispatch_receive_loop (void* arg) {
 int io_open (resmgr_context_t* ctp, io_open_t* msg,
         RESMGR_HANDLE_T* handle, void* extra)
 {
-    log_trace("io_open -> %s\n", _can_resmgr[ctp->id]->name);
+    can_resmgr_t* resmgr = get_resmgr(&root_resmgr, ctp->id);
+
+    log_trace("io_open -> %s (id: %d)\n", resmgr->name, ctp->id);
 
     return (iofunc_open_default (ctp, msg, handle, extra));
 }
@@ -590,7 +504,9 @@ int io_open (resmgr_context_t* ctp, io_open_t* msg,
  */
 
 int io_close_ocb (resmgr_context_t* ctp, void* reserved, RESMGR_OCB_T* _ocb) {
-    log_trace("io_close_ocb -> %s\n", _can_resmgr[ctp->id]->name);
+    can_resmgr_t* resmgr = get_resmgr(&root_resmgr, ctp->id);
+
+    log_trace("io_close_ocb -> %s (id: %d)\n", resmgr->name, ctp->id);
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
@@ -616,7 +532,7 @@ int io_read (resmgr_context_t* ctp, io_read_t* msg, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("io_read -> %s\n", _can_resmgr[ctp->id]->name);
+    log_trace("io_read -> id: %d\n", ctp->id);
 
     /* Here we verify if the client has the access
      * rights needed to read from our device */
@@ -677,7 +593,7 @@ int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("io_write -> %s\n", _can_resmgr[ctp->id]->name);
+    log_trace("io_write -> id: %d\n", ctp->id);
 
     /* Check the access permissions of the client */
     if ((status = iofunc_write_verify(ctp, msg, ocb, NULL)) != EOK) {
@@ -777,7 +693,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         struct can_devctl_timing    timing;
     } *data;
 
-    log_trace("io_devctl -> %s\n", _can_resmgr[ctp->id]->name);
+    log_trace("io_devctl -> id: %d\n", ctp->id);
 
     /*
      Let common code handle DCMD_ALL_* cases.
@@ -882,7 +798,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
             log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
                       "%02X %02X %02X %02X %02X %02X %02X %02X\n",
-                    _can_resmgr[ctp->id]->name,
+                    _ocb->resmgr->name,
                     canmsg->ext.timestamp,
                     canmsg->ext.is_extended_mid ? "EFF" : "SFF",
                     canmsg->mid,
@@ -928,7 +844,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
         log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
                   "%02X %02X %02X %02X %02X %02X %02X %02X\n",
-                _can_resmgr[ctp->id]->name,
+                _ocb->resmgr->name,
                 canmsg.ext.timestamp,
                 canmsg.ext.is_extended_mid ? "EFF" : "SFF",
                 canmsg.mid,
