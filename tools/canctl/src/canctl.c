@@ -119,6 +119,8 @@ int main (int argc, char* argv[]) {
                     canmsg.dat[5],
                     canmsg.dat[6],
                     canmsg.dat[7]);
+
+            close(fd);
         }
 
         return EXIT_SUCCESS;
@@ -174,6 +176,8 @@ int main (int argc, char* argv[]) {
                     canmsg.dat[5],
                     canmsg.dat[6],
                     canmsg.dat[7]);
+
+            close(fd);
         }
 
         return EXIT_SUCCESS;

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# \file     integration-testing.sh
+# \file     start-driver.sh
 # \brief    Bash script for Jenkins integration testing.
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
@@ -20,24 +20,16 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-SLAY_TARGET="dev-can-linux"    # default slay command target
-RUN_DURATION="10"               # default run duration
-CMAKE_BUILD_TYPE="Release"          # default build type
-SSH_PORT="6022"         # default SSH port number
+CMAKE_BUILD_TYPE="Release"  # default build type
+SSH_PORT="6022"             # default SSH port number
 
-while getopts b:k:p:r:s:t:v opt; do
+while getopts b:p:s:t:v opt; do
     case ${opt} in
     b )
         BUILD_PATH=$OPTARG
         ;;
-    k )
-        SLAY_TARGET=$OPTARG
-        ;;
     p )
         SSH_PORT=$OPTARG
-        ;;
-    r )
-        RUN_DURATION=$OPTARG
         ;;
     s )
         COPY_DEBUG_SYMS=$OPTARG
@@ -49,12 +41,9 @@ while getopts b:k:p:r:s:t:v opt; do
         VERBOSE="-vvvvv"
         ;;
     \?)
-        echo "Usage: integration-testing.sh [options]"
+        echo "Usage: start-driver.sh [options]"
         echo "  -b build full path to use"
-        echo "  -k what process to slay when stopping testing"
-        echo "     (default: dev-can-linux)"
         echo "  -p ssh port number"
-        echo "  -r run duration in seconds (default: 10)"
         echo "  -s if not empty then copy debug symbols for libc.so"
         echo "  -t build type (default: Release)" 
         echo "  -v for verbose mode"
@@ -137,24 +126,3 @@ docker exec -d --user root --workdir /root dev_env bash -c \
         -o 'LogLevel=ERROR' \
         -p$SSH_PORT root@localhost \
         \"cd $BUILD_PATH ; $QNX_PREFIX_CMD dev-can-linux $VERBOSE\""
-
-sleep $RUN_DURATION
-
-docker exec --user root --workdir /root dev_env bash -c \
-    "sshpass -p 'root' ssh \
-        -o 'StrictHostKeyChecking=no' \
-        -o 'UserKnownHostsFile=/dev/null' \
-        -o 'LogLevel=ERROR' \
-        -p$SSH_PORT root@localhost \
-        \"slay -s SIGINT $SLAY_TARGET\" || (exit 0)"
-
-# Copy build directory back from the QNX VM
-docker exec --user root --workdir /root dev_env bash -c \
-    "source .profile \
-    && sshpass -p 'root' scp \
-        -o 'StrictHostKeyChecking=no' \
-        -o 'UserKnownHostsFile=/dev/null' \
-        -o 'LogLevel=ERROR' \
-        -r -P$SSH_PORT \
-        root@localhost:$BUILD_PATH \
-        $BUILD_PATH/.."

@@ -35,7 +35,7 @@ while getopts d:i:p: opt; do
         SSH_PORT=$OPTARG
         ;;
     \?)
-        echo "Usage: integration-testing.sh [options]"
+        echo "Usage: start-emulation.sh [options]"
         echo "  -d device selection (default: mioe3680_pci)" 
         echo "  -i local file full path to store images"
         echo "  -p ssh port number"

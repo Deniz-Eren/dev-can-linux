@@ -104,12 +104,17 @@ node('jenkins_agent') {
                     -p $sshport \
                     -d mioe3680_pci
 
-                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
                     -v \
                     -b /data/home/root/build_qcc_coverage \
                     -t Coverage \
-                    -p $sshport \
-                    -r 10
+                    -p $sshport
+
+                sleep 10
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                    -b /data/home/root/build_qcc_coverage \
+                    -p $sshport
 
                 docker exec --user root --workdir /root dev_env bash -c \
                     "source .profile \
@@ -163,14 +168,19 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-memcheck.xml"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
                     -v \
                     -b /data/home/root/build_memcheck \
                     -t Profiling \
-                    -k memcheck-amd64-nto \
                     -s 1 \
-                    -p $sshport \
-                    -r 10
+                    -p $sshport
+
+                sleep 10
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                    -b /data/home/root/build_memcheck \
+                    -k memcheck-amd64-nto \
+                    -p $sshport
 
                 docker cp \
                     dev_env:/data/home/root/build_memcheck/valgrind-memcheck.xml \
@@ -188,14 +198,19 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-helgrind.xml"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
                     -v \
                     -b /data/home/root/build_helgrind \
                     -t Profiling \
-                    -k helgrind-amd64-nto \
                     -s 1 \
-                    -p $sshport \
-                    -r 10
+                    -p $sshport
+
+                sleep 10
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                    -b /data/home/root/build_helgrind \
+                    -k helgrind-amd64-nto \
+                    -p $sshport
 
                 docker cp \
                     dev_env:/data/home/root/build_helgrind/valgrind-helgrind.xml \
@@ -211,14 +226,19 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-drd.xml"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
                     -v \
                     -b /data/home/root/build_drd \
                     -t Profiling \
-                    -k drd-amd64-nto \
                     -s 1 \
-                    -p $sshport \
-                    -r 10
+                    -p $sshport
+
+                sleep 10
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                    -b /data/home/root/build_drd \
+                    -k drd-amd64-nto \
+                    -p $sshport
 
                 docker cp \
                     dev_env:/data/home/root/build_drd/valgrind-drd.xml \
@@ -234,14 +254,19 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-exp-sgcheck.xml"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/integration-testing.sh \
+                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
                     -v \
                     -b /data/home/root/build_exp-sgcheck \
                     -t Profiling \
-                    -k exp-sgcheck-amd64-nto \
                     -s 1 \
-                    -p $sshport \
-                    -r 10
+                    -p $sshport
+
+                sleep 10
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                    -b /data/home/root/build_exp-sgcheck \
+                    -k exp-sgcheck-amd64-nto \
+                    -p $sshport
 
                 docker cp \
                     dev_env:/data/home/root/build_exp-sgcheck/valgrind-exp-sgcheck.xml \
