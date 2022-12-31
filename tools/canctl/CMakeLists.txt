@@ -23,6 +23,7 @@ add_executable( canctl
     ${CMAKE_CURRENT_SOURCE_DIR}/src/canctl.c )
 
 target_include_directories( canctl PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/> )
 
 if( CMAKE_BUILD_TYPE MATCHES Profiling )
@@ -33,4 +34,4 @@ endif()
 
 install( TARGETS canctl
     DESTINATION bin/
-    COMPONENT ${CMAKE_PROJECT_NAME} )
+    COMPONENT bin )

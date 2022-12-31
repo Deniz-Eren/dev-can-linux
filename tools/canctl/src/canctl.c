@@ -20,13 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <errno.h>
-
-#include <fcntl.h>
-#include <sys/can_dcmd.h>
+#include <dev-can-linux/commands.h>
 
 #define NATIVE_CANCTL_CMD "/system/xbin/canctl"
 
@@ -109,14 +103,8 @@ int main (int argc, char* argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        if (EOK != (ret = devctl(
-                fd, CAN_DEVCTL_READ_CANMSG_EXT,
-                &canmsg, sizeof(struct can_msg), NULL )))
-        {
-            fprintf(stderr, "devctl CAN_DEVCTL_READ_CANMSG_EXT: %s\n", strerror(ret));
-        }
-        else {
-            printf("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
+        if (read_canmsg_ext(fd, &canmsg) == EOK) {
+            printf("read_canmsg_ext; %s TS: %X [%s] %X [%d] " \
                       "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                     OPEN_FILE,
                     canmsg.ext.timestamp,
@@ -170,11 +158,22 @@ int main (int argc, char* argv[]) {
             exit(EXIT_FAILURE);
         }
 
-        if (EOK != (ret = devctl(
-                fd, CAN_DEVCTL_WRITE_CANMSG_EXT,
-                &canmsg, sizeof(struct can_msg), NULL )))
-        {
-            fprintf(stderr, "devctl CAN_DEVCTL_SET_MID: %s\n", strerror(ret));
+        if (write_canmsg_ext(fd, &canmsg) == EOK) {
+            printf("write_canmsg_ext; %s TS: %X [%s] %X [%d] " \
+                      "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                    OPEN_FILE,
+                    canmsg.ext.timestamp,
+                    canmsg.ext.is_extended_mid ? "EFF" : "SFF",
+                    canmsg.mid,
+                    canmsg.len,
+                    canmsg.dat[0],
+                    canmsg.dat[1],
+                    canmsg.dat[2],
+                    canmsg.dat[3],
+                    canmsg.dat[4],
+                    canmsg.dat[5],
+                    canmsg.dat[6],
+                    canmsg.dat[7]);
         }
 
         return EXIT_SUCCESS;

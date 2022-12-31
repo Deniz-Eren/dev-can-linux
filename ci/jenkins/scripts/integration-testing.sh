@@ -93,7 +93,8 @@ docker exec --user root --workdir /root dev_env bash -c \
         -o 'UserKnownHostsFile=/dev/null' \
         -o 'LogLevel=ERROR' \
         -p$SSH_PORT root@localhost \
-        \"tar -xf $BUILD_PATH/dev-can-linux-*.tar.gz -C /opt/\""
+        \"find $BUILD_PATH -iname \"dev-can-linux-*.tar.gz\" \
+            -exec tar -xf {} -C /opt/ \\; \""
 
 if [ ! -z "$COPY_DEBUG_SYMS" ]; then
     #
