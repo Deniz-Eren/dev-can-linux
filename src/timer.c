@@ -43,38 +43,26 @@
 #endif
 
 
-static struct timer_record_t {
-    timer_t* id;
-
-    int created, index, chid;
-
-    void (*callback)(void*);
-    void *data;
-
-    struct sigevent event;
-
-    pthread_attr_t attr;
-} timer[MAX_DEVICES];
-
-static int n_timers = 0;
-
 static void* timer_loop (void* arg);
 
 
-void create (int i) {
-    struct sched_param scheduling_params;
-    int prio;
-
-    if (timer[i].created) {
+static void create (timer_record_t* timer) {
+    if (timer == NULL) {
         return;
     }
 
-    timer[i].index = i;
-    timer[i].chid = ChannelCreate(0);
+    struct sched_param scheduling_params;
+    int prio;
 
-    if (timer[i].chid == -1) {
-        log_err( "create(%d) ChannelCreate error; %s\n",
-                i, strerror(errno) );
+    if (timer->created) {
+        return;
+    }
+
+    timer->chid = ChannelCreate(0);
+
+    if (timer->chid == -1) {
+        log_err( "timer ChannelCreate error; %s\n",
+                strerror(errno) );
     }
 
     /* Get our priority. */
@@ -85,111 +73,98 @@ void create (int i) {
        prio = 10;
     }
 
-    timer[i].event.sigev_notify = SIGEV_PULSE;
-    timer[i].event.sigev_coid =
-        ConnectAttach(ND_LOCAL_NODE, 0, timer[i].chid, _NTO_SIDE_CHANNEL, 0);
+    timer->event.sigev_notify = SIGEV_PULSE;
+    timer->event.sigev_coid =
+        ConnectAttach(ND_LOCAL_NODE, 0, timer->chid, _NTO_SIDE_CHANNEL, 0);
 
-    if (timer[i].event.sigev_coid == -1) {
-        log_err( "create(%d) ConnectAttach error; %s\n",
-                i, strerror(errno) );
+    if (timer->event.sigev_coid == -1) {
+        log_err( "timer ConnectAttach error; %s\n",
+                strerror(errno) );
     }
 
-    timer[i].event.sigev_priority = prio;
-    timer[i].event.sigev_code = _PULSE_CODE_TIMER_TRIGGER;
+    timer->event.sigev_priority = prio;
+    timer->event.sigev_code = _PULSE_CODE_TIMER_TRIGGER;
 
-    if (timer_create(CLOCK_MONOTONIC, &timer[i].event, timer[i].id) == -1) {
-        log_err( "create(%d) timer_create error; %s\n",
-                i, strerror(errno) );
+    if (timer_create(CLOCK_MONOTONIC, &timer->event, &timer->id) == -1) {
+        log_err( "timer timer_create error; %s\n",
+                strerror(errno) );
     }
 
     /* Start the timer thread */
-    pthread_attr_init(&timer[i].attr);
-    pthread_attr_setdetachstate(&timer[i].attr, PTHREAD_CREATE_DETACHED);
-    pthread_create(NULL, &timer[i].attr, &timer_loop, &timer[i].index);
+    pthread_attr_init(&timer->attr);
+    pthread_attr_setdetachstate(&timer->attr, PTHREAD_CREATE_DETACHED);
+    pthread_create(NULL, &timer->attr, &timer_loop, timer);
 
-    timer[i].created = 1;
+    timer->created = 1;
 }
 
-void destroy (int i) {
-    if (!timer[i].created) {
+void destroy (timer_record_t* timer) {
+    if (timer == NULL) {
+        return;
+    }
+
+    if (!timer->created) {
         return;
     }
 
     if (MsgSendPulse(
-        timer[i].event.sigev_coid,
+        timer->event.sigev_coid,
         -1, _PULSE_CODE_SHUTDOWN_TIMER, 0 ) == -1)
     {
-        log_err( "destroy(%d) MsgSendPulse error; %s\n",
-                i, strerror(errno) );
+        log_err( "destroy timer MsgSendPulse error; %s\n",
+                strerror(errno) );
     }
 
-    if (timer_delete(*timer[i].id) == -1) {
-        log_err( "destroy(%d) timer_delete error; %s\n",
-                i, strerror(errno) );
+    if (timer_delete(timer->id) == -1) {
+        log_err( "destroy timer timer_delete error; %s\n",
+                strerror(errno) );
     }
 
-    if (ConnectDetach(timer[i].event.sigev_coid) == -1) {
-        log_err( "destroy(%d) ConnectDetach error; %s\n",
-                i, strerror(errno) );
+    if (ConnectDetach(timer->event.sigev_coid) == -1) {
+        log_err( "destroy timer ConnectDetach error; %s\n",
+                strerror(errno) );
     }
 
-    if (ChannelDestroy(timer[i].chid) == -1) {
-        log_err( "destroy(%d) ChannelDestroy error; %s\n",
-                i, strerror(errno) );
+    if (ChannelDestroy(timer->chid) == -1) {
+        log_err( "destroy timer ChannelDestroy error; %s\n",
+                strerror(errno) );
     }
 
-    timer[i].created = 0;
+    timer->created = 0;
 }
 
-void setup_timer (timer_t* timer_id, void (*callback)(void*), void *data) {
-    int i = -1, j;
+void setup_timer (timer_record_t* timer, void (*callback)(void*), void *data) {
+    if (timer == NULL) {
+        log_err("setup_timer: invalid pointer\n");
 
-    for (j = 0; j < n_timers; ++j) {
-        if (timer[j].id == timer_id) {
-            i = j;
-            break;
-        }
+        return;
     }
 
-    if (i == -1) {
-    	i = n_timers;
+    log_trace( "setup_timer (%x%x)\n",
+            (u32)(~(u32)0 & ((u64)timer >> 32)),
+            (u32)(~(u32)0 & (u64)timer) );
 
-        if (i >= MAX_DEVICES) {
-            log_err( "setup_timer (%d:%x%x) fail; max devices reached\n", i,
-                    (u32)(~(u32)0 & ((u64)timer_id >> 32)),
-                    (u32)(~(u32)0 & (u64)timer_id) );
-            return;
-        }
-    }
+    timer->created = 0;
+    timer->callback = callback;
+    timer->data = data;
 
-    log_trace( "setup_timer (%d:%x%x)\n", i,
-            (u32)(~(u32)0 & ((u64)timer_id >> 32)),
-            (u32)(~(u32)0 & (u64)timer_id) );
-
-    timer[i].created = 0;
-    timer[i].id = timer_id;
-    timer[i].callback = callback;
-    timer[i].data = data;
-
-    create(i);
-
-    ++n_timers;
+    create(timer);
 }
 
 static void* timer_loop (void* arg) {
-    int i = *(int*)arg;
+    timer_record_t* timer = (timer_record_t*)arg;
 
     int             rcvid;
     struct _pulse   pulse;
 
     for (;;) {
-        rcvid = MsgReceive(timer[i].chid, &pulse, sizeof(struct _pulse), NULL);
+        rcvid = MsgReceive(timer->chid, &pulse, sizeof(struct _pulse), NULL);
         if (rcvid == 0) { /* we got a pulse */
             if (pulse.code == _PULSE_CODE_TIMER_TRIGGER) {
-                timer[i].callback(timer[i].data);
+                timer->callback(timer->data);
             }
 	        else if (pulse.code == _PULSE_CODE_SHUTDOWN_TIMER) {
-	            log_trace("timer_loop (%d) shutdown\n", i);
+	            log_trace("timer_loop shutdown\n");
 
 	            pthread_exit(NULL);
             } /* else other pulses ... */
@@ -199,79 +174,34 @@ static void* timer_loop (void* arg) {
     return NULL;
 }
 
-void cancel_delayed_work_sync (timer_t* timer_id) {
-    int i = -1, j;
+void cancel_delayed_work_sync (timer_record_t* timer) {
+    if (timer == NULL) {
+        log_err("cancel_delayed_work_sync: invalid pointer\n");
 
-    for (j = 0; j < n_timers; ++j) {
-        if (timer[j].id == timer_id) {
-            i = j;
-            break;
-        }
-    }
-
-    log_trace( "cancel_delayed_work_sync (%d:%x%x)\n", i,
-            (u32)(~(u32)0 & ((u64)timer_id >> 32)),
-            (u32)(~(u32)0 & (u64)timer_id) );
-
-    if (i == -1) {
-        log_err("cancel_delayed_work_sync unknown timer\n");
         return;
     }
 
-    destroy(i);
+    log_trace( "cancel_delayed_work_sync (%x%x)\n",
+            (u32)(~(u32)0 & ((u64)timer >> 32)),
+            (u32)(~(u32)0 & (u64)timer) );
 
-/*
- * Important!
- * Linux CAN-bus driver calls the following 3 functions to handle scheduled timer
- * workloads:
- *      setup( callback function, data )
- *      schedule_delayed_work()
- *      cancel_delayed_work_sync()
- *
- * It does this by calling setup() in the begining and then
- * schedule_delayed_work() everytime works needs to be scheduled. At the very end
- * it calls cancel_delayed_work_sync() to shutdown. However, there seems to be
- * code that is open to the possibility of calling schedule_delayed_work() after
- * cancel_delayed_work_sync() was called.
- * For this reason, and since setup() is only called in the begining, we cannot
- * lose our records of the "callback function" and "data".
- * Also keeping in mind this timer based workload scheduler isn't a completely
- * dynamic one, and that a fixed number of timers are expected per executable
- * application.
- * For these reasons, we will not perform the following "maintain timer
- * inventory" section, however it is left here in commented out form for this
- * illustrate this explanation.
- */
-//    /* maintain timer inventory */
-//    for (j = i; j < n_timers; ++j) {
-//        timer[j] = timer[j+1];
-//    }
-//
-//    --n_timers;
+    destroy(timer);
 }
 
-void schedule_delayed_work (timer_t* timer_id, int ticks) {
-    int i = -1, j;
+void schedule_delayed_work (timer_record_t* timer, int ticks) {
+    if (timer == NULL) {
+        log_err("schedule_delayed_work: invalid pointer\n");
 
-    for (j = 0; j < n_timers; ++j) {
-        if (timer[j].id == timer_id) {
-            i = j;
-            break;
-        }
-    }
-
-    log_trace( "schedule_delayed_work (%d:%x%x)\n", i,
-            (u32)(~(u32)0 & ((u64)timer_id >> 32)),
-            (u32)(~(u32)0 & (u64)timer_id) );
-
-    if (i == -1) {
-        log_err("mod_timer unknown timer\n");
         return;
     }
 
-    create(i);
+    log_trace( "schedule_delayed_work (%x%x)\n",
+            (u32)(~(u32)0 & ((u64)timer >> 32)),
+            (u32)(~(u32)0 & (u64)timer) );
 
-    struct itimerspec       itime;
+    create(timer);
+
+    struct itimerspec itime;
 
     // first trigger, seconds:
     itime.it_value.tv_sec = 0;
@@ -283,15 +213,15 @@ void schedule_delayed_work (timer_t* timer_id, int ticks) {
     // interval between triggers, nanoseconds:
     itime.it_interval.tv_nsec = 0;
 
-    if (timer_settime(*timer[i].id, 0, &itime, NULL) == -1) {
-        log_err( "timer_loop (%d) timer_settime error; %s\n",
-                i, strerror(errno) );
+    if (timer_settime(timer->id, 0, &itime, NULL) == -1) {
+        log_err( "schedule_delayed_work timer_settime error; %s\n",
+                strerror(errno) );
     }
 
-    timer[i].created = 1;
+    timer->created = 1;
 }
 
-uint64_t get_clock_time_us () {
+uint64_t get_clock_time_us() {
     static uint64_t cycles_per_us = 0;
 
     if (cycles_per_us == 0) {

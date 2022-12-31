@@ -45,7 +45,7 @@ extern "C" {
         }
     }
 
-    timer_t test_work1, test_work2, test_work3;
+    timer_record_t test_work1, test_work2, test_work3;
     test_data_t test_data1, test_data2, test_data3;
 }
 

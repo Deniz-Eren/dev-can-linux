@@ -71,12 +71,6 @@ extern int opt_did;
 #define __attribute_const__
 
 /*
- * QNX Resource Manager macros
- */
-
-#define MAX_DEVICES 16
-
-/*
  * Mapping stdint.h types to Linux Kernel needed type names
  */
 

@@ -34,10 +34,9 @@ void netif_wake_queue (struct net_device* dev) {
 }
 
 void* netif_tx (void* arg) {
-    struct net_device* dev = (struct net_device*)arg;
+    device_session_t* ds = (device_session_t*)arg;
+    struct net_device* dev = ds->device;
     struct can_msg* canmsg;
-
-    device_sessions_t* ds = &device_sessions[dev->dev_id];
 
     while (1) {
         if (ds->tx_queue.attr.size == 0) {
@@ -162,11 +161,14 @@ int netif_rx (struct sk_buff* skb) {
         canmsg.dat[i] = msg->data[i]; // Set DAT
     }
 
-    device_sessions_t* ds = &device_sessions[skb->dev->dev_id];
+    device_session_t* ds = device_sessions[skb->dev->dev_id];
 
-    for (i = 0; i < ds->num_sessions; ++i) {
-        if (enqueue(&ds->sessions[i].rx_queue, &canmsg) != EOK) {
+    client_session_t** it = &ds->root_client_session;
+    while (*it != NULL) {
+        if (enqueue(&(*it)->rx_queue, &canmsg) != EOK) {
         }
+
+        it = &(*it)->next;
     }
 
     log_trace("netif_rx; can%d [%s] %X [%d] %2X %2X %2X %2X %2X %2X %2X %2X\n",

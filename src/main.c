@@ -25,6 +25,7 @@
 #include <pci.h>
 #include <interrupt.h>
 #include <prints.h>
+#include <session.h>
 
 struct pci_dev pdev = {
         .ba = NULL,
@@ -131,6 +132,8 @@ int main (int argc, char* argv[]) {
      * thus we can never reach here.
      */
     adv_pci_driver.remove(&pdev);
+
+    free(device_sessions);
 
     return EXIT_SUCCESS;
 }

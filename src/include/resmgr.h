@@ -47,7 +47,6 @@ struct can_ocb;
 #include <sys/can_dcmd.h>
 #include <sys/neutrino.h>
 
-#define MAX_MAILBOXES 16
 #define MAX_NAME_SIZE (IFNAMSIZ*2) // e.g. /dev/can1/rx0
 
 
@@ -99,7 +98,7 @@ typedef struct can_ocb {
     struct can_resmgr* resmgr;
 
     int session_index;
-    session_t *session;
+    client_session_t *session;
 
     struct rx_t {
         pthread_attr_t thread_attr;
@@ -117,9 +116,9 @@ typedef enum channel_type {
 } channel_type_t;
 
 typedef struct can_resmgr {
-    struct can_resmgr* next;
+    struct can_resmgr *prev, *next;
 
-    struct net_device* device;
+    device_session_t* device_session;
 
     char name[MAX_NAME_SIZE];
     channel_type_t channel_type;
@@ -141,21 +140,25 @@ typedef struct can_resmgr {
 
     iofunc_mount_t mount;
     iofunc_funcs_t mount_funcs;
-
-    queue_t* tx_queue;
 } can_resmgr_t;
 
 
 static inline void store_resmgr (can_resmgr_t** root, can_resmgr_t* r) {
-    can_resmgr_t** location = root;
-
-    while (*location != NULL) {
-        location = &(*location)->next;
+    if (*root == NULL) {
+        *root = r;
+        r->prev = r->next = NULL;
+        return;
     }
 
-    *location = r;
+    can_resmgr_t** last = root;
 
-    (*location)->next = NULL;
+    while ((*last)->next != NULL) {
+        last = &(*last)->next;
+    }
+
+    (*last)->next = r;
+    r->prev = (*last);
+    r->next = NULL;
 }
 
 static inline can_resmgr_t* get_resmgr (can_resmgr_t** root, int id) {

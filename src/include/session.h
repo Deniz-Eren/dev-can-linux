@@ -24,26 +24,82 @@
 #include <config.h>
 #include <queue.h>
 
-#define MAX_SESSIONS 256
 
-typedef struct session {
-    struct net_device* device;
+typedef struct client_session {
+    struct client_session *prev, *next;
+    struct device_session* device_session;
 
     queue_t rx_queue;
-} session_t;
+} client_session_t;
 
-typedef struct device_sessions {
-    session_t sessions[MAX_SESSIONS];
+typedef struct device_session {
+    struct device_session *prev, *next;
+    struct net_device* device;
+    struct client_session* root_client_session;
+
+    pthread_attr_t tx_thread_attr;
+    pthread_t tx_thread;
+
     queue_t tx_queue;
+} device_session_t;
 
-    int num_sessions;
-} device_sessions_t;
+extern device_session_t* root_device_session;
+extern device_session_t** device_sessions; // Fast lookup array using dev_id
 
-extern device_sessions_t device_sessions[MAX_DEVICES];
+extern device_session_t* create_device_session (
+        struct net_device* dev, const queue_attr_t* tx_attr);
 
-extern int create_session (session_t* S, struct net_device* dev,
-        const queue_attr_t* attr);
+extern void destroy_device_session (device_session_t* D);
 
-extern void destroy_session (session_t* S);
+extern client_session_t* create_client_session (
+        struct net_device* dev, const queue_attr_t* rx_attr);
+
+extern void destroy_client_session (client_session_t* S);
+
+static inline device_session_t* get_last_device_session() {
+    device_session_t** last = &root_device_session;
+
+    if (*last == NULL) {
+        return NULL;
+    }
+
+    while ((*last)->next != NULL) {
+        last = &(*last)->next;
+    }
+
+    return *last;
+}
+
+static inline client_session_t* get_last_client_session (device_session_t* ds) {
+    if (ds == NULL) {
+        return NULL;
+    }
+
+    client_session_t** last = &ds->root_client_session;
+
+    if (*last == NULL) {
+        return NULL;
+    }
+
+    while ((*last)->next != NULL) {
+        last = &(*last)->next;
+    }
+
+    return *last;
+}
+
+static inline device_session_t* get_device_session (struct net_device* dev) {
+    device_session_t** location = &root_device_session;
+
+    while (*location != NULL) {
+        if ((*location)->device == dev) {
+            return *location;
+        }
+
+        location = &(*location)->next;
+    }
+
+    return NULL;
+}
 
 #endif /* SRC_SESSION_H_ */

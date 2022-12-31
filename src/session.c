@@ -21,31 +21,166 @@
 #include <linux/netdevice.h>
 
 #include "session.h"
+#include "netif.h"
 
-device_sessions_t device_sessions[MAX_DEVICES];
+device_session_t* root_device_session = NULL;
+device_session_t** device_sessions = NULL; // Fast lookup array using dev_id
+static size_t device_sessions_size = 0;
 
 
-int create_session (session_t* S, struct net_device* dev,
-        const queue_attr_t* attr)
-{
-    int result;
+device_session_t*
+create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
+    device_session_t* new_device = malloc(sizeof(device_session_t));
 
-    if (S == NULL) {
-        return EFAULT; // Bad address
+    device_session_t* last = get_last_device_session();
+
+    if (last == NULL) {
+        root_device_session = new_device;
+        new_device->prev = new_device->next = NULL;
+    }
+    else {
+        last->next = new_device;
+        new_device->prev = last;
+        new_device->next = NULL;
     }
 
-    if ((result = create_queue(&S->rx_queue, attr)) != EOK) {
+    new_device->device = dev;
+    new_device->root_client_session = NULL;
+
+    if (create_queue(&new_device->tx_queue, tx_attr) != EOK) {
     }
 
-    S->device = dev;
+    pthread_attr_init(&new_device->tx_thread_attr);
+    pthread_attr_setdetachstate(
+            &new_device->tx_thread_attr, PTHREAD_CREATE_DETACHED );
 
-    return EOK;
+    pthread_create( &new_device->tx_thread, &new_device->tx_thread_attr,
+            &netif_tx, new_device );
+
+    /*
+     * Update the device_sessions quick lookup array
+     */
+    if (dev->dev_id >= device_sessions_size) {
+        device_session_t** new_device_sessions =
+            malloc((dev->dev_id + 1)*sizeof(device_session_t*));
+
+        memcpy( new_device_sessions, device_sessions,
+                device_sessions_size*sizeof(device_session_t*) );
+
+        if (device_sessions_size != 0) {
+            free(device_sessions);
+        }
+
+        device_sessions = new_device_sessions;
+        device_sessions_size = dev->dev_id + 1;
+    }
+
+    device_sessions[dev->dev_id] = new_device;
+
+    return new_device;
 }
 
-void destroy_session (session_t* S) {
+void destroy_device_session (device_session_t* D) {
+    if (D == NULL) {
+        return;
+    }
+
+    if (D->prev && D->next) {
+        D->prev->next = D->next;
+        D->next->prev = D->prev;
+    }
+    else if (D->prev) {
+        D->prev->next = NULL;
+    }
+    else if (D->next) {
+        D->next->prev = NULL;
+
+        /* Since this node does not have a previous node, it must be the root
+         * node. Therefore when it is destroyed the new root node must then be
+         * the next node. */
+        root_device_session = D->next;
+    }
+    else {
+        /* Since this node does not have a previous or a next node, it must be
+         * the root and last remaining node. Therefore when it is destroyed the
+         * root node must be set to NULL. */
+
+        root_device_session = NULL;
+    }
+
+    free(D);
+}
+
+client_session_t*
+create_client_session (struct net_device* dev, const queue_attr_t* rx_attr) {
+    int result;
+
+    if (dev == NULL) {
+        return NULL;
+    }
+
+    device_session_t* ds = get_device_session(dev);
+
+    if (ds == NULL) {
+        return NULL;
+    }
+
+    client_session_t* new_client = malloc(sizeof(client_session_t));
+
+    client_session_t* last = get_last_client_session(ds);
+
+    if (last == NULL) {
+        ds->root_client_session = new_client;
+        new_client->prev = new_client->next = NULL;
+    }
+    else {
+        last->next = new_client;
+        new_client->prev = last;
+        new_client->next = NULL;
+    }
+
+    new_client->device_session = ds;
+
+    if (create_queue(&new_client->rx_queue, rx_attr) != EOK) {
+    }
+
+    return new_client;
+}
+
+void destroy_client_session (client_session_t* S) {
     if (S == NULL) {
         return;
     }
 
+    device_session_t* ds = S->device_session;
+
+    if (ds == NULL) {
+        return;
+    }
+
+    if (S->prev && S->next) {
+        S->prev->next = S->next;
+        S->next->prev = S->prev;
+    }
+    else if (S->prev) {
+        S->prev->next = NULL;
+    }
+    else if (S->next) {
+        S->next->prev = NULL;
+
+        /* Since this node does not have a previous node, it must be the root
+         * node. Therefore when it is destroyed the new root node must then be
+         * the next node. */
+        ds->root_client_session = S->next;
+    }
+    else {
+        /* Since this node does not have a previous or a next node, it must be
+         * the root and last remaining node. Therefore when it is destroyed the
+         * root node must be set to NULL. */
+
+        ds->root_client_session = NULL;
+    }
+
     destroy_queue(&S->rx_queue);
+    free(S);
 }

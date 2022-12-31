@@ -40,15 +40,28 @@
 #define TIMER_INTERVAL_NS   ((BILLION) / (HZ)) // Timer interval nanoseconds
 #define jiffies             0
 
+typedef struct timer_record {
+    timer_t id;
+
+    int created, chid;
+
+    void (*callback)(void*);
+    void *data;
+
+    struct sigevent event;
+
+    pthread_attr_t attr;
+} timer_record_t;
+
 /*
  * Functions needed by the Linux Kernel source "drivers/net/can/dev.c" to
  * implement Bus-off recovery timer functionality.
  */
-extern void setup_timer (timer_t* timer_id, void (*callback)(void*),
+extern void setup_timer (timer_record_t* timer, void (*callback)(void*),
         void *priv);
 
-extern void cancel_delayed_work_sync (timer_t* timer_id);
-extern void schedule_delayed_work (timer_t* timer_id, int ticks);
+extern void cancel_delayed_work_sync (timer_record_t* timer);
+extern void schedule_delayed_work (timer_record_t* timer, int ticks);
 
 /* accurate relative time function in us */
 extern uint64_t get_clock_time_us();

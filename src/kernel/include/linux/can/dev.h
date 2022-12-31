@@ -52,6 +52,8 @@
 #include <linux/skbuff.h>
 #include <asm/div64.h>
 
+#include "timer.h"
+
 /*
  * CAN mode
  */
@@ -106,7 +108,7 @@ struct can_priv {
 	u32 ctrlmode_supported;	/* options that can be modified by netlink */
 
 	int restart_ms;
-	timer_t restart_work;
+	timer_record_t restart_work;
 
 	int (*do_set_bittiming)(struct net_device *dev);
 	int (*do_set_data_bittiming)(struct net_device *dev);
