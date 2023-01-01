@@ -20,13 +20,17 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-CMAKE_BUILD_TYPE="Release"  # default build type
-SSH_PORT="6022"             # default SSH port number
+CMAKE_BUILD_TYPE="Release"      # default build type
+DISABLE_COVERAGE_HTML_GEN="ON"  # default cmake disable coverage html option
+SSH_PORT="6022"                 # default SSH port number
 
-while getopts b:p:s:t:v opt; do
+while getopts b:h:p:s:t:v opt; do
     case ${opt} in
     b )
         BUILD_PATH=$OPTARG
+        ;;
+    h )
+        DISABLE_COVERAGE_HTML_GEN=$OPTARG
         ;;
     p )
         SSH_PORT=$OPTARG
@@ -61,7 +65,7 @@ docker exec --user root --workdir /root dev_env bash -c \
     && mkdir -p $BUILD_PATH \
     && cd $BUILD_PATH \
     && cmake -DSSH_PORT=$SSH_PORT -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \
-        -DDISABLE_COVERAGE_HTML_GEN=ON \
+        -DDISABLE_COVERAGE_HTML_GEN=${DISABLE_COVERAGE_HTML_GEN} \
         /root/dev-can-linux \
     && make -j8 \
     && cpack"

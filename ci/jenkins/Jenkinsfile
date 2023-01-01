@@ -25,7 +25,7 @@ node('jenkins_agent') {
     def buildpath = "/var/tmp/$NODE_NAME";
 
     try {
-        stage('checkout and setup dev environment') {
+        stage('Checkout and setup dev environment') {
             sh(script: """
                 rm -rf $buildpath
                 mkdir -p $buildpath
@@ -53,34 +53,52 @@ node('jenkins_agent') {
             """)
         }
 
-        stage('Unit testing with coverage') {
+        stage('Testing with coverage') {
             sh(script: """
                 /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
                     -p $sshport \
                     -d mioe3680_pci
 
+                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
+                    -v \
+                    -b /data/home/root/build_coverage \
+                    -t Coverage \
+                    -p $sshport
+
                 docker exec --user root --workdir /root dev_env bash -c \
                     "source .profile \
                     && /root/dev-can-linux/dev/setup-profile.sh \
-                    && mkdir -p build_qcc_unit \
-                    && cd build_qcc_unit \
-                    && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Coverage \
-                        /root/dev-can-linux \
-                    && make -j8 \
+                    && cd /data/home/root/build_coverage \
                     && ctest --output-junit test_results.xml || (exit 0)"
+
+                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                    -b /data/home/root/build_coverage \
+                    -p $sshport
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-emulation.sh
 
-                rm -rf $WORKSPACE/test-coverage-ut
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && cd /data/home/root/build_coverage \
+                    && lcov --gcov-tool=\\\$QNX_HOST/usr/bin/ntox86_64-gcov \
+                        -t \"test_coverage_results\" -o tests.info \
+                        -c -d /data/home/root/build_coverage \
+                        --base-directory=/root/dev-can-linux \
+                        --no-external --quiet \
+                    && genhtml -o /data/home/root/build_coverage/cov-html \
+                        tests.info --quiet"
+
+                rm -rf $WORKSPACE/test-coverage
                 rm -rf $WORKSPACE/test_results.xml
 
                 docker cp \
-                    dev_env:/root/build_qcc_unit/tests/test-coverage \
-                        $WORKSPACE/test-coverage-ut
+                    dev_env:/data/home/root/build_coverage/cov-html \
+                        $WORKSPACE/test-coverage
 
                 docker cp \
-                    dev_env:/root/build_qcc_unit/test_results.xml \
+                    dev_env:/data/home/root/build_coverage/test_results.xml \
                         $WORKSPACE/test_results.xml
             """)
 
@@ -89,64 +107,13 @@ node('jenkins_agent') {
             publishHTML(target : [allowMissing: false,
                 alwaysLinkToLastBuild: true,
                 keepAll: true,
-                reportDir: 'test-coverage-ut',
+                reportDir: 'test-coverage',
                 reportFiles: 'index.html',
-                reportName: 'Unit Testing Coverage Report',
-                reportTitles: 'Unit Testing Coverage Report'])
+                reportName: 'Test Coverage Report',
+                reportTitles: 'Test Coverage Report'])
         }
 
-        stage('Integration testing with coverage') {
-            sh(script: """
-                rm -rf /data/home/root/build_qcc_coverage
-
-                /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
-                    -i /home/jenkins/Images \
-                    -p $sshport \
-                    -d mioe3680_pci
-
-                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
-                    -v \
-                    -b /data/home/root/build_qcc_coverage \
-                    -t Coverage \
-                    -p $sshport
-
-                sleep 10
-
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
-                    -b /data/home/root/build_qcc_coverage \
-                    -p $sshport
-
-                docker exec --user root --workdir /root dev_env bash -c \
-                    "source .profile \
-                    && /root/dev-can-linux/dev/setup-profile.sh \
-                    && cd /data/home/root/build_qcc_coverage \
-                    && lcov --gcov-tool=\\\$QNX_HOST/usr/bin/ntox86_64-gcov \
-                        -t \"test_coverage_results\" -o tests.info \
-                        -c -d /data/home/root/build_qcc_coverage \
-                        --base-directory=/root/dev-can-linux \
-                        --no-external --quiet \
-                    && genhtml -o /data/home/root/build_qcc_coverage/cov-html \
-                        tests.info --quiet"
-
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-emulation.sh
-
-                rm -rf $WORKSPACE/test-coverage-qcc
-
-                docker cp \
-                    dev_env:/data/home/root/build_qcc_coverage/cov-html \
-                        $WORKSPACE/test-coverage-qcc
-            """)
-
-            publishHTML(target : [allowMissing: false,
-                alwaysLinkToLastBuild: true,
-                keepAll: true,
-                reportDir: 'test-coverage-qcc',
-                reportFiles: 'index.html',
-                reportName: 'Integration Testing Coverage Report',
-                reportTitles: 'Integration Testing Coverage Report'])
-        }
-
-        stage('Integration testing with Valgrind') {
+        stage('Testing with Valgrind') {
             sh(script: """
                 rm -rf $WORKSPACE/valgrind-*.xml
 
@@ -175,7 +142,11 @@ node('jenkins_agent') {
                     -s 1 \
                     -p $sshport
 
-                sleep 10
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && cd /data/home/root/build_memcheck \
+                    && ctest || (exit 0)"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
                     -b /data/home/root/build_memcheck \
@@ -205,7 +176,11 @@ node('jenkins_agent') {
                     -s 1 \
                     -p $sshport
 
-                sleep 10
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && cd /data/home/root/build_helgrind \
+                    && ctest || (exit 0)"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
                     -b /data/home/root/build_helgrind \
@@ -233,7 +208,11 @@ node('jenkins_agent') {
                     -s 1 \
                     -p $sshport
 
-                sleep 10
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && cd /data/home/root/build_drd \
+                    && ctest || (exit 0)"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
                     -b /data/home/root/build_drd \
@@ -261,7 +240,11 @@ node('jenkins_agent') {
                     -s 1 \
                     -p $sshport
 
-                sleep 10
+                docker exec --user root --workdir /root dev_env bash -c \
+                    "source .profile \
+                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && cd /data/home/root/build_exp-sgcheck \
+                    && ctest || (exit 0)"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
                     -b /data/home/root/build_exp-sgcheck \
@@ -284,7 +267,7 @@ node('jenkins_agent') {
                 sourceSubstitutionPaths: '/root/dev-can-linux:dev-can-linux')
         }
 
-        stage('release') {
+        stage('Release') {
             sh(script: """
                 docker exec --user root --workdir /root dev_env \
                     bash -c "source .profile \
@@ -309,7 +292,7 @@ node('jenkins_agent') {
         currentBuild.result = 'FAILURE'
     }
     finally {
-        stage('clean-up') {
+        stage('Clean-up') {
             sh(script: """
                 docker stop dev_env qemu_env || (exit 0)
                 docker rm dev_env qemu_env || (exit 0)
