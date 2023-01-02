@@ -21,6 +21,7 @@
 add_executable( timer-tests ${C_SOURCE_FILES} timer-tests.cpp )
 
 target_include_directories( timer-tests PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel>

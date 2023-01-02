@@ -45,7 +45,7 @@ void* netif_tx (void* arg) {
             return NULL;
         }
 
-        if ((canmsg = dequeue(&ds->tx_queue)) == NULL) {
+        if ((canmsg = dequeue(&ds->tx_queue, 0)) == NULL) {
             log_trace("netif_tx exit: %s\n", dev->name);
 
             return NULL;

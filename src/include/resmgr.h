@@ -140,6 +140,8 @@ typedef struct can_resmgr {
 
     iofunc_mount_t mount;
     iofunc_funcs_t mount_funcs;
+
+    uint32_t latency_limit_ms;
 } can_resmgr_t;
 
 

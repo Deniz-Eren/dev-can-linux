@@ -50,8 +50,8 @@ typedef struct queue {
 extern int create_queue (queue_t* Q, const queue_attr_t* attr);
 extern void destroy_queue (queue_t* Q);
 extern int enqueue (queue_t* Q, struct can_msg* msg);
-extern struct can_msg* dequeue (queue_t* Q);
-extern struct can_msg* dequeue_nonblock (queue_t* Q);
+extern struct can_msg* dequeue (queue_t* Q, uint32_t latency_limit_ms);
+extern struct can_msg* dequeue_nonblock (queue_t* Q, uint32_t latency_limit_ms);
 extern struct can_msg* dequeue_peek (queue_t* Q);
 
 

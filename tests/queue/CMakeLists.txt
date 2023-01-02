@@ -21,6 +21,7 @@
 add_executable( queue-tests ${C_SOURCE_FILES} queue-tests.cpp )
 
 target_include_directories( queue-tests PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel>

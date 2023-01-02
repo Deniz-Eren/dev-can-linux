@@ -24,6 +24,7 @@
 #include <resmgr.h>
 #include <config.h>
 #include <pci.h>
+#include <dev-can-linux/commands.h>
 
 static can_resmgr_t* root_resmgr = NULL;
 
@@ -199,6 +200,8 @@ int register_netdev(struct net_device *dev) {
 
                 return -1;
             }
+
+            resmgr->latency_limit_ms = 0;
 
             /* Attach a callback (handler) for two message types */
             if (message_attach( resmgr->dispatch, NULL, _IO_MAX + 1,
@@ -488,10 +491,6 @@ void* rx_loop (void* arg) {
                 {
                     log_err("rx_loop MsgSend error: %s\n", strerror(errno));
                 }
-
-                pthread_mutex_lock(&rx_mutex);
-                ocb->rx.rcvid = -1;
-                pthread_mutex_unlock(&rx_mutex);
             }
         }
     }
@@ -723,6 +722,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         // CAN_DEVCTL_DEBUG_INFO:
         //  no data
 
+        // EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS
         // CAN_DEVCTL_DEBUG_INFO2:
         // CAN_DEVCTL_GET_MID:
         // CAN_DEVCTL_SET_MID:
@@ -771,10 +771,30 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     /* Get the data from the message. See Note 3. */
     data = _DEVCTL_DATA(msg->i);
 
-    switch (msg->i.dcmd) {
     /*
      * Where applicable an associated canctl tool usage example is given as
      * comments in each case below.
+     */
+    switch (msg->i.dcmd) {
+    /*
+     * Extended devctl() commands; these are in addition to the standard
+     * QNX dev-can-* driver protocol commands
+     */
+    case EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS:
+    {
+        uint32_t can_latency_limit = data->u32;
+        nbytes = 0;
+
+        _ocb->resmgr->latency_limit_ms = can_latency_limit;
+
+        log_trace("EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS: %dms (%s)\n",
+                can_latency_limit,
+                _ocb->resmgr->name);
+
+        break;
+    }
+    /*
+     * Standard QNX dev-can-* driver protocol commands
      */
     case CAN_DEVCTL_GET_MID: // e.g. canctl -u1,rx0 -M
     {
@@ -850,7 +870,9 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
             break;
         }
 
-        struct can_msg* canmsg = dequeue_nonblock(&_ocb->session->rx_queue);
+        struct can_msg* canmsg =
+            dequeue_nonblock( &_ocb->session->rx_queue,
+                    _ocb->resmgr->latency_limit_ms );
 
         if (canmsg != NULL) { // Could be a zero size rx queue, i.e. a tx queue
             data->canmsg = *canmsg;
@@ -872,6 +894,10 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                     canmsg->dat[5],
                     canmsg->dat[6],
                     canmsg->dat[7]);
+
+            pthread_mutex_lock(&rx_mutex);
+            _ocb->rx.rcvid = -1;
+            pthread_mutex_unlock(&rx_mutex);
         }
         else {
             pthread_mutex_lock(&rx_mutex);
@@ -941,10 +967,10 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_DEBUG_INFO2: // e.g. canctl -d # Some strange behaviour INFO vs INFO2
     {
-        data->u32 = 0x0; // <- set INFO2
-        nbytes = sizeof(data->u32);
+        u32 debug = data->u32;
+        nbytes = 0;
 
-        log_trace("CAN_DEVCTL_DEBUG_INFO2: %x\n", data->u32);
+        log_trace("CAN_DEVCTL_DEBUG_INFO2: %x\n", debug);
         break;
     }
     case CAN_DEVCTL_GET_STATS: // e.g. canctl -s

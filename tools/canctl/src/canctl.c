@@ -32,6 +32,9 @@ int main (int argc, char* argv[]) {
 
     int optr = 0;
 
+    int optL = 0;
+    int optL_value = 0;
+
     int optu_unit;
     char optu_mailbox_str[8];
     int optu_mailbox_is_tx = 0;
@@ -42,7 +45,7 @@ int main (int argc, char* argv[]) {
     int optw_mid_type = 0;
     char optw_data_str[32];
 
-    while ((opt = getopt(argc, argv, "ru:w:?h")) != -1) {
+    while ((opt = getopt(argc, argv, "L:ru:w:?h")) != -1) {
         switch (opt) {
         case 'r':
             optr = 1;
@@ -73,6 +76,15 @@ int main (int argc, char* argv[]) {
 
             break;
 
+        case 'L':
+            optL = 1;
+            optL_value = atoi(optarg);
+
+            if (optL_value < 0) {
+                optL_value = 0;
+            }
+            break;
+
         case '?':
         case 'h':
             rc = system(NATIVE_CANCTL_CMD " -h");
@@ -87,6 +99,29 @@ int main (int argc, char* argv[]) {
             printf("invalid option %c\n", opt);
             break;
         }
+    }
+
+    if (optL) {
+        int         fd, ret;
+        uint32_t    latency_limit_ms = optL_value;
+
+        char OPEN_FILE[16];
+
+        snprintf( OPEN_FILE, 16, "/dev/can%d/%s%d",
+                optu_unit,
+                (optu_mailbox_is_tx ? "tx" : "rx"), optu_mailbox );
+
+        if ((fd = open(OPEN_FILE, O_RDWR)) == -1) {
+            exit(EXIT_FAILURE);
+        }
+
+        if (set_latency_limit_ms(fd, latency_limit_ms) == EOK) {
+            printf("set_latency_limit_ms %dms: OK\n", latency_limit_ms);
+
+            close(fd);
+        }
+
+        return EXIT_SUCCESS;
     }
 
     if (optr) {

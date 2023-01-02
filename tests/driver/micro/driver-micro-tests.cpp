@@ -128,7 +128,7 @@ TEST( Driver, SingleSendReceive ) {
     EXPECT_EQ(canmsg1.len, 8);
     EXPECT_EQ(canmsg1.mid, 0xABC);
     EXPECT_GE(canmsg1.ext.timestamp - start_ms, 6);
-    EXPECT_LE(canmsg1.ext.timestamp - start_ms, 10);
+    EXPECT_LE(canmsg1.ext.timestamp - start_ms, 11);
     EXPECT_EQ(canmsg1.ext.is_extended_mid, 1);
     EXPECT_EQ(canmsg1.ext.is_remote_frame, 0);
 

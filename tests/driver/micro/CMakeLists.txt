@@ -19,7 +19,9 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-add_executable( driver-micro-tests ${C_SOURCE_FILES} driver-micro-tests.cpp )
+add_executable( driver-micro-tests ${C_SOURCE_FILES}
+    driver-micro-tests.cpp
+    driver-latency-tests.cpp )
 
 target_include_directories( driver-micro-tests PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>

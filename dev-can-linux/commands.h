@@ -49,6 +49,13 @@
     }
 #endif
 
+/*
+ * Extended devctl() commands; these are in addition to the standard
+ * QNX dev-can-* driver protocol commands
+ */
+#define EXT_CAN_CMD_CODE                    0x54
+#define EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS __DIOT(_DCMD_MISC, EXT_CAN_CMD_CODE + 0,  uint32_t)
+
 
 static inline int write_canmsg_ext (int filedes, struct can_msg* canmsg) {
     int ret;
@@ -73,6 +80,22 @@ static inline int read_canmsg_ext (int filedes, struct can_msg* canmsg) {
             canmsg, sizeof(struct can_msg), NULL )))
     {
         log_err("devctl CAN_DEVCTL_READ_CANMSG_EXT: %s\n", strerror(ret));
+
+        return -1;
+    }
+
+    return EOK;
+}
+
+static inline int set_latency_limit_ms (int filedes, uint32_t value) {
+    int ret;
+
+    if (EOK != (ret = devctl(
+            filedes, EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS,
+            &value, sizeof(uint32_t), NULL )))
+    {
+        log_err("devctl EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS: %s\n",
+                strerror(ret));
 
         return -1;
     }

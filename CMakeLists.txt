@@ -128,6 +128,7 @@ add_executable( dev-can-linux
     ${C_SOURCE_FILES} )
 
 target_include_directories( dev-can-linux PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel>
