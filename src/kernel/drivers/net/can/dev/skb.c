@@ -221,6 +221,7 @@ struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
     skb->head = (unsigned char*)skb_priv;
     skb->data = (unsigned char*)(*cf);
     skb->dev = dev;
+    skb->is_echo = 0;
 
     return skb;
 }

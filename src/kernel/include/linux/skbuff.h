@@ -38,7 +38,7 @@
  * @dev:    Used to access device data and callbacks
  */
 struct sk_buff {
-	unsigned int len, data_len;
+	unsigned int len, data_len, is_echo;
     unsigned char *head, *data;
 	struct net_device* dev;
 };

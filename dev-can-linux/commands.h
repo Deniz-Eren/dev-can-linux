@@ -42,10 +42,12 @@
 # define FPRINTF_ERR(fmt, arg...)
 #endif
 
-#define log_err(fmt, arg...) {   \
+#ifndef log_err
+# define log_err(fmt, arg...) {   \
         SYSLOG_ERR(fmt, ##arg);  \
         FPRINTF_ERR(fmt, ##arg); \
     }
+#endif
 
 
 static inline int write_canmsg_ext (int filedes, struct can_msg* canmsg) {

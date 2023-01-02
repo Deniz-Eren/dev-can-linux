@@ -43,7 +43,21 @@ int io_open      (resmgr_context_t* ctp, io_open_t*   msg,
                     RESMGR_HANDLE_T* handle, void* extra);
 
 void* rx_loop (void* arg);
+
+#if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
 void* dispatch_receive_loop (void* arg);
+#endif
+
+/*
+ * Managing blocking clients
+ */
+typedef struct {
+    uint16_t id;
+    int rcvid;
+} msg_again_t;
+
+int msg_again_callback(
+        message_context_t* ctp, int type, unsigned flags, void* handle);
 
 /*
  * Our connect and I/O functions - we supply two tables
@@ -182,6 +196,15 @@ int register_netdev(struct net_device *dev) {
 
             if (resmgr->id == -1) {
                 log_err("resmgr_attach fail: %s\n", strerror(errno));
+
+                return -1;
+            }
+
+            /* Attach a callback (handler) for two message types */
+            if (message_attach( resmgr->dispatch, NULL, _IO_MAX + 1,
+                        _IO_MAX + 1, msg_again_callback, NULL ) == -1)
+            {
+                log_err("message_attach() failed: %s\n", strerror(errno));
 
                 return -1;
             }
@@ -354,6 +377,7 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
     // Every rx session has it's own rx thread to call resmgr_msg_again()
     if (ocb->resmgr->channel_type == RX_CHANNEL) {
         ocb->rx.queue = &ocb->session->rx_queue;
+        ocb->rx.rcvid = -1;
 
         if (pthread_cond_init(&ocb->rx.cond, NULL) != EOK) {
         }
@@ -382,11 +406,38 @@ void can_ocb_free (IOFUNC_OCB_T* ocb) {
     // Wait for rx thread to exit
     if (ocb->resmgr->channel_type == RX_CHANNEL) {
         pthread_join(ocb->rx.thread, NULL);
+
+        pthread_mutex_lock(&rx_mutex);
+        if (ocb->rx.rcvid != -1) {
+            // Don't leave any blocking clients hanging
+            MsgError(ocb->rx.rcvid, EBADF);
+            ocb->rx.rcvid = -1;
+        }
+        pthread_mutex_unlock(&rx_mutex);
     }
 
     free(ocb);
 }
 
+int msg_again_callback (message_context_t* ctp, int type, unsigned flags,
+        void* handle)
+{
+    msg_again_t* msg_again = (msg_again_t*)ctp->msg;
+
+    // function resmgr_msg_again() seems to modify the ctp->rcvid value
+    // so let's save it and restore it afer the call
+    int rcvid_save = ctp->rcvid;
+
+    if (msg_again->rcvid != -1) {
+        if (resmgr_msg_again(ctp, msg_again->rcvid) == -1) {
+        }
+    }
+
+    ctp->rcvid = rcvid_save;
+
+    MsgReply(ctp->rcvid, EOK, NULL, 0);
+    return 0;
+}
 
 void* rx_loop (void* arg) {
     struct can_ocb* ocb = (struct can_ocb*)arg;
@@ -394,14 +445,24 @@ void* rx_loop (void* arg) {
     device_session_t* ds = ocb->resmgr->device_session;
     struct net_device* device = ds->device;
 
-    ocb->rx.ctp = NULL;
+    int coid;
+    msg_again_t msg_again = { .id = _IO_MAX + 1 };
+
+    /* Connect to our channel */
+    if ((coid = message_connect(
+                    ocb->resmgr->dispatch, MSG_FLAG_SIDE_CHANNEL )) == -1)
+    {
+        log_err("rx_loop exit: Unable to attach to channel.\n");
+
+        return NULL;
+    }
 
     while (1) {
         pthread_mutex_lock(&rx_mutex);
 
         while ((device->flags & IFF_UP)
                 && (ocb->rx.queue != NULL)
-                && (ocb->rx.ctp == NULL))
+                && (ocb->rx.rcvid == -1))
         {
             pthread_cond_wait(&ocb->rx.cond, &rx_mutex);
         }
@@ -409,20 +470,29 @@ void* rx_loop (void* arg) {
         pthread_mutex_unlock(&rx_mutex);
 
         if (!(device->flags & IFF_UP) || (ocb->rx.queue == NULL)) {
-            log_trace("rx_loop exit: %s\n", ocb->resmgr->name);
+            log_trace("rx_loop exit\n");
 
             pthread_exit(NULL);
         }
 
-        if (ocb->rx.ctp != NULL) {
+        if (ocb->rx.rcvid != -1) {
             struct can_msg* canmsg = dequeue_peek(ocb->rx.queue);
 
             pthread_mutex_lock(&rx_mutex);
-            if (resmgr_msg_again(ocb->rx.ctp, ocb->rx.rcvid) == -1) {
-            }
-
-            ocb->rx.ctp = NULL;
+            msg_again.rcvid = ocb->rx.rcvid;
             pthread_mutex_unlock(&rx_mutex);
+
+            if (ocb->rx.queue != NULL && msg_again.rcvid != -1) {
+                if (MsgSend(coid, &msg_again, sizeof(msg_again_t), NULL, 0)
+                        == -1)
+                {
+                    log_err("rx_loop MsgSend error: %s\n", strerror(errno));
+                }
+
+                pthread_mutex_lock(&rx_mutex);
+                ocb->rx.rcvid = -1;
+                pthread_mutex_unlock(&rx_mutex);
+            }
         }
     }
 
@@ -482,7 +552,8 @@ int io_open (resmgr_context_t* ctp, io_open_t* msg,
 {
     can_resmgr_t* resmgr = get_resmgr(&root_resmgr, ctp->id);
 
-    log_trace("io_open -> %s (id: %d)\n", resmgr->name, ctp->id);
+    log_trace( "io_open -> %s (id: %d, rcvid: %d)\n",
+            resmgr->name, ctp->id, ctp->rcvid);
 
     return (iofunc_open_default (ctp, msg, handle, extra));
 }
@@ -496,7 +567,7 @@ int io_open (resmgr_context_t* ctp, io_open_t* msg,
 int io_close_ocb (resmgr_context_t* ctp, void* reserved, RESMGR_OCB_T* _ocb) {
     can_resmgr_t* resmgr = get_resmgr(&root_resmgr, ctp->id);
 
-    log_trace("io_close_ocb -> %s (id: %d)\n", resmgr->name, ctp->id);
+    log_trace("io_close_ocb -> id: %d\n", ctp->id);
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
@@ -786,7 +857,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
             nbytes = sizeof(data->canmsg);
 
-            log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
+            log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %u [%s] %X [%d] " \
                       "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                     _ocb->resmgr->name,
                     canmsg->ext.timestamp,
@@ -804,8 +875,6 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         }
         else {
             pthread_mutex_lock(&rx_mutex);
-
-            _ocb->rx.ctp = ctp;
             _ocb->rx.rcvid = ctp->rcvid;
 
             pthread_cond_signal(&_ocb->rx.cond);
@@ -830,7 +899,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
         enqueue(&_ocb->resmgr->device_session->tx_queue, &canmsg);
 
-        log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; %s TS: %X [%s] %X [%d] " \
+        log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; %s TS: %u [%s] %X [%d] " \
                   "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                 _ocb->resmgr->name,
                 canmsg.ext.timestamp,

@@ -153,7 +153,8 @@ int netif_rx (struct sk_buff* skb) {
         canmsg.ext.is_extended_mid = 0; // SFF
     }
 
-    canmsg.ext.timestamp = 0x0; // set TIMESTAMP
+    canmsg.ext.timestamp = get_clock_time_us()/1000; // set TIMESTAMP
+    canmsg.ext.is_remote_frame = (skb->is_echo ? 0 : 1);
     canmsg.len = msg->len; // set LEN
 
     int i;

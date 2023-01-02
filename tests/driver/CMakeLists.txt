@@ -1,5 +1,5 @@
 # \file     CMakeLists.txt
-# \brief    CMake listing file for tests
+# \brief    CMake listing file for driver integration tests
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -18,28 +18,4 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-if( NOT BUILD_TESTING )
-    return()
-endif()
-
-enable_testing()
-
-find_package( GTest REQUIRED )
-
-if( GTest_FOUND )
-    include_directories( SYSTEM ${GTEST_INCLUDE_DIRS} )
-endif()
-
-add_subdirectory( driver )
-add_subdirectory( queue )
-add_subdirectory( timer )
-
-if( CMAKE_BUILD_TYPE MATCHES Coverage AND NOT DISABLE_COVERAGE_HTML_GEN )
-    add_custom_target( all-cov-runs ALL
-        DEPENDS # list all coverage run targets here:
-            ssh-driver-micro-tests-cov-run
-            ssh-queue-tests-cov-run
-            ssh-timer-tests-cov-run )
-
-    code_coverage_gen_html( all-cov-runs )
-endif()
+add_subdirectory( micro )

@@ -73,9 +73,7 @@ TEST( Queue, ZeroQueueSize ) {
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
-    pthread_attr_t thread_attr;
     pthread_t thread;
-
     pthread_create(&thread, NULL, &receive_loop, &queue);
 
     usleep(5000);
@@ -144,9 +142,7 @@ TEST( Queue, PeekZeroQueueSize ) {
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
-    pthread_attr_t thread_attr;
     pthread_t thread;
-
     pthread_create(&thread, NULL, &peek_receive_loop, &queue);
 
     usleep(5000);
@@ -904,9 +900,7 @@ TEST( Queue, BlockingDequeue ) {
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
-    pthread_attr_t thread_attr;
     pthread_t thread;
-
     pthread_create(&thread, NULL, &receive_loop, &queue);
 
     usleep(5000);
@@ -961,9 +955,7 @@ TEST( Queue, DestroyWhileDequeueBlocks ) {
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
-    pthread_attr_t thread_attr;
     pthread_t thread;
-
     pthread_create(&thread, NULL, &receive_loop, &queue);
 
     usleep(5000);
@@ -1007,9 +999,7 @@ TEST( Queue, DestroyWhilePeekDequeueBlocks ) {
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
-    pthread_attr_t thread_attr;
     pthread_t thread;
-
     pthread_create(&thread, NULL, &peek_receive_loop, &queue);
 
     usleep(5000);

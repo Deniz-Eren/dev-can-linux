@@ -104,8 +104,8 @@ typedef struct can_ocb {
         pthread_attr_t thread_attr;
         pthread_t thread;
         pthread_cond_t cond;
-        resmgr_context_t* ctp;
-        int rcvid;
+
+        int rcvid; // resmgr_msg_again() entry; -1 when no blocking client
         queue_t* queue;
     } rx;
 } can_ocb_t;

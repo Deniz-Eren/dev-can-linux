@@ -90,6 +90,7 @@ static inline struct can_skb_priv *can_skb_prv(struct sk_buff *skb)
 static inline struct sk_buff *can_create_echo_skb(struct sk_buff *skb)
 {
     /* no sharing of skb in the QNX application thus we can just return back */
+    skb->is_echo = 1;
     return skb;
 }
 
