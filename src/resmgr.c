@@ -72,6 +72,8 @@ int msg_again_callback(
 resmgr_connect_funcs_t connect_funcs;
 resmgr_io_funcs_t io_funcs;
 
+void log_trace_bittiming_info (struct net_device* device);
+
 
 int register_netdev(struct net_device *dev) {
     snprintf(dev->name, IFNAMSIZ, "can%d", dev->dev_id);
@@ -82,7 +84,15 @@ int register_netdev(struct net_device *dev) {
             .set_bittiming = true,
             .bittiming = { .bitrate = 250000 }
     };
-    dev->resmgr_ops->changelink(dev, &user);
+
+    int err;
+    if ((err = dev->resmgr_ops->changelink(dev, &user)) != 0) {
+        log_err("register_netdev: changelink failed: %d\n", err);
+
+        return -1;
+    }
+
+    log_trace_bittiming_info(dev);
 
     if (dev->netdev_ops->ndo_open(dev)) {
         return -1;
@@ -202,6 +212,7 @@ int register_netdev(struct net_device *dev) {
             }
 
             resmgr->latency_limit_ms = 0;
+            resmgr->shutdown = 0;
 
             /* Attach a callback (handler) for two message types */
             if (message_attach( resmgr->dispatch, NULL, _IO_MAX + 1,
@@ -287,6 +298,8 @@ void unregister_netdev(struct net_device *dev) {
     while (*location != NULL) {
         can_resmgr_t* resmgr = *location;
 
+        resmgr->shutdown = 1;
+
         if (resmgr->device_session->device != dev) {
             location = &(*location)->next;
 
@@ -305,15 +318,15 @@ void unregister_netdev(struct net_device *dev) {
         else if (resmgr->next) {
             resmgr->next->prev = NULL;
 
-            /* Since this node does not have a previous node, it must be the root
-             * node. Therefore when it is destroyed the new root node must then be
-             * the next node. */
+            /* Since this node does not have a previous node, it must be the
+             * root node. Therefore when it is destroyed the new root node must
+             * then be the next node. */
             root_resmgr = resmgr->next;
         }
         else {
-            /* Since this node does not have a previous or a next node, it must be
-             * the root and last remaining node. Therefore when it is destroyed the
-             * root node must be set to NULL. */
+            /* Since this node does not have a previous or a next node, it must
+             * be the root and last remaining node. Therefore when it is
+             * destroyed the root node must be set to NULL. */
 
             root_resmgr = NULL;
         }
@@ -445,7 +458,8 @@ int msg_again_callback (message_context_t* ctp, int type, unsigned flags,
 void* rx_loop (void* arg) {
     struct can_ocb* ocb = (struct can_ocb*)arg;
 
-    device_session_t* ds = ocb->resmgr->device_session;
+    can_resmgr_t* resmgr = ocb->resmgr;
+    device_session_t* ds = resmgr->device_session;
     struct net_device* device = ds->device;
 
     int coid;
@@ -463,7 +477,7 @@ void* rx_loop (void* arg) {
     while (1) {
         pthread_mutex_lock(&rx_mutex);
 
-        while ((device->flags & IFF_UP)
+        while ((!resmgr->shutdown)
                 && (ocb->rx.queue != NULL)
                 && (ocb->rx.rcvid == -1))
         {
@@ -472,7 +486,7 @@ void* rx_loop (void* arg) {
 
         pthread_mutex_unlock(&rx_mutex);
 
-        if (!(device->flags & IFF_UP) || (ocb->rx.queue == NULL)) {
+        if (resmgr->shutdown || (ocb->rx.queue == NULL)) {
             log_trace("rx_loop exit\n");
 
             pthread_exit(NULL);
@@ -517,7 +531,7 @@ void* dispatch_receive_loop (void* arg) {
      * for us and calls the appropriate callback function. */
     while (1) {
         if ((ctp = dispatch_block(ctp)) == NULL) {
-            if (resmgr->device->flags & IFF_UP) {
+            if (!resmgr->shutdown) {
                 log_err("dispatch_block failed: %s\n", strerror(errno));
             }
 
@@ -723,6 +737,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         //  no data
 
         // EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS
+        // EXT_CAN_DEVCTL_SET_BITRATE
         // CAN_DEVCTL_DEBUG_INFO2:
         // CAN_DEVCTL_GET_MID:
         // CAN_DEVCTL_SET_MID:
@@ -793,6 +808,41 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
         break;
     }
+    case EXT_CAN_DEVCTL_SET_BITRATE:
+    {
+        uint32_t bitrate = data->u32;
+        nbytes = 0;
+
+        log_trace("EXT_CAN_DEVCTL_SET_BITRATE: %dbits/second (%s)\n",
+                bitrate,
+                _ocb->resmgr->name);
+
+        struct user_dev_setup user = {
+                .set_bittiming = true,
+                .bittiming = { .bitrate = bitrate }
+        };
+
+        struct net_device* device = _ocb->resmgr->device_session->device;
+
+        int err;
+
+        device->flags &= ~IFF_UP;
+
+        if ((err = device->resmgr_ops->changelink(device, &user)) != 0) {
+            log_err("EXT_CAN_DEVCTL_SET_BITRATE: changelink failed: (%d) %s\n",
+                    -err, strerror(-err));
+
+            device->flags |= IFF_UP;
+            return -err;
+        }
+
+        device->flags |= IFF_UP;
+
+        log_trace("EXT_CAN_DEVCTL_SET_BITRATE: success\n");
+        log_trace_bittiming_info(device);
+
+        break;
+    }
     /*
      * Standard QNX dev-can-* driver protocol commands
      */
@@ -860,7 +910,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         log_trace("CAN_DEVCTL_SET_TIMESTAMP: %x\n", ts);
         break;
     }
-    case CAN_DEVCTL_READ_CANMSG_EXT: // e.g. canctl -u1,rx0 -r # canctl not working with this option!
+    case CAN_DEVCTL_READ_CANMSG_EXT: // e.g. canctl -u0,rx0 -r
     {
         int i;
 
@@ -983,22 +1033,119 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                 data->stats.transmitted_frames);
         break;
     }
-    case CAN_DEVCTL_GET_INFO: // e.g. canctl -i
+    case CAN_DEVCTL_GET_INFO: // e.g. canctl -u0,rx0 -i
     {
-        snprintf(data->info.description, 64, "driver: %s", detected_driver->name); // set description
-
         nbytes = sizeof(data->info);
 
-        log_trace("CAN_DEVCTL_GET_INFO; %s\n",
-                data->info.description);
+        struct net_device* device = _ocb->resmgr->device_session->device;
+        struct can_priv* priv = netdev_priv(device);
+
+        /* CAN device description */
+        snprintf( data->info.description, 64,
+                "dev-can-linux dev: %s, driver: %s",
+                _ocb->resmgr->name,
+                detected_driver->name );
+
+        /* Number of message queue objects */
+        data->info.msgq_size = 0; // TODO: set msgq_size
+
+        /* Number of client wait queue objects */
+        data->info.waitq_size = 0; // TODO: set waitq_size
+
+        /* CAN driver mode - I/O or raw frames */
+        data->info.mode = CANDEV_MODE_RAW_FRAME;
+
+        /* Bit rate */
+        data->info.bit_rate = priv->bittiming.bitrate;
+
+        /* Bit rate prescaler */
+        data->info.bit_rate_prescaler = priv->bittiming.brp;
+
+        /* Time quantum Sync Jump Width */
+        data->info.sync_jump_width = priv->bittiming.sjw;
+
+        /* Time quantum Time Segment 1 */
+        data->info.time_segment_1 = priv->bittiming.phase_seg1;
+
+        /* Time quantum Time Segment 2 */
+        data->info.time_segment_2 = priv->bittiming.phase_seg2;
+
+        /* Number of TX Mailboxes */
+        data->info.num_tx_mboxes = 0; // TODO: set num_tx_mboxes
+
+        /* Number of RX Mailboxes */
+        data->info.num_rx_mboxes = 0; // TODO: set num_rx_mboxes
+
+        /* External loopback is enabled */
+        data->info.loopback_external = 0; // TODO: set loopback_external
+
+        /* Internal loopback is enabled */
+        data->info.loopback_internal = 1; // TODO: check meaning of this
+
+        /* Auto timed bus on after bus off */
+        data->info.autobus_on = 0; // TODO: set autobus_on
+
+        /* Receiver only, no ack generation */
+        data->info.silent = 0; // TODO: set silent
+
         break;
     }
-    case CAN_DEVCTL_SET_TIMING: // e.g. canctl -c 12,1,1,1,1 # TODO: come up with realistic example comment
+    case CAN_DEVCTL_SET_TIMING: // e.g. canctl -u0,rx0 -c 250k,2,7,2,1
+                                // e.g. canctl -u0,rx0 -c 1M,1,3,2,1
+                                // e.g. canctl -u0,rx0 -c 0,1,3,2,1
+                                //          reference clock don't change if '0'
     {
         struct can_devctl_timing timing = data->timing;
         nbytes = 0;
 
-        log_trace("CAN_DEVCTL_SET_TIMING: %x\n", timing.ref_clock_freq);
+        struct net_device* device = _ocb->resmgr->device_session->device;
+
+        struct can_priv* priv = netdev_priv(device);
+
+        if (!timing.ref_clock_freq) {
+            timing.ref_clock_freq = priv->bittiming.bitrate;
+        }
+
+        int TQ = timing.bit_rate_prescaler * BILLION / priv->clock.freq;
+        int one_bit = BILLION / timing.ref_clock_freq / TQ;
+        int prop_seg = one_bit
+                    - timing.sync_jump_width
+                    - timing.time_segment_1
+                    - timing.time_segment_2;
+
+        struct user_dev_setup user = {
+                .set_bittiming = true,
+                .bittiming = {
+                    .bitrate = 0, // set to zero to invoke it's calculation
+                    .sample_point = (timing.sync_jump_width
+                                    + prop_seg
+                                    + timing.time_segment_1)*10/one_bit,
+                    .tq = TQ,
+                    .prop_seg = prop_seg,
+                    .sjw = timing.sync_jump_width,
+                    .phase_seg1 = timing.time_segment_1,
+                    .phase_seg2 = timing.time_segment_2,
+                    .brp = timing.bit_rate_prescaler
+                }
+        };
+
+        int err;
+
+        device->flags &= ~IFF_UP;
+
+        if ((err = device->resmgr_ops->changelink(device, &user)) != 0) {
+            log_err("CAN_DEVCTL_SET_TIMING: changelink failed: (%d) %s\n",
+                    -err, strerror(-err));
+
+            device->flags |= IFF_UP;
+            return -err;
+        }
+
+        device->flags |= IFF_UP;
+
+        log_trace("CAN_DEVCTL_SET_TIMING: success\n");
+        log_trace_bittiming_info(device);
+
         break;
     }
     case CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK:
@@ -1026,4 +1173,36 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     /* Indicate the number of bytes and return the message */
     msg->o.nbytes = nbytes;
     return(_RESMGR_PTR(ctp, &msg->o, sizeof(msg->o) + nbytes));
+}
+
+void log_trace_bittiming_info (struct net_device* device) {
+    struct can_priv* priv = netdev_priv(device);
+
+    /* Clock frequency */
+    log_trace("  clock: %uHz\n", priv->clock.freq);
+
+    /* Bit-rate in bits/second */
+    log_trace("  bitrate: %ubits/second\n", priv->bittiming.bitrate);
+
+    /* Sample point in one-tenth of a percent */
+    log_trace("  sample_point: %u (1/10 of 1%)\n",
+            priv->bittiming.sample_point);
+
+    /* Time quanta (TQ) in nanoseconds */
+    log_trace("  tq: %uns (TQ)\n", priv->bittiming.tq);
+
+    /* Propagation segment in TQs */
+    log_trace("  prop_seg: %u\n", priv->bittiming.prop_seg);
+
+    /* Phase buffer segment 1 in TQs */
+    log_trace("  phase_seg1: %uTQ\n", priv->bittiming.phase_seg1);
+
+    /* Phase buffer segment 2 in TQs */
+    log_trace("  phase_seg2: %uTQ\n", priv->bittiming.phase_seg2);
+
+    /* Synchronisation jump width in TQs */
+    log_trace("  sjw: %uTQ\n", priv->bittiming.sjw);
+
+    /* Bit-rate prescaler */
+    log_trace("  brp: %u\n", priv->bittiming.brp);
 }

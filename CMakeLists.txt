@@ -63,6 +63,9 @@ add_compile_definitions(
 add_compile_definitions(
     CONFIG_QNX_RESMGR_THREAD_POOL=${CONFIG_QNX_RESMGR_THREAD_POOL} )
 
+add_compile_definitions( DEVCANLINUX_SYSLOG=1 )
+add_compile_definitions( DEVCANLINUX_STDERR=1 )
+
 # Always enable the following
 add_compile_definitions( CONFIG_CAN_CALC_BITTIMING )
 add_compile_definitions( CONFIG_X86_64 ) # 32-bit alternative is CONFIG_X86_32

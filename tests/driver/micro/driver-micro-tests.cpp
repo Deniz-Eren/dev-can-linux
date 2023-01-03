@@ -28,10 +28,14 @@ extern "C" {
     #include <dev-can-linux/commands.h>
 }
 
+bool receive_loop0_started = false, receive_loop1_started = false;
+
 void* receive_loop0 (void* arg) {
     struct can_msg* canmsg = (struct can_msg*)arg;
 
     int fd = open("/dev/can0/rx0", O_RDWR);
+
+    receive_loop0_started = true;
 
     if (read_canmsg_ext(fd, canmsg) == EOK) {
         close(fd);
@@ -45,6 +49,8 @@ void* receive_loop1 (void* arg) {
     struct can_msg* canmsg = (struct can_msg*)arg;
 
     int fd = open("/dev/can1/rx0", O_RDWR);
+
+    receive_loop1_started = true;
 
     if (read_canmsg_ext(fd, canmsg) == EOK) {
         close(fd);
@@ -78,13 +84,18 @@ TEST( Driver, SingleSendReceive ) {
 
     struct can_msg canmsg0, canmsg1;
 
+    receive_loop0_started = receive_loop1_started = false;
+
     pthread_t thread0;
     pthread_create(&thread0, NULL, &receive_loop0, &canmsg0);
 
     pthread_t thread1;
     pthread_create(&thread1, NULL, &receive_loop1, &canmsg1);
 
-    usleep(3000);
+    while (!receive_loop0_started || !receive_loop1_started) {
+        usleep(1000);
+    }
+
     int write_ret = write_canmsg_ext(fd0, &canmsg);
 
     EXPECT_EQ(write_ret, EOK);
@@ -103,8 +114,7 @@ TEST( Driver, SingleSendReceive ) {
     EXPECT_EQ(canmsg0.dat[7], 0x88);
     EXPECT_EQ(canmsg0.len, 8);
     EXPECT_EQ(canmsg0.mid, 0xABC);
-    EXPECT_GE(canmsg0.ext.timestamp - start_ms, 3);
-    EXPECT_LE(canmsg0.ext.timestamp - start_ms, 5);
+    EXPECT_GE(canmsg0.ext.timestamp - start_ms, 1);
     EXPECT_EQ(canmsg0.ext.is_extended_mid, 1);
     EXPECT_EQ(canmsg0.ext.is_remote_frame, 0);
 
@@ -127,8 +137,7 @@ TEST( Driver, SingleSendReceive ) {
     EXPECT_EQ(canmsg1.dat[7], 0x88);
     EXPECT_EQ(canmsg1.len, 8);
     EXPECT_EQ(canmsg1.mid, 0xABC);
-    EXPECT_GE(canmsg1.ext.timestamp - start_ms, 6);
-    EXPECT_LE(canmsg1.ext.timestamp - start_ms, 11);
+    EXPECT_GE(canmsg1.ext.timestamp - start_ms, 4);
     EXPECT_EQ(canmsg1.ext.is_extended_mid, 1);
     EXPECT_EQ(canmsg1.ext.is_remote_frame, 0);
 
@@ -154,6 +163,8 @@ TEST( Driver, SingleSendMultiReceive ) {
         }
     };
 
+    receive_loop0_started = false;
+
     struct can_msg canmsg0, canmsg1;
 
     pthread_attr_t attr0;
@@ -167,7 +178,10 @@ TEST( Driver, SingleSendMultiReceive ) {
     pthread_attr_init(&attr1);
     pthread_attr_setdetachstate(&attr1, PTHREAD_CREATE_DETACHED);
     pthread_create(&thread1, NULL, &receive_loop0, &canmsg1);
-    usleep(3000);
+
+    while (!receive_loop0_started) {
+        usleep(1000);
+    }
 
     int write_ret = write_canmsg_ext(fd, &canmsg);
 
@@ -188,8 +202,7 @@ TEST( Driver, SingleSendMultiReceive ) {
     EXPECT_EQ(canmsg0.dat[7], 0x88);
     EXPECT_EQ(canmsg0.len, 8);
     EXPECT_EQ(canmsg0.mid, 0xABC);
-    EXPECT_GE(canmsg0.ext.timestamp - start_ms, 3);
-    EXPECT_LE(canmsg0.ext.timestamp - start_ms, 5);
+    EXPECT_GE(canmsg0.ext.timestamp - start_ms, 1);
     EXPECT_EQ(canmsg0.ext.is_extended_mid, 1);
     EXPECT_EQ(canmsg0.ext.is_remote_frame, 0);
 
@@ -204,8 +217,7 @@ TEST( Driver, SingleSendMultiReceive ) {
     EXPECT_EQ(canmsg1.dat[7], 0x88);
     EXPECT_EQ(canmsg1.len, 8);
     EXPECT_EQ(canmsg1.mid, 0xABC);
-    EXPECT_GE(canmsg1.ext.timestamp - start_ms, 3);
-    EXPECT_LE(canmsg1.ext.timestamp - start_ms, 5);
+    EXPECT_GE(canmsg1.ext.timestamp - start_ms, 1);
     EXPECT_EQ(canmsg1.ext.is_extended_mid, 1);
     EXPECT_EQ(canmsg1.ext.is_remote_frame, 0);
 

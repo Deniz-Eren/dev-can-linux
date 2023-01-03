@@ -146,7 +146,7 @@ node('jenkins_agent') {
                     "source .profile \
                     && /root/dev-can-linux/dev/setup-profile.sh \
                     && cd /data/home/root/build_memcheck \
-                    && ctest || (exit 0)"
+                    && ctest --verbose || (exit 0)"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
                     -b /data/home/root/build_memcheck \
@@ -180,7 +180,7 @@ node('jenkins_agent') {
                     "source .profile \
                     && /root/dev-can-linux/dev/setup-profile.sh \
                     && cd /data/home/root/build_helgrind \
-                    && ctest || (exit 0)"
+                    && ctest --verbose || (exit 0)"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
                     -b /data/home/root/build_helgrind \
@@ -212,7 +212,7 @@ node('jenkins_agent') {
                     "source .profile \
                     && /root/dev-can-linux/dev/setup-profile.sh \
                     && cd /data/home/root/build_drd \
-                    && ctest || (exit 0)"
+                    && ctest --verbose || (exit 0)"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
                     -b /data/home/root/build_drd \
@@ -244,7 +244,7 @@ node('jenkins_agent') {
                     "source .profile \
                     && /root/dev-can-linux/dev/setup-profile.sh \
                     && cd /data/home/root/build_exp-sgcheck \
-                    && ctest || (exit 0)"
+                    && ctest --verbose || (exit 0)"
 
                 /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
                     -b /data/home/root/build_exp-sgcheck \

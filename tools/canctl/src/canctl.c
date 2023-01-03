@@ -30,10 +30,13 @@ int main (int argc, char* argv[]) {
     int opt;
     char buffer[1024];
 
-    int optr = 0;
+    int optC = 0;
+    int optC_value = 0;
 
     int optL = 0;
     int optL_value = 0;
+
+    int optr = 0;
 
     int optu_unit;
     char optu_mailbox_str[8];
@@ -45,8 +48,22 @@ int main (int argc, char* argv[]) {
     int optw_mid_type = 0;
     char optw_data_str[32];
 
-    while ((opt = getopt(argc, argv, "L:ru:w:?h")) != -1) {
+    while ((opt = getopt(argc, argv, "c:C:iL:ru:w:?h")) != -1) {
         switch (opt) {
+        case 'c':
+            break;
+        case 'C':
+            optC = 1;
+            optC_value = atoi(optarg);
+
+            if (optC_value < 0) {
+                optC_value = 0;
+            }
+            break;
+
+        case 'i':
+            break;
+
         case 'r':
             optr = 1;
             break;
@@ -99,6 +116,29 @@ int main (int argc, char* argv[]) {
             printf("invalid option %c\n", opt);
             break;
         }
+    }
+
+    if (optC) {
+        int         fd, ret;
+        uint32_t    bitrate = optC_value;
+
+        char OPEN_FILE[16];
+
+        snprintf( OPEN_FILE, 16, "/dev/can%d/%s%d",
+                optu_unit,
+                (optu_mailbox_is_tx ? "tx" : "rx"), optu_mailbox );
+
+        if ((fd = open(OPEN_FILE, O_RDWR)) == -1) {
+            exit(EXIT_FAILURE);
+        }
+
+        if (set_bitrate(fd, bitrate) == EOK) {
+            printf("set_bitrate %dbits/second: OK\n", bitrate);
+
+            close(fd);
+        }
+
+        return EXIT_SUCCESS;
     }
 
     if (optL) {

@@ -130,3 +130,11 @@ docker exec -d --user root --workdir /root dev_env bash -c \
         -o 'LogLevel=ERROR' \
         -p$SSH_PORT root@localhost \
         \"cd $BUILD_PATH ; $QNX_PREFIX_CMD dev-can-linux $VERBOSE\""
+
+docker exec --user root --workdir /root dev_env bash -c \
+    "sshpass -p 'root' ssh \
+        -o 'StrictHostKeyChecking=no' \
+        -o 'UserKnownHostsFile=/dev/null' \
+        -o 'LogLevel=ERROR' \
+        -p$SSH_PORT root@localhost \
+        \"waitfor /dev/can0/rx0\""

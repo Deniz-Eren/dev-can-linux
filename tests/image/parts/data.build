@@ -26,7 +26,7 @@
 #
 
 [num_inodes=*3000]
-[num_sectors=*122880]
+[num_sectors=*983040]
 [search=/x86_64:/x86_64/boot/sys::/opt/qnx710/target/qnx7/x86_64:/opt/qnx710/target/qnx7/x86_64/boot/sys:/opt/qnx710/target/qnx7]
 [uid=0 gid=0 perms=644 dperms=755]
 
