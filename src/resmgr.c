@@ -1086,7 +1086,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         data->info.autobus_on = 0; // TODO: set autobus_on
 
         /* Receiver only, no ack generation */
-        data->info.silent = 0; // TODO: set silent
+        data->info.silent = (priv->ctrlmode & CAN_CTRLMODE_LISTENONLY ? 1 : 0);
 
         break;
     }
