@@ -69,12 +69,12 @@ services:
       - JENKINS_AGENT_SSH_PUBKEY=${JENKINS_AGENT_SSH_PUBKEY}
     command: >
       sh -c "echo &&
-        if [ ! -d /sys/class/net/vcan0 ]; then \
+        if [ ! -d /sys/class/net/vcan1000 ]; then \
             echo \"Setting up VCAN...\" &&
-            ip link add dev vcan0 type vcan &&
-            ip link set up vcan0 &&
-            ip link add dev vcan1 type vcan &&
-            ip link set up vcan1; \
+            ip link add dev vcan1000 type vcan &&
+            ip link set up vcan1000 &&
+            ip link add dev vcan1001 type vcan &&
+            ip link set up vcan1001; \
         else echo \"VCAN already setup\"; fi \
         && /opt/dev-can-linux/ci/jenkins/scripts/setup-ssh-port.sh \
         && groupmod -g $DOCKER_GROUP docker \

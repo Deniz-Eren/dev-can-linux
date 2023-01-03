@@ -62,8 +62,8 @@ docker exec -d --user root --workdir /root qemu_env \
         -object can-bus,id=c0 \
         -object can-bus,id=c1 \
         -device $DEVICE,canbus0=c0,canbus1=c1 \
-        -object can-host-socketcan,id=h0,if=c0,canbus=c0,if=vcan0 \
-        -object can-host-socketcan,id=h1,if=c1,canbus=c1,if=vcan1 \
+        -object can-host-socketcan,id=h0,if=c0,canbus=c0,if=vcan1000 \
+        -object can-host-socketcan,id=h1,if=c1,canbus=c1,if=vcan1001 \
         -m size=4096 \
         -nic user,hostfwd=tcp::$SSH_PORT-:22 \
         -smp 2 \
