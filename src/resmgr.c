@@ -733,40 +733,11 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
     union data_t {
-        // CAN_DEVCTL_DEBUG_INFO:
-        //  no data
+        uint32_t    latency_limit;
+        uint32_t    bitrate;
+        uint32_t    info2;
 
-        // EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS
-        // EXT_CAN_DEVCTL_SET_BITRATE
-        // CAN_DEVCTL_DEBUG_INFO2:
-        // CAN_DEVCTL_GET_MID:
-        // CAN_DEVCTL_SET_MID:
-        // CAN_DEVCTL_GET_MFILTER:
-        // CAN_DEVCTL_SET_MFILTER:
-        // CAN_DEVCTL_GET_PRIO:
-        // CAN_DEVCTL_SET_PRIO:
-        // CAN_DEVCTL_GET_TIMESTAMP:
-        // CAN_DEVCTL_SET_TIMESTAMP:
-        uint32_t                    u32;
-
-        // CAN_DEVCTL_READ_CANMSG_EXT:
-        // CAN_DEVCTL_WRITE_CANMSG_EXT:
-        // CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK:
-        // CAN_DEVCTL_RX_FRAME_RAW_BLOCK:
-        // CAN_DEVCTL_TX_FRAME_RAW:
-        struct can_msg              canmsg;
-
-        // CAN_DEVCTL_ERROR:
-        struct can_devctl_error     err;
-
-        // CAN_DEVCTL_GET_STATS:
-        struct can_devctl_stats     stats;
-
-        // CAN_DEVCTL_GET_INFO:
-        struct can_devctl_info      info;
-
-        // CAN_DEVCTL_SET_TIMING:
-        struct can_devctl_timing    timing;
+        DCMD_DATA   dcmd;
     } *data;
 
     log_trace("io_devctl -> id: %d\n", ctp->id);
@@ -797,7 +768,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
      */
     case EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS:
     {
-        uint32_t can_latency_limit = data->u32;
+        uint32_t can_latency_limit = data->latency_limit;
         nbytes = 0;
 
         _ocb->resmgr->latency_limit_ms = can_latency_limit;
@@ -810,7 +781,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case EXT_CAN_DEVCTL_SET_BITRATE:
     {
-        uint32_t bitrate = data->u32;
+        uint32_t bitrate = data->bitrate;
         nbytes = 0;
 
         log_trace("EXT_CAN_DEVCTL_SET_BITRATE: %dbits/second (%s)\n",
@@ -848,15 +819,15 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
      */
     case CAN_DEVCTL_GET_MID: // e.g. canctl -u1,rx0 -M
     {
-        data->u32 = 0x0; // <- set MID
-        nbytes = sizeof(data->u32);
+        data->dcmd.mid = 0x0; // <- set MID
+        nbytes = sizeof(data->dcmd.mid);
 
-        log_trace("CAN_DEVCTL_GET_MID: %x\n", data->u32);
+        log_trace("CAN_DEVCTL_GET_MID: %x\n", data->dcmd.mid);
         break;
     }
     case CAN_DEVCTL_SET_MID: // e.g. canctl -u1,rx1 -m 0x11CC0000
     {
-        uint32_t mid = data->u32;
+        uint32_t mid = data->dcmd.mid;
         nbytes = 0;
 
         log_trace("CAN_DEVCTL_SET_MID: %x\n", mid);
@@ -864,15 +835,15 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_GET_MFILTER: // e.g. #canctl -u0,tx0 -F
     {
-        data->u32 = 0x0; // set MFILTER
-        nbytes = sizeof(data->u32);
+        data->dcmd.mfilter = 0x0; // set MFILTER
+        nbytes = sizeof(data->dcmd.mfilter);
 
-        log_trace("CAN_DEVCTL_GET_MFILTER: %x\n", data->u32);
+        log_trace("CAN_DEVCTL_GET_MFILTER: %x\n", data->dcmd.mfilter);
         break;
     }
     case CAN_DEVCTL_SET_MFILTER: // e.g. canctl -u0,tx0 -f 0x11CC0000
     {
-        uint32_t mfilter = data->u32;
+        uint32_t mfilter = data->dcmd.mfilter;
         nbytes = 0;
 
         log_trace("CAN_DEVCTL_SET_MFILTER: %x\n", mfilter);
@@ -880,15 +851,15 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_GET_PRIO: // canctl -u1,tx1 -P
     {
-        data->u32 = 0x0; // set PRIO
-        nbytes = sizeof(data->u32);
+        data->dcmd.prio = 0x0; // set PRIO
+        nbytes = sizeof(data->dcmd.prio);
 
-        log_trace("CAN_DEVCTL_GET_PRIO: %x\n", data->u32);
+        log_trace("CAN_DEVCTL_GET_PRIO: %x\n", data->dcmd.prio);
         break;
     }
     case CAN_DEVCTL_SET_PRIO: // e.g. canctl -u1,tx1 -p 5
     {
-        uint32_t prio = data->u32;
+        uint32_t prio = data->dcmd.prio;
         nbytes = 0;
 
         log_trace("CAN_DEVCTL_SET_PRIO: %x\n", prio);
@@ -896,15 +867,15 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_GET_TIMESTAMP: // e.g. canctl -u1 -T
     {
-        data->u32 = 0x0; // set TIMESTAMP
-        nbytes = sizeof(data->u32);
+        data->dcmd.timestamp = 0x0; // set TIMESTAMP
+        nbytes = sizeof(data->dcmd.timestamp);
 
-        log_trace("CAN_DEVCTL_GET_TIMESTAMP: %x\n", data->u32);
+        log_trace("CAN_DEVCTL_GET_TIMESTAMP: %x\n", data->dcmd.timestamp);
         break;
     }
     case CAN_DEVCTL_SET_TIMESTAMP: // e.g. canctl -u1 -t 0xAAAAAA
     {
-        uint32_t ts = data->u32;
+        uint32_t ts = data->dcmd.timestamp;
         nbytes = 0;
 
         log_trace("CAN_DEVCTL_SET_TIMESTAMP: %x\n", ts);
@@ -925,9 +896,9 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                     _ocb->resmgr->latency_limit_ms );
 
         if (canmsg != NULL) { // Could be a zero size rx queue, i.e. a tx queue
-            data->canmsg = *canmsg;
+            data->dcmd.canmsg = *canmsg;
 
-            nbytes = sizeof(data->canmsg);
+            nbytes = sizeof(data->dcmd.canmsg);
 
             log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %u [%s] %X [%d] " \
                       "%02X %02X %02X %02X %02X %02X %02X %02X\n",
@@ -970,7 +941,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                       // incorrect results. Thus custom verion of canctl needs to
                       // be made.
     {
-        struct can_msg canmsg = data->canmsg;
+        struct can_msg canmsg = data->dcmd.canmsg;
         nbytes = 0;
 
         enqueue(&_ocb->resmgr->device_session->tx_queue, &canmsg);
@@ -995,17 +966,17 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_ERROR: // e.g. canctl -u0,rx0 -e
     {
-        data->err.drvr1 = 0x0; // set DRIVER ERROR 1
-        data->err.drvr2 = 0x0; // set DRIVER ERROR 1
-        data->err.drvr3 = 0x0; // set DRIVER ERROR 1
-        data->err.drvr4 = 0x0; // set DRIVER ERROR 1
-        nbytes = sizeof(data->err);
+        data->dcmd.error.drvr1 = 0x0; // set DRIVER ERROR 1
+        data->dcmd.error.drvr2 = 0x0; // set DRIVER ERROR 1
+        data->dcmd.error.drvr3 = 0x0; // set DRIVER ERROR 1
+        data->dcmd.error.drvr4 = 0x0; // set DRIVER ERROR 1
+        nbytes = sizeof(data->dcmd.error);
 
         log_trace("CAN_DEVCTL_ERROR: %x %x %x %x\n",
-                data->err.drvr1,
-                data->err.drvr2,
-                data->err.drvr3,
-                data->err.drvr4);
+                data->dcmd.error.drvr1,
+                data->dcmd.error.drvr2,
+                data->dcmd.error.drvr3,
+                data->dcmd.error.drvr4);
         break;
     }
     case CAN_DEVCTL_DEBUG_INFO: // e.g. canctl -d # Some strange behaviour INFO vs INFO2
@@ -1017,7 +988,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_DEBUG_INFO2: // e.g. canctl -d # Some strange behaviour INFO vs INFO2
     {
-        u32 debug = data->u32;
+        u32 debug = data->info2;
         nbytes = 0;
 
         log_trace("CAN_DEVCTL_DEBUG_INFO2: %x\n", debug);
@@ -1025,68 +996,69 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_GET_STATS: // e.g. canctl -s
     {
-        data->stats.transmitted_frames = 0x0; // set transmitted_frames
+        data->dcmd.stats.transmitted_frames = 0x0; // set transmitted_frames
 
-        nbytes = sizeof(data->stats);
+        nbytes = sizeof(data->dcmd.stats);
 
         log_trace("CAN_DEVCTL_GET_STATS; %d\n",
-                data->stats.transmitted_frames);
+                data->dcmd.stats.transmitted_frames);
         break;
     }
     case CAN_DEVCTL_GET_INFO: // e.g. canctl -u0,rx0 -i
     {
-        nbytes = sizeof(data->info);
+        nbytes = sizeof(data->dcmd.info);
 
         struct net_device* device = _ocb->resmgr->device_session->device;
         struct can_priv* priv = netdev_priv(device);
 
         /* CAN device description */
-        snprintf( data->info.description, 64,
+        snprintf( data->dcmd.info.description, 64,
                 "dev-can-linux dev: %s, driver: %s",
                 _ocb->resmgr->name,
                 detected_driver->name );
 
         /* Number of message queue objects */
-        data->info.msgq_size = 0; // TODO: set msgq_size
+        data->dcmd.info.msgq_size = 0; // TODO: set msgq_size
 
         /* Number of client wait queue objects */
-        data->info.waitq_size = 0; // TODO: set waitq_size
+        data->dcmd.info.waitq_size = 0; // TODO: set waitq_size
 
         /* CAN driver mode - I/O or raw frames */
-        data->info.mode = CANDEV_MODE_RAW_FRAME;
+        data->dcmd.info.mode = CANDEV_MODE_RAW_FRAME;
 
         /* Bit rate */
-        data->info.bit_rate = priv->bittiming.bitrate;
+        data->dcmd.info.bit_rate = priv->bittiming.bitrate;
 
         /* Bit rate prescaler */
-        data->info.bit_rate_prescaler = priv->bittiming.brp;
+        data->dcmd.info.bit_rate_prescaler = priv->bittiming.brp;
 
         /* Time quantum Sync Jump Width */
-        data->info.sync_jump_width = priv->bittiming.sjw;
+        data->dcmd.info.sync_jump_width = priv->bittiming.sjw;
 
         /* Time quantum Time Segment 1 */
-        data->info.time_segment_1 = priv->bittiming.phase_seg1;
+        data->dcmd.info.time_segment_1 = priv->bittiming.phase_seg1;
 
         /* Time quantum Time Segment 2 */
-        data->info.time_segment_2 = priv->bittiming.phase_seg2;
+        data->dcmd.info.time_segment_2 = priv->bittiming.phase_seg2;
 
         /* Number of TX Mailboxes */
-        data->info.num_tx_mboxes = 0; // TODO: set num_tx_mboxes
+        data->dcmd.info.num_tx_mboxes = 0; // TODO: set num_tx_mboxes
 
         /* Number of RX Mailboxes */
-        data->info.num_rx_mboxes = 0; // TODO: set num_rx_mboxes
+        data->dcmd.info.num_rx_mboxes = 0; // TODO: set num_rx_mboxes
 
         /* External loopback is enabled */
-        data->info.loopback_external = 0; // TODO: set loopback_external
+        data->dcmd.info.loopback_external = 0; // TODO: set loopback_external
 
         /* Internal loopback is enabled */
-        data->info.loopback_internal = 1; // TODO: check meaning of this
+        data->dcmd.info.loopback_internal = 1; // TODO: check meaning of this
 
         /* Auto timed bus on after bus off */
-        data->info.autobus_on = 0; // TODO: set autobus_on
+        data->dcmd.info.autobus_on = 0; // TODO: set autobus_on
 
         /* Receiver only, no ack generation */
-        data->info.silent = (priv->ctrlmode & CAN_CTRLMODE_LISTENONLY ? 1 : 0);
+        data->dcmd.info.silent =
+            (priv->ctrlmode & CAN_CTRLMODE_LISTENONLY ? 1 : 0);
 
         break;
     }
@@ -1095,7 +1067,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                                 // e.g. canctl -u0,rx0 -c 0,1,3,2,1
                                 //          reference clock don't change if '0'
     {
-        struct can_devctl_timing timing = data->timing;
+        struct can_devctl_timing timing = data->dcmd.timing;
         nbytes = 0;
 
         struct net_device* device = _ocb->resmgr->device_session->device;
