@@ -45,48 +45,54 @@
 extern volatile unsigned log_enabled;
 
 #define log_err(fmt, arg...) { \
-        if (log_enabled && !optq) { \
+        if (log_enabled) { \
             syslog(LOG_ERR, fmt, ##arg); \
-            fprintf(stderr, fmt, ##arg); \
+            \
+            if (!optq) { \
+                fprintf(stderr, fmt, ##arg); \
+            } \
         } \
     }
 
 #define log_warn(fmt, arg...) { \
-        if (log_enabled && !optq) { \
+        if (log_enabled) { \
             syslog(LOG_WARNING, fmt, ##arg); \
-            fprintf(stderr, fmt, ##arg); \
+            \
+            if (!optq) { \
+                fprintf(stderr, fmt, ##arg); \
+            } \
         } \
     }
 
 #define log_info(fmt, arg...) { \
-        if (log_enabled && !optq) { \
-            if (optv >= 1) { \
+        if (log_enabled) { \
+            if (optl >= 1) { \
                 syslog(LOG_INFO, fmt, ##arg); \
             } \
-            if (!optq && optv >= 3) { \
-                printf(fmt, ##arg); \
+            if (!optq && optv >= 1) { \
+                fprintf(stdout, fmt, ##arg); \
             } \
         } \
     }
 
 #define log_dbg(fmt, arg...) { \
-        if (log_enabled && !optq) { \
-            if (optv >= 2) { \
+        if (log_enabled) { \
+            if (optl >= 2) { \
                 syslog(LOG_DEBUG, fmt, ##arg); \
             } \
-            if (!optq && optv >= 4) { \
-                printf(fmt, ##arg); \
+            if (!optq && optv >= 2) { \
+                fprintf(stdout, fmt, ##arg); \
             } \
         } \
     }
 
 #define log_trace(fmt, arg...) { \
-        if (log_enabled && !optq) { \
-            if (optv >= 5) { \
+        if (log_enabled) { \
+            if (optl >= 3) { \
                 syslog(LOG_DEBUG, fmt, ##arg); \
             } \
-            if (!optq && optv >= 6) { \
-                printf(fmt, ##arg); \
+            if (!optq && optv >= 3) { \
+                fprintf(stdout, fmt, ##arg); \
             } \
         } \
     }

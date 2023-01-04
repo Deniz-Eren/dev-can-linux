@@ -63,10 +63,11 @@ CCFLAGS_profile += -g -O0 -finstrument-functions
 LIBS_profile += -lprofilingS
 
 #
-# Coverage
+# Coverage & Profiling
 #
 
-CCFLAGS_coverage +=	-DCOVERAGE
+CCFLAGS_coverage +=	-DCOVERAGE_BUILD
+CCFLAGS_profile +=	-DPROFILING_BUILD
 
 #
 # Project specific configuration macros

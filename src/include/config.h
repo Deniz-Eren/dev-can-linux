@@ -37,6 +37,7 @@
 
 extern int optv;
 extern int optl;
+extern int opti;
 extern int optq;
 extern int optd;
 extern int opt_vid;

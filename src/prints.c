@@ -23,7 +23,17 @@
 
 
 void print_version (void) {
+#if COVERAGE_BUILD == 1
+    printf("\e[1mdev-can-linux v%s - Coverage Build (NOT PRODUCTION!)\e[m\n",
+            PROGRAM_VERSION);
+#elif PROFILING_BUILD == 1
+    printf("\e[1mdev-can-linux v%s - Profiling Build (NOT PRODUCTION!)\e[m\n",
+            PROGRAM_VERSION);
+#elif DEBUG_BUILD == 1
+    printf("\e[1mdev-can-linux v%s - Debug Build\e[m\n", PROGRAM_VERSION);
+#else
     printf("\e[1mdev-can-linux v%s\e[m\n", PROGRAM_VERSION);
+#endif
 
     return;
 }
@@ -128,7 +138,7 @@ void print_support (bool detailed) {
     printf("  - PEAK PCAN PCI family cards\n");
     printf("  - PLX90xx PCI-bridge cards (with the SJA1000 chips)\n");
     printf("\n");
-    printf("For more details use option `\e[1m-ll\e[m'\n");
+    printf("For more details use option `\e[1m-ii\e[m'\n");
 }
 
 void print_help (char* program_name) {
@@ -145,18 +155,29 @@ void print_help (char* program_name) {
     printf("\e[1mOPTIONS\e[m\n");
     printf("    \e[1m-V\e[m             - print application version and exit\n");
     printf("    \e[1m-C\e[m             - print build configurations and exit\n");
-    printf("    \e[1m-l\e[m             - list supported hardware and exit\n");
-    printf("    \e[1m-ll\e[m            - list supported hardware details and exit\n");
+    printf("    \e[1m-i\e[m             - list supported hardware and exit\n");
+    printf("    \e[1m-ii\e[m            - list supported hardware details and exit\n");
     printf("    \e[1m-d {vid}:{did}\e[m - target desired device, e.g. -d 13fe:c302\n");
-    printf("    \e[1m-v\e[m             - verbose 1; syslog(i) info\n");
-    printf("    \e[1m-vv\e[m            - verbose 2; syslog(i) info & debug\n");
-    printf("    \e[1m-vvv\e[m           - verbose 3; syslog(i) all, stdout(ii) info\n");
-    printf("    \e[1m-vvvv\e[m          - verbose 4; syslog(i) all, stdout(ii) info & debug\n");
-    printf("    \e[1m-vvvvv\e[m         - verbose 5; syslog(i) all + trace, stdout(ii) all\n");
-    printf("    \e[1m-vvvvvv\e[m        - verbose 6; syslog(i) all + trace, stdout(ii) all + trace\n");
-    printf("    \e[1m-q\e[m             - quiet mode trumps all verbose modes\n");
     printf("    \e[1m-w\e[m             - print warranty message and exit\n");
     printf("    \e[1m-c\e[m             - print license details and exit\n");
+    printf("    \e[1m-q\e[m             - quiet mode turns of all terminal printing and trumps all\n");
+    printf("                     verbose modes. Both stdout and stderr are turned off!\n");
+    printf("                     Errors and warnings are printed to stderr normally when\n");
+    printf("                     this option is not selected. Logging to syslog is not\n");
+    printf("                     impacted by this option.\n");
+    printf("    \e[1m-v\e[m             - verbose 1; prints out info to stdout\n");
+    printf("    \e[1m-vv\e[m            - verbose 2; prints out info & debug to stdout\n");
+#if RELEASE_BUILD != 1
+    printf("    \e[1m-vvv\e[m           - verbose 3; prints out info, debug & trace to stdout;\n");
+    printf("                     do NOT enable this for general usage, it is only intended for\n");
+    printf("                     debugging during development.\n");
+#endif
+    printf("    \e[1m-l\e[m             - log 1; syslog entries for info\n");
+    printf("    \e[1m-ll\e[m            - log 2; syslog entries for info & debug\n");
+#if RELEASE_BUILD != 1
+    printf("    \e[1m-lll\e[m           - log 3; syslog entries for info, debug & trace; NOT for\n");
+    printf("                     general use.\n");
+#endif
     printf("    \e[1m-?/h\e[m           - print help menu and exit\n");
     printf("\n");
     printf("\e[1mNOTES\e[m\n");

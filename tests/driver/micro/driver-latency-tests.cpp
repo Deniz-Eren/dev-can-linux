@@ -29,7 +29,7 @@ extern "C" {
 }
 
 /* Timing tests are very unreliable during Profiling so we will skip these */
-#if PROFILING != 1
+#if PROFILING_BUILD != 1
 
 TEST( Driver, LatencyFunctionality ) {
     int fd_tx = open("/dev/can0/tx0", O_RDWR);

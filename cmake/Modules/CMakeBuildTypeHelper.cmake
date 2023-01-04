@@ -20,11 +20,17 @@
 #
 
 if( CMAKE_BUILD_TYPE MATCHES Coverage )
+    add_compile_definitions( DEBUG_BUILD=1 )
+    add_compile_definitions( COVERAGE_BUILD=1 )
     set( BUILD_TYPE_NAME "-cov" )
 elseif( CMAKE_BUILD_TYPE MATCHES Profiling )
+    add_compile_definitions( DEBUG_BUILD=1 )
+    add_compile_definitions( PROFILING_BUILD=1 )
     set( BUILD_TYPE_NAME "-pro" )
 elseif( CMAKE_BUILD_TYPE MATCHES Debug )
+    add_compile_definitions( DEBUG_BUILD=1 )
     set( BUILD_TYPE_NAME "-g" )
-else()
+elseif( CMAKE_BUILD_TYPE MATCHES Release )
+    add_compile_definitions( RELEASE_BUILD=1 )
     set( BUILD_TYPE_NAME "" )
 endif()

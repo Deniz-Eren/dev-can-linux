@@ -43,7 +43,7 @@ void sigint_signal_handler (int sig_no) {
 int main (int argc, char* argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, argv, "d:vqlVCwc?h")) != -1) {
+    while ((opt = getopt(argc, argv, "d:viqlVCwc?h")) != -1) {
         switch (opt) {
         case 'd':
             optd = 1;
@@ -61,6 +61,10 @@ int main (int argc, char* argv[]) {
 
         case 'l':
             optl++;
+            break;
+
+        case 'i':
+            opti++;
             break;
 
         case 'V':
@@ -90,8 +94,18 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    if (optl) {
-        print_support(optl > 1);
+#if RELEASE_BUILD == 1
+    if (optv > 2) {
+        optv = 2;
+    }
+
+    if (optl > 2) {
+        optl = 2;
+    }
+#endif
+
+    if (opti) {
+        print_support(opti > 1);
 
         return EXIT_SUCCESS;
     }

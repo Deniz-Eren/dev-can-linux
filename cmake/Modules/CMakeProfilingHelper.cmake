@@ -21,8 +21,6 @@
 
 function( code_profiling_flags )
     if( CMAKE_BUILD_TYPE MATCHES Profiling )
-        add_compile_definitions( PROFILING=1 )
-
         if( "${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR
             "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" )
 

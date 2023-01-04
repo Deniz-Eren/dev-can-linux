@@ -21,8 +21,6 @@
 
 function( code_coverage_flags )
     if( CMAKE_BUILD_TYPE MATCHES Coverage )
-        add_compile_definitions( COVERAGE=1 )
-
         if( "${CMAKE_C_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" OR
             "${CMAKE_CXX_COMPILER_ID}" MATCHES "(Apple)?[Cc]lang" )
 
