@@ -234,6 +234,16 @@ TEST( Driver, SetBitTiming ) {
 
     EXPECT_EQ(set_bitrate_ret, EOK);
 
+    /* Set bitrate back to default value */
+    set_bitrate_ret = set_bitrate(fd_tx, 250000);
+
+    EXPECT_EQ(set_bitrate_ret, EOK);
+
+    /* Set bitrate back to default value */
+    set_bitrate_ret = set_bitrate(fd_rx, 250000);
+
+    EXPECT_EQ(set_bitrate_ret, EOK);
+
     close(fd_tx);
     close(fd_rx);
 }

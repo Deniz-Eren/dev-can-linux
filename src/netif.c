@@ -29,10 +29,6 @@
 #include "netif.h"
 
 
-void netif_wake_queue (struct net_device* dev) {
-    log_trace("netif_wake_queue\n");
-}
-
 void* netif_tx (void* arg) {
     device_session_t* ds = (device_session_t*)arg;
     struct net_device* dev = ds->device;
@@ -217,7 +213,36 @@ int netif_queue_stopped(const struct net_device *dev)
     return 0;
 }
 
-void netif_stop_queue(struct net_device *dev)
-{
+void netif_wake_queue (struct net_device* dev) {
+    log_trace("netif_wake_queue\n");
+
+    device_session_t* ds = device_sessions[dev->dev_id];
+
+    pthread_mutex_lock(&ds->mutex);
+    ds->queue_stopped = 0;
+    pthread_cond_signal(&ds->cond);
+    pthread_mutex_unlock(&ds->mutex);
+}
+
+void netif_stop_queue (struct net_device* dev) {
     log_trace("netif_stop_queue\n");
+
+    device_session_t* ds = device_sessions[dev->dev_id];
+
+    if (ds->tx_queue.attr.size == 0) {
+        return;
+    }
+
+    pthread_t self = pthread_self();
+    if (self != ds->tx_thread) {
+        return;
+    }
+
+    pthread_mutex_lock(&ds->mutex);
+    while (ds->queue_stopped && ds->tx_queue.attr.size != 0) {
+        pthread_cond_wait(&ds->cond, &ds->mutex);
+    }
+
+    ds->queue_stopped = 1;
+    pthread_mutex_unlock(&ds->mutex);
 }

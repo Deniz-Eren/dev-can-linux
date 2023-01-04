@@ -46,6 +46,7 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
 
     new_device->device = dev;
     new_device->root_client_session = NULL;
+    new_device->queue_stopped = 0;
 
     if (create_queue(&new_device->tx_queue, tx_attr) != EOK) {
     }
@@ -53,6 +54,24 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
     pthread_attr_init(&new_device->tx_thread_attr);
     pthread_attr_setdetachstate(
             &new_device->tx_thread_attr, PTHREAD_CREATE_DETACHED );
+
+    int result;
+
+    if ((result = pthread_mutex_init(&new_device->mutex, NULL)) != EOK) {
+        log_err("create_device_session pthread_mutex_init failed: %d\n",
+                result);
+
+        return NULL;
+    }
+
+    if ((result = pthread_cond_init(&new_device->cond, NULL)) != EOK) {
+        pthread_mutex_destroy(&new_device->mutex);
+
+        log_err("create_device_session pthread_cond_init failed: %d\n",
+                result);
+
+        return NULL;
+    }
 
     pthread_create( &new_device->tx_thread, &new_device->tx_thread_attr,
             &netif_tx, new_device );
@@ -107,6 +126,15 @@ void destroy_device_session (device_session_t* D) {
 
         root_device_session = NULL;
     }
+
+    pthread_mutex_lock(&D->mutex);
+    destroy_queue(&D->tx_queue);
+    D->queue_stopped = 0;
+    pthread_cond_signal(&D->cond);
+    pthread_mutex_unlock(&D->mutex);
+
+    pthread_mutex_destroy(&D->mutex);
+    pthread_cond_destroy(&D->cond);
 
     free(D);
 }

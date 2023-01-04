@@ -40,7 +40,12 @@ typedef struct device_session {
     pthread_attr_t tx_thread_attr;
     pthread_t tx_thread;
 
+    pthread_cond_t cond;
+    pthread_mutex_t mutex;
+
     queue_t tx_queue;
+
+    int queue_stopped;
 } device_session_t;
 
 extern device_session_t* root_device_session;

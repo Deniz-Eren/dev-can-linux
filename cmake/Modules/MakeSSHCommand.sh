@@ -63,36 +63,43 @@ FILENAME=`basename $FILE_SRC_PATH`
 DIRNAME=`dirname $FILE_SRC_PATH`
 
 cat << END > $SCRIPT_OUTPUT_PATH
-sshpass -p 'root' ssh \
-        -o 'StrictHostKeyChecking=no' \
-        -o 'UserKnownHostsFile=/dev/null' \
-        -o 'LogLevel=ERROR' \
-        -p$SSH_PORT root@localhost \
+sshpass -p 'root' ssh \\
+        -o 'StrictHostKeyChecking=no' \\
+        -o 'UserKnownHostsFile=/dev/null' \\
+        -o 'LogLevel=ERROR' \\
+        -p$SSH_PORT root@localhost \\
         "mkdir -p $DIRNAME"
 
-sshpass -p 'root' scp \
-        -o 'StrictHostKeyChecking=no' \
-        -o 'UserKnownHostsFile=/dev/null' \
-        -o 'LogLevel=ERROR' \
-        -r -P$SSH_PORT $FILE_SRC_PATH \
+sshpass -p 'root' scp \\
+        -o 'StrictHostKeyChecking=no' \\
+        -o 'UserKnownHostsFile=/dev/null' \\
+        -o 'LogLevel=ERROR' \\
+        -r -P$SSH_PORT $FILE_SRC_PATH \\
         root@localhost:$DIRNAME/
 
 PROGRAM_ARGS=\$@
 
-sshpass -p 'root' ssh \
-        -o 'StrictHostKeyChecking=no' \
-        -o 'UserKnownHostsFile=/dev/null' \
-        -o 'LogLevel=ERROR' \
-        -p$SSH_PORT root@localhost \
+sshpass -p 'root' ssh \\
+        -o 'StrictHostKeyChecking=no' \\
+        -o 'UserKnownHostsFile=/dev/null' \\
+        -o 'LogLevel=ERROR' \\
+        -p$SSH_PORT root@localhost \\
         "$FILE_DST_PATH \$PROGRAM_ARGS"
 
 EXITCODE=\$?
 
+sshpass -p 'root' ssh \\
+        -o 'StrictHostKeyChecking=no' \\
+        -o 'UserKnownHostsFile=/dev/null' \\
+        -o 'LogLevel=ERROR' \\
+        -p$SSH_PORT root@localhost \\
+        "rm -rf $FILE_SRC_PATH ; find $BUILD_ROOT -iname "*.obj*" -exec rm {} \\;"
+
 # Perform and file copy here
-sshpass -p 'root' scp \
-        -o 'StrictHostKeyChecking=no' \
-        -o 'UserKnownHostsFile=/dev/null' \
-        -o 'LogLevel=ERROR' \
+sshpass -p 'root' scp \\
+        -o 'StrictHostKeyChecking=no' \\
+        -o 'UserKnownHostsFile=/dev/null' \\
+        -o 'LogLevel=ERROR' \\
         -r -P$SSH_PORT root@localhost:$BUILD_ROOT $BUILD_ROOT/..
 
 exit \$EXITCODE

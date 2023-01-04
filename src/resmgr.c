@@ -996,7 +996,68 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_GET_STATS: // e.g. canctl -s
     {
-        data->dcmd.stats.transmitted_frames = 0x0; // set transmitted_frames
+        struct net_device* device = _ocb->resmgr->device_session->device;
+        struct sja1000_priv* priv = netdev_priv(device);
+
+        data->dcmd.stats.transmitted_frames = device->stats.tx_packets;
+        data->dcmd.stats.received_frames = device->stats.rx_packets;
+        data->dcmd.stats.missing_ack = 0;
+
+        /* Bus errors */
+        data->dcmd.stats.total_frame_errors =
+            device->stats.rx_errors + device->stats.tx_errors;
+
+        /* Arbitration lost errors */
+        data->dcmd.stats.stuff_errors = priv->can.can_stats.arbitration_lost;
+
+        data->dcmd.stats.form_errors = 0;
+        data->dcmd.stats.dom_bit_recess_errors = 0;
+        data->dcmd.stats.recess_bit_dom_errors = 0;
+        data->dcmd.stats.parity_errors = 0;
+        data->dcmd.stats.crc_errors = device->stats.rx_crc_errors;
+        data->dcmd.stats.hw_receive_overflows = device->stats.rx_over_errors;
+        data->dcmd.stats.sw_receive_q_full = 0;
+
+        /* Changes to error warning state */
+        data->dcmd.stats.error_warning_state_count =
+            priv->can.can_stats.error_warning;
+
+        /* Changes to error passive state */
+        data->dcmd.stats.error_passive_state_count =
+            priv->can.can_stats.error_passive;
+
+        /* Changes to bus off state */
+        data->dcmd.stats.bus_off_state_count = priv->can.can_stats.bus_off;
+
+        data->dcmd.stats.bus_idle_count = priv->can.can_stats.bus_error;
+
+        /* CAN controller re-starts */
+        data->dcmd.stats.power_down_count =
+            data->dcmd.stats.wake_up_count = priv->can.can_stats.restarts;
+
+        data->dcmd.stats.rx_interrupts = device->stats.rx_errors;
+        data->dcmd.stats.tx_interrupts = device->stats.tx_errors;
+        data->dcmd.stats.total_interrupts =
+            device->stats.rx_errors + device->stats.tx_errors;
+
+        // TODO: These may need to be incremented on resmgr side:
+        // device->stats.rx_bytes;
+        // device->stats.tx_bytes;
+        // device->stats.rx_dropped;
+        // device->stats.tx_dropped;
+        // device->stats.multicast;
+        // device->stats.collisions;
+        // device->stats.rx_length_errors;
+        // device->stats.rx_frame_errors;
+        // device->stats.rx_fifo_errors;
+        // device->stats.rx_missed_errors;
+        // device->stats.tx_aborted_errors;
+        // device->stats.tx_carrier_errors;
+        // device->stats.tx_fifo_errors;
+        // device->stats.tx_heartbeat_errors;
+        // device->stats.tx_window_errors;
+        // device->stats.rx_compressed;
+        // device->stats.tx_compressed;
 
         nbytes = sizeof(data->dcmd.stats);
 

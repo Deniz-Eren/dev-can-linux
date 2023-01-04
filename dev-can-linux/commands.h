@@ -147,3 +147,18 @@ static inline int get_info (int filedes, struct can_devctl_info* info) {
 
     return EOK;
 }
+
+static inline int get_stats (int filedes, struct can_devctl_stats* info) {
+    int ret;
+
+    if (EOK != (ret = devctl(
+            filedes, CAN_DEVCTL_GET_STATS,
+            info, sizeof(struct can_devctl_stats), NULL )))
+    {
+        log_error("devctl CAN_DEVCTL_GET_STATS: %s\n", strerror(ret));
+
+        return -1;
+    }
+
+    return EOK;
+}

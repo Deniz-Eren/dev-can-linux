@@ -19,4 +19,5 @@
 #
 
 add_subdirectory( baud )
+add_subdirectory( flood )
 add_subdirectory( micro )
