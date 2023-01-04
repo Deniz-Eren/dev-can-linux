@@ -900,7 +900,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
             nbytes = sizeof(data->dcmd.canmsg);
 
-            log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %u [%s] %X [%d] " \
+            log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %ums [%s] %X [%d] " \
                       "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                     _ocb->resmgr->name,
                     canmsg->ext.timestamp,
@@ -946,7 +946,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
         enqueue(&_ocb->resmgr->device_session->tx_queue, &canmsg);
 
-        log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; %s TS: %u [%s] %X [%d] " \
+        log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT; %s TS: %ums [%s] %X [%d] " \
                   "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                 _ocb->resmgr->name,
                 canmsg.ext.timestamp,

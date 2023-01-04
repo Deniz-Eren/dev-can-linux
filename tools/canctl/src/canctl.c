@@ -179,7 +179,7 @@ int main (int argc, char* argv[]) {
         }
 
         if (read_canmsg_ext(fd, &canmsg) == EOK) {
-            printf("read_canmsg_ext; %s TS: %X [%s] %X [%d] " \
+            printf("read_canmsg_ext; %s TS: %ums [%s] %X [%d] " \
                       "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                     OPEN_FILE,
                     canmsg.ext.timestamp,
@@ -236,7 +236,7 @@ int main (int argc, char* argv[]) {
         }
 
         if (write_canmsg_ext(fd, &canmsg) == EOK) {
-            printf("write_canmsg_ext; %s TS: %X [%s] %X [%d] " \
+            printf("write_canmsg_ext; %s TS: %ums [%s] %X [%d] " \
                       "%02X %02X %02X %02X %02X %02X %02X %02X\n",
                     OPEN_FILE,
                     canmsg.ext.timestamp,
