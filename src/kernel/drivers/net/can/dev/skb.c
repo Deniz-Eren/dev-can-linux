@@ -214,6 +214,9 @@ struct sk_buff *alloc_can_skb(struct net_device *dev, struct can_frame **cf)
         return NULL;
 
     skb_priv = fixed_malloc(sizeof(struct can_skb_priv));
+    if (unlikely(!skb_priv))
+        return NULL;
+
     memset(skb_priv, 0, sizeof(struct can_skb_priv));
 
     *cf = skb_priv->cf;

@@ -1,6 +1,6 @@
 # \file     CMakeLists.txt
 #
-# \details  CMake file for canctl tool
+# \details  CMake file for cansend tool
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -19,19 +19,19 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-add_executable( canctl
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/canctl.c )
+add_executable( cansend
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/cansend.c )
 
-target_include_directories( canctl PUBLIC
+target_include_directories( cansend PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/> )
 
 if( CMAKE_BUILD_TYPE MATCHES Profiling )
-    target_link_libraries( canctl ${QNX_PROFILING_LIBRARY} )
+    target_link_libraries( cansend ${QNX_PROFILING_LIBRARY} )
 else()
-    target_link_libraries( canctl )
+    target_link_libraries( cansend )
 endif()
 
-install( TARGETS canctl
+install( TARGETS cansend
     DESTINATION bin/
     COMPONENT bin )

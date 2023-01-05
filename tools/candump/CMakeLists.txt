@@ -1,5 +1,6 @@
 # \file     CMakeLists.txt
-# \brief    CMake listing file for tools
+#
+# \details  CMake file for candump tool
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -18,5 +19,19 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-add_subdirectory( cansend )
-add_subdirectory( candump )
+add_executable( candump
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/candump.c )
+
+target_include_directories( candump PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/> )
+
+if( CMAKE_BUILD_TYPE MATCHES Profiling )
+    target_link_libraries( candump ${QNX_PROFILING_LIBRARY} )
+else()
+    target_link_libraries( candump )
+endif()
+
+install( TARGETS candump
+    DESTINATION bin/
+    COMPONENT bin )

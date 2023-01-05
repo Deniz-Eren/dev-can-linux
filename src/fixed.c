@@ -97,6 +97,12 @@ void* fixed_malloc (size_t size) {
     }
 #endif
 
+    if (result == NULL) {
+        log_err("fixed_malloc: BUG! exceeded FIXED_MAX_NUM_BLOCKS !\n");
+
+        return NULL;
+    }
+
     memset(result, 0, size);
     return result;
 }

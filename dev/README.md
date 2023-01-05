@@ -1,4 +1,4 @@
-# DEV-CAN-LINUX
+# Development
 
 A containerized QNX development environment setup is presented here based on
 Ubuntu host operating system.
@@ -164,6 +164,51 @@ For remote private repo:
 Now you will have a disposable container setup where you can perform _down_ and
 _up_ whenever you like to throw away your _qnx710-dev_ container and re-create
 it from committed base image; this gives great flexibility.
+
+
+## Developing in Momentics
+
+To develope in Momentics, simply use the Git Perspective and import the QNX
+Momentics project.
+
+From within Momentics you can connect to the target QEmu hardware emulation
+environment over QConn (port 8000). To start the emulator check documentation
+[Emulation](../tests/emulation/).
+
+
+## Developing in Terminal
+
+To build in terminal simply:
+
+    cd dev-can-linux
+    mkdir build ; cd build
+    cmake -DCMAKE_BUILD_TYPE=Release ..
+    cpack
+
+Other build types you can indicate are Debug, Coverage and Profiling.
+
+The following installer files will be created:
+
+    dev-can-linux-1.0.0-qnx710[build type].tar.gz
+    dev-can-linux-1.0.0-qnx710-dev.tar.gz
+
+Where the "[build type]" is empty for Release, "-g" for Debug, "-cov" for
+Coverage and "-pro" for Profiling.
+
+The '-dev' variant contains the application development headers used to develope
+software that talks to dev-can-linux driver. You do not need to install this on
+the target system, but rather your development environment if you are developing
+an application that needs to talk to dev-can-linux channels.
+
+From CMake you can also run the tests with:
+
+    ctest
+
+Because we are cross-compiling in CMake, we can only run the tests on a QNX
+target. The CMake project is configured to talk to our QEmu hardware emulation
+over SSH. You must make sure this emulator has been started up before running
+ctest. To start the emulator check documentation
+[Emulation](../tests/emulation/).
 
 
 ## Debugging Core Dumps (GDB Usage)

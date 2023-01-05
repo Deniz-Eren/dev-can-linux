@@ -141,8 +141,6 @@ void destroy_device_session (device_session_t* D) {
 
 client_session_t*
 create_client_session (struct net_device* dev, const queue_attr_t* rx_attr) {
-    int result;
-
     if (dev == NULL) {
         return NULL;
     }
@@ -169,7 +167,12 @@ create_client_session (struct net_device* dev, const queue_attr_t* rx_attr) {
 
     new_client->device_session = ds;
 
-    if (create_queue(&new_client->rx_queue, rx_attr) != EOK) {
+    int err;
+    if ((err = create_queue(&new_client->rx_queue, rx_attr)) != EOK) {
+        log_err("create_client_session fail: create_queue err: %d\n", err);
+
+        destroy_client_session(new_client);
+        return NULL;
     }
 
     return new_client;

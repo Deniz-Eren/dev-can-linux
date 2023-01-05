@@ -128,11 +128,17 @@ int netif_rx (struct sk_buff* skb) {
                     skb->dev->dev_id, msg->data[6], msg->data[7]);
         }
 
+        kfree_skb(skb);
+
         return NET_RX_SUCCESS;
     }
 
     if (msg->can_id & CAN_RTR_FLAG) {
         log_trace("netif_rx; CAN_RTR_FLAG\n");
+
+        if (!skb->is_echo) {
+            kfree_skb(skb);
+        }
 
         return NET_RX_SUCCESS;
     }
@@ -182,6 +188,10 @@ int netif_rx (struct sk_buff* skb) {
             msg->data[5],
             msg->data[6],
             msg->data[7]);
+
+    if (!skb->is_echo) {
+        kfree_skb(skb);
+    }
 
     return NET_RX_SUCCESS;
 }

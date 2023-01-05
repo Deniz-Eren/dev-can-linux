@@ -76,7 +76,14 @@ void log_trace_bittiming_info (struct net_device* device);
 
 
 int register_netdev(struct net_device *dev) {
-    snprintf(dev->name, IFNAMSIZ, "can%d", dev->dev_id);
+    if (dev == NULL) {
+        log_err("register_netdev failed: invalid net_device\n");
+        return -1;
+    }
+
+    int id = dev->dev_id;
+
+    snprintf(dev->name, IFNAMSIZ, "can%d", id);
 
     log_trace("register_netdev: %s\n", dev->name);
 
@@ -95,10 +102,10 @@ int register_netdev(struct net_device *dev) {
     log_trace_bittiming_info(dev);
 
     if (dev->netdev_ops->ndo_open(dev)) {
+        log_err("register_netdev failed: ndo_open error\n");
+
         return -1;
     }
-
-    int id = dev->dev_id;
 
     const queue_attr_t tx_attr = { .size = 15 };
 
@@ -281,11 +288,12 @@ int register_netdev(struct net_device *dev) {
 }
 
 void unregister_netdev(struct net_device *dev) {
-    int i, j;
+    if (dev == NULL) {
+        log_err("unregister_netdev failed: invalid net_device\n");
+        return;
+    }
 
     log_trace("unregister_netdev: %s\n", dev->name);
-
-    int id = dev->dev_id;
 
     dev->flags &= ~IFF_UP;
 
@@ -297,6 +305,9 @@ void unregister_netdev(struct net_device *dev) {
 
     while (*location != NULL) {
         can_resmgr_t* resmgr = *location;
+
+        char name[MAX_NAME_SIZE];
+        strncpy(name, resmgr->name, MAX_NAME_SIZE);
 
         resmgr->shutdown = 1;
 
@@ -333,14 +344,13 @@ void unregister_netdev(struct net_device *dev) {
 
 #if CONFIG_QNX_RESMGR_THREAD_POOL == 1
         if (thread_pool_destroy(resmgr->thread_pool) == -1) {
-            log_err( "internal error; thread_pool_destroy failure " \
-                     "(%d, %d)\n", i, j );
+            log_err( "internal error; thread_pool_destroy failure (%s)\n",
+                    name );
         }
 #endif
 
         if (resmgr_detach(resmgr->dispatch, resmgr->id, 0) == -1) {
-            log_err( "internal error; resmgr_detach failure (%d, %d)\n",
-                    i, j );
+            log_err("internal error; resmgr_detach failure (%s)\n", name);
         }
 
 #if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1
@@ -354,8 +364,8 @@ void unregister_netdev(struct net_device *dev) {
 #endif
 
         if (dispatch_destroy(resmgr->dispatch) == -1) {
-            log_err( "internal error; dispatch_destroy failure (%d, %d)\n",
-                    i, j );
+            log_err( "internal error; dispatch_destroy failure (%s)\n",
+                    name );
         }
 
         free(resmgr);
@@ -459,8 +469,6 @@ void* rx_loop (void* arg) {
     struct can_ocb* ocb = (struct can_ocb*)arg;
 
     can_resmgr_t* resmgr = ocb->resmgr;
-    device_session_t* ds = resmgr->device_session;
-    struct net_device* device = ds->device;
 
     int coid;
     msg_again_t msg_again = { .id = _IO_MAX + 1 };
@@ -494,6 +502,10 @@ void* rx_loop (void* arg) {
 
         if (ocb->rx.rcvid != -1) {
             struct can_msg* canmsg = dequeue_peek(ocb->rx.queue);
+
+            if (canmsg == NULL) {
+                continue;
+            }
 
             pthread_mutex_lock(&rx_mutex);
             msg_again.rcvid = ocb->rx.rcvid;
@@ -578,8 +590,6 @@ int io_open (resmgr_context_t* ctp, io_open_t* msg,
  */
 
 int io_close_ocb (resmgr_context_t* ctp, void* reserved, RESMGR_OCB_T* _ocb) {
-    can_resmgr_t* resmgr = get_resmgr(&root_resmgr, ctp->id);
-
     log_trace("io_close_ocb -> id: %d\n", ctp->id);
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
@@ -758,8 +768,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     data = _DEVCTL_DATA(msg->i);
 
     /*
-     * Where applicable an associated canctl tool usage example is given as
-     * comments in each case below.
+     * Where applicable an associated canctl, candump or cansend tool usage
+     * example is given as comments in each case below.
      */
     switch (msg->i.dcmd) {
     /*
@@ -776,41 +786,6 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         log_trace("EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS: %dms (%s)\n",
                 can_latency_limit,
                 _ocb->resmgr->name);
-
-        break;
-    }
-    case EXT_CAN_DEVCTL_SET_BITRATE:
-    {
-        uint32_t bitrate = data->bitrate;
-        nbytes = 0;
-
-        log_trace("EXT_CAN_DEVCTL_SET_BITRATE: %dbits/second (%s)\n",
-                bitrate,
-                _ocb->resmgr->name);
-
-        struct user_dev_setup user = {
-                .set_bittiming = true,
-                .bittiming = { .bitrate = bitrate }
-        };
-
-        struct net_device* device = _ocb->resmgr->device_session->device;
-
-        int err;
-
-        device->flags &= ~IFF_UP;
-
-        if ((err = device->resmgr_ops->changelink(device, &user)) != 0) {
-            log_err("EXT_CAN_DEVCTL_SET_BITRATE: changelink failed: (%d) %s\n",
-                    -err, strerror(-err));
-
-            device->flags |= IFF_UP;
-            return -err;
-        }
-
-        device->flags |= IFF_UP;
-
-        log_trace("EXT_CAN_DEVCTL_SET_BITRATE: success\n");
-        log_trace_bittiming_info(device);
 
         break;
     }
@@ -883,8 +858,6 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_READ_CANMSG_EXT: // e.g. canctl -u0,rx0 -r
     {
-        int i;
-
         if (_ocb->session->rx_queue.attr.size == 0) {
             nbytes = 0;
 
@@ -933,13 +906,6 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         break;
     }
     case CAN_DEVCTL_WRITE_CANMSG_EXT: // e.g. canctl -u0,rx0 -w0x22,1,0x55
-    // case -2141977334: // TODO: raise to QNX
-                      // Instead of the above macro, this command ID seems to be
-                      // sent by canctl program. Perhaps canctl hasn't been
-                      // recompiled after some changes made to 'sys/can_dcmd.h'
-                      // by QNX? However the data is all scrambled and yields
-                      // incorrect results. Thus custom verion of canctl needs to
-                      // be made.
     {
         struct can_msg canmsg = data->dcmd.canmsg;
         nbytes = 0;
@@ -996,6 +962,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_GET_STATS: // e.g. canctl -s
     {
+        nbytes = sizeof(data->dcmd.stats);
+
         struct net_device* device = _ocb->resmgr->device_session->device;
         struct sja1000_priv* priv = netdev_priv(device);
 
@@ -1059,10 +1027,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         // device->stats.rx_compressed;
         // device->stats.tx_compressed;
 
-        nbytes = sizeof(data->dcmd.stats);
-
-        log_trace("CAN_DEVCTL_GET_STATS; %d\n",
-                data->dcmd.stats.transmitted_frames);
+        log_trace("CAN_DEVCTL_GET_STATS\n");
         break;
     }
     case CAN_DEVCTL_GET_INFO: // e.g. canctl -u0,rx0 -i
@@ -1121,6 +1086,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         data->dcmd.info.silent =
             (priv->ctrlmode & CAN_CTRLMODE_LISTENONLY ? 1 : 0);
 
+        log_trace("CAN_DEVCTL_GET_INFO\n");
         break;
     }
     case CAN_DEVCTL_SET_TIMING: // e.g. canctl -u0,rx0 -c 250k,2,7,2,1
@@ -1146,7 +1112,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                     - timing.time_segment_1
                     - timing.time_segment_2;
 
-        struct user_dev_setup user = {
+        struct user_dev_setup user1 = {
                 .set_bittiming = true,
                 .bittiming = {
                     .bitrate = 0, // set to zero to invoke it's calculation
@@ -1162,11 +1128,31 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                 }
         };
 
+        struct user_dev_setup user2 = {
+                .set_bittiming = true,
+                .bittiming = {
+                    .bitrate = timing.ref_clock_freq,
+                    .sample_point = 0,
+                    .tq = 0,
+                    .prop_seg = 0,
+                    .sjw = 0,
+                    .phase_seg1 = 0,
+                    .phase_seg2 = 0,
+                    .brp = 0
+                }
+        };
+
+        struct user_dev_setup* user = &user1;
+
+        if (timing.bit_rate_prescaler == 0) {
+            user = &user2;
+        }
+
         int err;
 
         device->flags &= ~IFF_UP;
 
-        if ((err = device->resmgr_ops->changelink(device, &user)) != 0) {
+        if ((err = device->resmgr_ops->changelink(device, user)) != 0) {
             log_err("CAN_DEVCTL_SET_TIMING: changelink failed: (%d) %s\n",
                     -err, strerror(-err));
 
@@ -1182,10 +1168,83 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         break;
     }
     case CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK:
-    case CAN_DEVCTL_RX_FRAME_RAW_BLOCK:
-    case CAN_DEVCTL_TX_FRAME_RAW:
-        return(ENOSYS);
+    case CAN_DEVCTL_RX_FRAME_RAW_BLOCK: // e.g. candump -u0,rx0
+    {
+        if (_ocb->session->rx_queue.attr.size == 0) {
+            nbytes = 0;
 
+            break;
+        }
+
+        struct can_msg* canmsg =
+            dequeue_nonblock( &_ocb->session->rx_queue,
+                    _ocb->resmgr->latency_limit_ms );
+
+        if (canmsg != NULL) { // Could be a zero size rx queue, i.e. a tx queue
+            data->dcmd.canmsg = *canmsg;
+
+            nbytes = sizeof(data->dcmd.canmsg);
+
+            log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %ums [%s] %X [%d] " \
+                      "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                    _ocb->resmgr->name,
+                    canmsg->ext.timestamp,
+                    canmsg->ext.is_extended_mid ? "EFF" : "SFF",
+                    canmsg->mid,
+                    canmsg->len,
+                    canmsg->dat[0],
+                    canmsg->dat[1],
+                    canmsg->dat[2],
+                    canmsg->dat[3],
+                    canmsg->dat[4],
+                    canmsg->dat[5],
+                    canmsg->dat[6],
+                    canmsg->dat[7]);
+
+            pthread_mutex_lock(&rx_mutex);
+            _ocb->rx.rcvid = -1;
+            pthread_mutex_unlock(&rx_mutex);
+        }
+        else if (msg->i.dcmd == CAN_DEVCTL_RX_FRAME_RAW_BLOCK) {
+            pthread_mutex_lock(&rx_mutex);
+            _ocb->rx.rcvid = ctp->rcvid;
+
+            pthread_cond_signal(&_ocb->rx.cond);
+            pthread_mutex_unlock(&rx_mutex);
+
+            return _RESMGR_NOREPLY; /* put the client in block state */
+        }
+        else { // CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK
+            return EAGAIN; /* There are no messages in the queue. */
+        }
+
+        break;
+    }
+    case CAN_DEVCTL_TX_FRAME_RAW: // e.g. cansend -u0,tx0 -w0x1234,1,0xABCD
+    {
+        struct can_msg canmsg = data->dcmd.canmsg;
+        nbytes = 0;
+
+        enqueue(&_ocb->resmgr->device_session->tx_queue, &canmsg);
+
+        log_trace("CAN_DEVCTL_TX_FRAME_RAW; %s TS: %ums [%s] %X [%d] " \
+                  "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                _ocb->resmgr->name,
+                canmsg.ext.timestamp,
+                canmsg.ext.is_extended_mid ? "EFF" : "SFF",
+                canmsg.mid,
+                canmsg.len,
+                canmsg.dat[0],
+                canmsg.dat[1],
+                canmsg.dat[2],
+                canmsg.dat[3],
+                canmsg.dat[4],
+                canmsg.dat[5],
+                canmsg.dat[6],
+                canmsg.dat[7]);
+
+        break;
+    }
     default:
         log_trace("io_devctl unknown command: %d\n", msg->i.dcmd);
 

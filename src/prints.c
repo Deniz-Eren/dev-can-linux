@@ -219,7 +219,7 @@ void print_help (char* program_name) {
     printf("    Target specific hardware detection of hardware and enable max verbose mode for\n");
     printf("    debugging:\n");
     printf("\n");
-    printf("        \e[1mdev-can-linux -d 13fe:c302 -vvvv\e[m\n");
+    printf("        \e[1mdev-can-linux -d 13fe:c302 -vv -ll\e[m\n");
     printf("\n");
     printf("\e[1mBUGS\e[m\n");
     printf("    If you find a bug, please report it.\n");

@@ -53,7 +53,7 @@ void* receive_loop0 (void* arg) {
     receive_loop0_started = true;
 
     while (!receive_loop0_stop) {
-        if (read_canmsg_ext(fd, &canmsg) == EOK) {
+        if (read_frame_raw_block(fd, &canmsg) == EOK) {
             record0[record0_size++] = canmsg;
         }
     }
@@ -73,7 +73,7 @@ void* receive_loop1 (void* arg) {
     receive_loop1_started = true;
 
     while (!receive_loop1_stop) {
-        if (read_canmsg_ext(fd, &canmsg) == EOK) {
+        if (read_frame_raw_block(fd, &canmsg) == EOK) {
             record1[record1_size++] = canmsg;
         }
     }
@@ -132,23 +132,25 @@ TEST( Driver, FloodSend ) {
     EXPECT_EQ(get_stats_ret, EOK);
 
     uint32_t initial_tx_frames0 = stats0.transmitted_frames;
+    uint32_t initial_rx_frames0 = stats0.received_frames;
 
     get_stats_ret = get_stats(fd1_tx, &stats1);
 
     EXPECT_EQ(get_stats_ret, EOK);
 
     uint32_t initial_tx_frames1 = stats1.transmitted_frames;
+    uint32_t initial_rx_frames1 = stats1.received_frames;
 
     uint32_t t0_ms = get_clock_time_us()/1000;
 
     for (int i = 0; i < FLOOD_TEST_SIZE; ++i) {
-        write_canmsg_ext(fd0_tx, &canmsg);
+        write_frame_raw(fd0_tx, &canmsg);
     }
 
     uint32_t t1_ms = get_clock_time_us()/1000;
 
     for (int i = 0; i < FLOOD_TEST_SIZE; ++i) {
-        write_canmsg_ext(fd1_tx, &canmsg);
+        write_frame_raw(fd1_tx, &canmsg);
     }
 
     size_t last_record0_size = record0_size;
@@ -158,8 +160,8 @@ TEST( Driver, FloodSend ) {
 
     receive_loop0_stop = receive_loop1_stop = true;
 
-    write_canmsg_ext(fd0_tx, &canmsg);
-    write_canmsg_ext(fd1_tx, &canmsg);
+    write_frame_raw(fd0_tx, &canmsg);
+    write_frame_raw(fd1_tx, &canmsg);
 
     pthread_join(thread0, NULL);
     pthread_join(thread1, NULL);
@@ -188,7 +190,7 @@ TEST( Driver, FloodSend ) {
     EXPECT_NEAR(stats0.transmitted_frames - initial_tx_frames0,
             last_record0_size + 1, 5);
 
-    EXPECT_EQ(stats0.received_frames, 0);
+    EXPECT_EQ(stats0.received_frames - initial_rx_frames0, 0);
     EXPECT_EQ(stats0.missing_ack, 0);
     EXPECT_EQ(stats0.total_frame_errors, 0);
     EXPECT_EQ(stats0.stuff_errors, 0);
@@ -212,7 +214,7 @@ TEST( Driver, FloodSend ) {
     EXPECT_NEAR(stats1.transmitted_frames - initial_tx_frames1,
             last_record1_size + 1, 5);
 
-    EXPECT_EQ(stats1.received_frames, 0);
+    EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
     EXPECT_EQ(stats1.missing_ack, 0);
     EXPECT_EQ(stats1.total_frame_errors, 0);
     EXPECT_EQ(stats1.stuff_errors, 0);

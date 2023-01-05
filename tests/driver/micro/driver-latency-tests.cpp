@@ -75,15 +75,15 @@ TEST( Driver, LatencyFunctionality ) {
      * Write and read 2 message quickly so the latency check doesn't drop any
      * messages
      */
-    int write_ret = write_canmsg_ext(fd_tx, &canmsg_tx1);
+    int write_ret = write_frame_raw(fd_tx, &canmsg_tx1);
 
     EXPECT_EQ(write_ret, EOK);
 
-    write_ret = write_canmsg_ext(fd_tx, &canmsg_tx2);
+    write_ret = write_frame_raw(fd_tx, &canmsg_tx2);
 
     EXPECT_EQ(write_ret, EOK);
 
-    int read_ret = read_canmsg_ext(fd_rx, &canmsg_rx);
+    int read_ret = read_frame_raw_block(fd_rx, &canmsg_rx);
 
     EXPECT_EQ(read_ret, EOK);
 
@@ -101,7 +101,7 @@ TEST( Driver, LatencyFunctionality ) {
     EXPECT_EQ(canmsg_rx.ext.is_extended_mid, 1);
     EXPECT_EQ(canmsg_rx.ext.is_remote_frame, 0);
 
-    read_ret = read_canmsg_ext(fd_rx, &canmsg_rx);
+    read_ret = read_frame_raw_block(fd_rx, &canmsg_rx);
 
     EXPECT_EQ(read_ret, EOK);
 
@@ -122,17 +122,17 @@ TEST( Driver, LatencyFunctionality ) {
     /*
      * Now write 2 messages again with some delays
      */
-    write_ret = write_canmsg_ext(fd_tx, &canmsg_tx1);
+    write_ret = write_frame_raw(fd_tx, &canmsg_tx1);
 
     EXPECT_EQ(write_ret, EOK);
 
     usleep(6000); // sleep for 6ms when latency limit is 5ms
 
-    write_ret = write_canmsg_ext(fd_tx, &canmsg_tx2);
+    write_ret = write_frame_raw(fd_tx, &canmsg_tx2);
 
     EXPECT_EQ(write_ret, EOK);
 
-    read_ret = read_canmsg_ext(fd_rx, &canmsg_rx);
+    read_ret = read_frame_raw_block(fd_rx, &canmsg_rx);
 
     EXPECT_EQ(read_ret, EOK);
 

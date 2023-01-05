@@ -37,7 +37,7 @@ void* receive_loop0 (void* arg) {
 
     receive_loop0_started = true;
 
-    if (read_canmsg_ext(fd, canmsg) == EOK) {
+    if (read_frame_raw_block(fd, canmsg) == EOK) {
         close(fd);
         pthread_exit(canmsg);
     }
@@ -52,7 +52,7 @@ void* receive_loop1 (void* arg) {
 
     receive_loop1_started = true;
 
-    if (read_canmsg_ext(fd, canmsg) == EOK) {
+    if (read_frame_raw_block(fd, canmsg) == EOK) {
         close(fd);
         pthread_exit(canmsg);
     }
@@ -96,7 +96,7 @@ TEST( Driver, SingleSendReceive ) {
         usleep(1000);
     }
 
-    int write_ret = write_canmsg_ext(fd0, &canmsg);
+    int write_ret = write_frame_raw(fd0, &canmsg);
 
     EXPECT_EQ(write_ret, EOK);
 
@@ -119,7 +119,7 @@ TEST( Driver, SingleSendReceive ) {
     EXPECT_EQ(canmsg0.ext.is_remote_frame, 0);
 
     usleep(3000);
-    write_ret = write_canmsg_ext(fd1, &canmsg);
+    write_ret = write_frame_raw(fd1, &canmsg);
 
     EXPECT_EQ(write_ret, EOK);
 
@@ -183,7 +183,7 @@ TEST( Driver, SingleSendMultiReceive ) {
         usleep(1000);
     }
 
-    int write_ret = write_canmsg_ext(fd, &canmsg);
+    int write_ret = write_frame_raw(fd, &canmsg);
 
     EXPECT_EQ(write_ret, EOK);
 

@@ -53,17 +53,16 @@
  */
 #define EXT_CAN_CMD_CODE                    0x54
 #define EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS __DIOT(_DCMD_MISC, EXT_CAN_CMD_CODE + 0,  uint32_t)
-#define EXT_CAN_DEVCTL_SET_BITRATE          __DIOT(_DCMD_MISC, EXT_CAN_CMD_CODE + 1,  uint32_t)
 
 
-static inline int write_canmsg_ext (int filedes, struct can_msg* canmsg) {
+static inline int write_frame_raw (int filedes, struct can_msg* canmsg) {
     int ret;
 
     if (EOK != (ret = devctl(
-            filedes, CAN_DEVCTL_WRITE_CANMSG_EXT,
+            filedes, CAN_DEVCTL_TX_FRAME_RAW,
             canmsg, sizeof(struct can_msg), NULL )))
     {
-        log_error("devctl CAN_DEVCTL_WRITE_CANMSG_EXT: %s\n", strerror(ret));
+        log_error("devctl CAN_DEVCTL_TX_FRAME_RAW: %s\n", strerror(ret));
 
         return -1;
     }
@@ -71,14 +70,30 @@ static inline int write_canmsg_ext (int filedes, struct can_msg* canmsg) {
     return EOK;
 }
 
-static inline int read_canmsg_ext (int filedes, struct can_msg* canmsg) {
+static inline int read_frame_raw_block (int filedes, struct can_msg* canmsg) {
     int ret;
 
     if (EOK != (ret = devctl(
-            filedes, CAN_DEVCTL_READ_CANMSG_EXT,
+            filedes, CAN_DEVCTL_RX_FRAME_RAW_BLOCK,
             canmsg, sizeof(struct can_msg), NULL )))
     {
-        log_error("devctl CAN_DEVCTL_READ_CANMSG_EXT: %s\n", strerror(ret));
+        log_error("devctl CAN_DEVCTL_RX_FRAME_RAW_BLOCK: %s\n", strerror(ret));
+
+        return -1;
+    }
+
+    return EOK;
+}
+
+static inline int read_frame_raw_noblock (int filedes, struct can_msg* canmsg) {
+    int ret;
+
+    if (EOK != (ret = devctl(
+            filedes, CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK,
+            canmsg, sizeof(struct can_msg), NULL )))
+    {
+        log_error("devctl CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK: %s\n",
+                strerror(ret));
 
         return -1;
     }
@@ -104,13 +119,13 @@ static inline int set_latency_limit_ms (int filedes, uint32_t value) {
 
 static inline int set_bitrate (int filedes, uint32_t value) {
     int ret;
+    struct can_devctl_timing timing = { .ref_clock_freq = value };
 
     if (EOK != (ret = devctl(
-            filedes, EXT_CAN_DEVCTL_SET_BITRATE,
-            &value, sizeof(uint32_t), NULL )))
+            filedes, CAN_DEVCTL_SET_TIMING,
+            &timing, sizeof(struct can_devctl_timing), NULL )))
     {
-        log_error("devctl EXT_CAN_DEVCTL_SET_BITRATE: %s\n",
-                strerror(ret));
+        log_error("devctl CAN_DEVCTL_SET_TIMING: %s\n", strerror(ret));
 
         return -1;
     }

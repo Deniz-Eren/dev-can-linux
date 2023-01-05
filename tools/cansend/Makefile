@@ -5,9 +5,6 @@
 #           Do NOT remove or replace this file using CMake system, because this
 #           file is used parallel to the CMake system when developing within QNX
 #           Momentics.
-#           IMPORTANT! Macro configurations must be handled with configuration
-#           files in config/ directory, not here directly! Both CMake and this
-#           Makefile refer to the same configuration settings.
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -26,7 +23,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-ARTIFACT = dev-can-linux
+ARTIFACT = cansend
 
 #Build architecture/variant string, possible values: x86, armv7le, etc...
 PLATFORM ?= x86_64
@@ -42,17 +39,11 @@ TARGET = $(OUTPUT_DIR)/$(ARTIFACT)
 
 CC = qcc -Vgcc_nto$(PLATFORM)
 CXX = q++ -Vgcc_nto$(PLATFORM)_cxx
-LD = $(CXX)
+LD = $(CC)
 
 #User defined include/preprocessor flags and libraries
 
-INCLUDES += -I. -Isrc -Isrc/include \
-	-Isrc/kernel \
-	-Isrc/kernel/include \
-	-Isrc/kernel/include/uapi \
-	-Isrc/kernel/arch/x86/include
-
-LIBS += -lpci
+INCLUDES += -I../../
 
 #Compiler flags for build profiles
 CCFLAGS_release += -O2
@@ -61,33 +52,6 @@ CCFLAGS_coverage += -g -O0 -ftest-coverage -fprofile-arcs -nopipe -Wc,-auxbase-s
 LDFLAGS_coverage += -ftest-coverage -fprofile-arcs
 CCFLAGS_profile += -g -O0 -finstrument-functions
 LIBS_profile += -lprofilingS
-
-#
-# Coverage & Profiling
-#
-
-CCFLAGS_coverage +=	-DCOVERAGE_BUILD
-CCFLAGS_profile +=	-DPROFILING_BUILD
-
-#
-# Project specific configuration macros
-#
-
-CCFLAGS += -DPROGRAM_VERSION=\"`cat "config/PROGRAM_VERSION"`\"
-CCFLAGS += -DCONFIG_QNX_INTERRUPT_ATTACH=`cat "config/CONFIG_QNX_INTERRUPT_ATTACH"`
-CCFLAGS += -DCONFIG_QNX_INTERRUPT_ATTACH_EVENT=`cat "config/CONFIG_QNX_INTERRUPT_ATTACH_EVENT"`
-CCFLAGS += -DCONFIG_QNX_RESMGR_SINGLE_THREAD=`cat "config/CONFIG_QNX_RESMGR_SINGLE_THREAD"`
-CCFLAGS += -DCONFIG_QNX_RESMGR_THREAD_POOL=`cat "config/CONFIG_QNX_RESMGR_THREAD_POOL"`
-
-#
-# Linux Kernel configuration macros
-#
-
-CCFLAGS +=	-DCONFIG_HZ=`cat "config/CONFIG_HZ"`
-
-# Always enable the following
-CCFLAGS +=	-DCONFIG_CAN_CALC_BITTIMING
-CCFLAGS +=	-DCONFIG_X86_64 # 32-bit alternative is CONFIG_X86_32
 
 #Generic compiler flags (which include build type flags)
 CCFLAGS_all += -Wall -fmessage-length=0
@@ -102,7 +66,7 @@ DEPS = -Wp,-MMD,$(@:%.o=%.d),-MT,$@
 rwildcard = $(wildcard $(addprefix $1/*.,$2)) $(foreach d,$(wildcard $1/*),$(call rwildcard,$d,$2))
 
 #Source list
-SRCS = $(call rwildcard, src, c cpp)
+SRCS = $(call rwildcard, src, c)
 
 #Object files list
 OBJS = $(addprefix $(OUTPUT_DIR)/,$(addsuffix .o, $(basename $(SRCS))))
@@ -111,9 +75,6 @@ OBJS = $(addprefix $(OUTPUT_DIR)/,$(addsuffix .o, $(basename $(SRCS))))
 $(OUTPUT_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
 	$(CC) -c $(DEPS) -o $@ $(INCLUDES) $(CCFLAGS_all) $(CCFLAGS) $<
-$(OUTPUT_DIR)/%.o: %.cpp
-	@mkdir -p $(dir $@)
-	$(CXX) -c $(DEPS) -o $@ $(INCLUDES) $(CCFLAGS_all) $(CCFLAGS) $<
 
 #Linking rule
 $(TARGET):$(OBJS)

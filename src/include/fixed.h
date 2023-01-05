@@ -42,6 +42,9 @@
  *      "<user-type> exceeds fixed block-size" );
  *
  * This requirement will prevent regression.
+ *
+ * Amount of RAM reserved is calculated (in bytes):
+ *     Fixed memory = FIXED_MAX_NUM_BLOCKS*FIXED_MAX_BLOCK_SIZE
  */
 #define FIXED_MAX_NUM_BLOCKS  256
 #define FIXED_MAX_BLOCK_SIZE  40

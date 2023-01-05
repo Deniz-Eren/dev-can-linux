@@ -23,7 +23,7 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-ARTIFACT = canctl
+ARTIFACT = candump
 
 #Build architecture/variant string, possible values: x86, armv7le, etc...
 PLATFORM ?= x86_64
@@ -42,6 +42,8 @@ CXX = q++ -Vgcc_nto$(PLATFORM)_cxx
 LD = $(CC)
 
 #User defined include/preprocessor flags and libraries
+
+INCLUDES += -I../../
 
 #Compiler flags for build profiles
 CCFLAGS_release += -O2
