@@ -27,7 +27,7 @@
 #include <prints.h>
 #include <session.h>
 
-struct pci_dev pdev = {
+static struct pci_dev pdev = {
         .ba = NULL,
         .vendor = 0,
         .device = 0,
@@ -36,7 +36,7 @@ struct pci_dev pdev = {
 };
 
 
-void sigint_signal_handler (int sig_no) {
+static void sigint_signal_handler (int sig_no) {
     terminate_run_wait();
 }
 

@@ -23,6 +23,14 @@
 #include <dev-can-linux/commands.h>
 
 
+static int fd = -1;
+
+static void sigint_signal_handler (int sig_no) {
+    close(fd);
+
+    exit(0);
+}
+
 int main (int argc, char* argv[]) {
     int opt;
     char buffer[1024];
@@ -62,7 +70,9 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    int     fd, ret = EOK;
+    signal(SIGINT, sigint_signal_handler);
+
+    int     ret = EOK;
     struct  can_msg canmsg;
 
     char OPEN_FILE[16];
@@ -72,6 +82,8 @@ int main (int argc, char* argv[]) {
             (optu_mailbox_is_tx ? "tx" : "rx"), optu_mailbox );
 
     if ((fd = open(OPEN_FILE, O_RDWR)) == -1) {
+        printf("candump error: %s\n", strerror(errno));
+
         exit(EXIT_FAILURE);
     }
 

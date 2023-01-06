@@ -39,6 +39,7 @@ void can_ocb_free (IOFUNC_OCB_T* ocb);
 int io_close_ocb (resmgr_context_t* ctp, void* reserved,   RESMGR_OCB_T* ocb);
 int io_read      (resmgr_context_t* ctp, io_read_t*   msg, RESMGR_OCB_T* ocb);
 int io_write     (resmgr_context_t* ctp, io_write_t*  msg, RESMGR_OCB_T* ocb);
+int io_unblock   (resmgr_context_t* ctp, io_pulse_t* msg,  RESMGR_OCB_T* ocb);
 int io_devctl    (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* ocb);
 int io_open      (resmgr_context_t* ctp, io_open_t*   msg,
                     RESMGR_HANDLE_T* handle, void* extra);
@@ -130,6 +131,7 @@ int register_netdev(struct net_device *dev) {
         connect_funcs.open = io_open;
         io_funcs.close_ocb = io_close_ocb;
         io_funcs.read = io_read;
+        io_funcs.unblock = io_unblock;
         io_funcs.write = io_write;
         io_funcs.devctl = io_devctl;
     }
@@ -735,6 +737,27 @@ int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
     }
 
     return (_RESMGR_NPARTS (0));
+}
+
+int io_unblock (resmgr_context_t* ctp, io_pulse_t* msg, RESMGR_OCB_T* _ocb) {
+    log_trace("io_unblock -> id: %d\n", ctp->id);
+
+    iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
+
+    int status;
+    if((status = iofunc_unblock_default(ctp, msg, ocb)) != _RESMGR_DEFAULT) {
+        printf("returning here\n");
+        return status;
+    }
+
+    pthread_mutex_lock(&rx_mutex);
+    if (_ocb->rx.rcvid != -1) {
+        // Don't leave any blocking clients hanging
+        _ocb->rx.rcvid = -1;
+    }
+    pthread_mutex_unlock(&rx_mutex);
+
+    return 0;
 }
 
 int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
