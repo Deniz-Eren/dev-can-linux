@@ -219,5 +219,5 @@ One can use GDB within the Ubuntu development environment shell, simply running:
 
 If you have a core dump file (for example _vgcore.704533_):
 
-    $QNX_HOST/usr/bin/ntox86_64-gdb dev-can-linux vgcore.704533
+    $QNX_HOST/usr/bin/ntox86_64-gdb dev-can-linux dev-can-linux.core
 

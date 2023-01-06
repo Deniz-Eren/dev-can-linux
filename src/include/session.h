@@ -24,6 +24,8 @@
 #include <config.h>
 #include <queue.h>
 
+/* must ensure session create, destroy and handling are atomic */
+extern pthread_mutex_t device_session_create_mutex;
 
 typedef struct client_session {
     struct client_session *prev, *next;

@@ -27,9 +27,14 @@ device_session_t* root_device_session = NULL;
 device_session_t** device_sessions = NULL; // Fast lookup array using dev_id
 static size_t device_sessions_size = 0;
 
+/* must ensure session create, destroy and handling are atomic */
+pthread_mutex_t device_session_create_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 device_session_t*
 create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
+    pthread_mutex_lock(&device_session_create_mutex);
+
     device_session_t* new_device = malloc(sizeof(device_session_t));
 
     device_session_t* last = get_last_device_session();
@@ -61,6 +66,7 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
         log_err("create_device_session pthread_mutex_init failed: %d\n",
                 result);
 
+        pthread_mutex_unlock(&device_session_create_mutex);
         return NULL;
     }
 
@@ -70,6 +76,7 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
         log_err("create_device_session pthread_cond_init failed: %d\n",
                 result);
 
+        pthread_mutex_unlock(&device_session_create_mutex);
         return NULL;
     }
 
@@ -96,6 +103,7 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
 
     device_sessions[dev->dev_id] = new_device;
 
+    pthread_mutex_unlock(&device_session_create_mutex);
     return new_device;
 }
 
@@ -103,6 +111,8 @@ void destroy_device_session (device_session_t* D) {
     if (D == NULL) {
         return;
     }
+
+    pthread_mutex_lock(&device_session_create_mutex);
 
     if (D->prev && D->next) {
         D->prev->next = D->next;
@@ -137,6 +147,8 @@ void destroy_device_session (device_session_t* D) {
     pthread_cond_destroy(&D->cond);
 
     free(D);
+
+    pthread_mutex_unlock(&device_session_create_mutex);
 }
 
 client_session_t*

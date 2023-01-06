@@ -164,15 +164,19 @@ int netif_rx (struct sk_buff* skb) {
         canmsg.dat[i] = msg->data[i]; // Set DAT
     }
 
+    pthread_mutex_lock(&device_session_create_mutex);
+
     device_session_t* ds = device_sessions[skb->dev->dev_id];
 
     client_session_t** it = &ds->root_client_session;
-    while (*it != NULL) {
+    while (it != NULL && *it != NULL) {
         if (enqueue(&(*it)->rx_queue, &canmsg) != EOK) {
         }
 
         it = &(*it)->next;
     }
+
+    pthread_mutex_unlock(&device_session_create_mutex);
 
     log_trace("netif_rx; can%d [%s] %X [%d] %2X %2X %2X %2X %2X %2X %2X %2X\n",
             skb->dev->dev_id,
