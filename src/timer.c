@@ -42,6 +42,8 @@
     unique values
 #endif
 
+uint32_t user_timestamp = 0;
+uint32_t user_timestamp_time = 0;
 
 static void* timer_loop (void* arg);
 

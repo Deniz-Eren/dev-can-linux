@@ -51,3 +51,5 @@ int optl = 0;
 int opti = 0;
 int optq = 0;
 int optd = 0, opt_vid = -1, opt_did = -1;
+int opts = 0;
+int optt = 0;

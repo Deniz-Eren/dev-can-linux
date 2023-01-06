@@ -43,7 +43,7 @@ static void sigint_signal_handler (int sig_no) {
 int main (int argc, char* argv[]) {
     int opt;
 
-    while ((opt = getopt(argc, argv, "d:viqlVCwc?h")) != -1) {
+    while ((opt = getopt(argc, argv, "d:viqstlVCwc?h")) != -1) {
         switch (opt) {
         case 'd':
             optd = 1;
@@ -57,6 +57,14 @@ int main (int argc, char* argv[]) {
 
         case 'q':
             optq = 1;
+            break;
+
+        case 's':
+            opts = 1;
+            break;
+
+        case 't':
+            optt = 1;
             break;
 
         case 'l':

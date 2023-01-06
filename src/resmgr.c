@@ -91,6 +91,11 @@ int register_netdev(struct net_device *dev) {
             .bittiming = { .bitrate = 250000 }
     };
 
+    if (opts) { /* silent mode; disable all CAN-bus TX capability */
+        user.set_ctrlmode = true;
+        user.ctrlmode.flags = user.ctrlmode.mask = CAN_CTRLMODE_LISTENONLY;
+    }
+
     int err;
     if ((err = dev->resmgr_ops->changelink(dev, &user)) != 0) {
         log_err("register_netdev: changelink failed: %d\n", err);
@@ -890,8 +895,19 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_GET_TIMESTAMP: // e.g. canctl -u1 -T
     {
-        data->dcmd.timestamp = 0x0; // set TIMESTAMP
         nbytes = sizeof(data->dcmd.timestamp);
+
+        // set TIMESTAMP
+        if (optt) {
+            data->dcmd.timestamp = user_timestamp;
+        }
+        else if (user_timestamp_time != 0) {
+            data->dcmd.timestamp =
+                user_timestamp + get_clock_time_us()/1000 - user_timestamp_time;
+        }
+        else {
+            data->dcmd.timestamp = get_clock_time_us()/1000;
+        }
 
         log_trace("CAN_DEVCTL_GET_TIMESTAMP: %x\n", data->dcmd.timestamp);
         break;
@@ -900,6 +916,9 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     {
         uint32_t ts = data->dcmd.timestamp;
         nbytes = 0;
+
+        user_timestamp = ts;
+        user_timestamp_time = get_clock_time_us()/1000;
 
         log_trace("CAN_DEVCTL_SET_TIMESTAMP: %x\n", ts);
         break;

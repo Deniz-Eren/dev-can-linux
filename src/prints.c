@@ -165,6 +165,15 @@ void print_help (char* program_name) {
     printf("                     Errors and warnings are printed to stderr normally when\n");
     printf("                     this option is not selected. Logging to syslog is not\n");
     printf("                     impacted by this option.\n");
+    printf("    \e[1m-s\e[m             - silent mode disables all CAN-bus TX capability\n");
+    printf("    \e[1m-t\e[m             - user timestamp mode disables internal timestamping of\n");
+    printf("                     CAN-bus messages. Instead the driver expects devctl()\n");
+    printf("                     CAN_DEVCTL_SET_TIMESTAMP command (or set_timestamp()\n");
+    printf("                     function in dev-can-linux headers) to set the timestamps.\n");
+    printf("                     In the absence of this option the devctl() set_timestamp()\n");
+    printf("                     command will synchronize the internal timestamp to the supplied\n");
+    printf("                     timestamp (in milliseconds). By default this timestamp is with\n");
+    printf("                     reference to boot-up time.\n");
     printf("    \e[1m-v\e[m             - verbose 1; prints out info to stdout\n");
     printf("    \e[1m-vv\e[m            - verbose 2; prints out info & debug to stdout\n");
 #if RELEASE_BUILD != 1

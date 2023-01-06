@@ -27,6 +27,15 @@ Options:
                      Errors and warnings are printed to stderr normally when
                      this option is not selected. Logging to syslog is not
                      impacted by this option.
+    -s             - silent mode disables all CAN-bus TX capability
+    -t             - user timestamp mode disables internal timestamping of
+                     CAN-bus messages. Instead the driver expects devctl()
+                     CAN_DEVCTL_SET_TIMESTAMP command (or set_timestamp()
+                     function in dev-can-linux headers) to set the timestamps.
+                     In the absence of this option the devctl() set_timestamp()
+                     command will synchronize the internal timestamp to the supplied
+                     timestamp (in milliseconds). By default this timestamp is with
+                     reference to boot-up time.
     -v             - verbose 1; prints out info to stdout
     -vv            - verbose 2; prints out info & debug to stdout
     -vvv           - verbose 3; prints out info, debug & trace to stdout;

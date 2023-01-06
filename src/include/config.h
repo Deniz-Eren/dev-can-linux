@@ -42,6 +42,8 @@ extern int optq;
 extern int optd;
 extern int opt_vid;
 extern int opt_did;
+extern int opts;
+extern int optt;
 
 /*
  * Linux Kernel platform and architecture macros

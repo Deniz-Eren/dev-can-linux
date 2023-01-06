@@ -66,4 +66,18 @@ extern void schedule_delayed_work (timer_record_t* timer, int ticks);
 /* accurate relative time function in us */
 extern uint64_t get_clock_time_us();
 
+/*
+ * Behaviour of these two variables depends on the option '-t' (optt).
+ * IF '-t' enabled, then user_timestamp supplied by the user via the devctl
+ *      command CAN_DEVCTL_SET_TIMESTAMP is used as the message timestamp. Thus
+ *      it is upto the user to ensure this command is called sufficiently
+ *      regularly.
+ * IF '-t' is not enabled, then the user_timestamp supplied by the user, is
+ *      used to synchronize the internal timstamping using the point in time
+ *      user_timestamp_time determined from get_clock_time_us()/10000. The
+ *      timestamp is recorded in millisecond in this mode.
+ */
+extern uint32_t user_timestamp;
+extern uint32_t user_timestamp_time;
+
 #endif /* SRC_TIMER_H_ */
