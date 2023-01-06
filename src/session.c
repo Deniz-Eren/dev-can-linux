@@ -143,12 +143,17 @@ void destroy_device_session (device_session_t* D) {
     pthread_cond_signal(&D->cond);
     pthread_mutex_unlock(&D->mutex);
 
+    pthread_mutex_lock(&D->mutex);
     pthread_mutex_destroy(&D->mutex);
     pthread_cond_destroy(&D->cond);
 
     free(D);
 
     pthread_mutex_unlock(&device_session_create_mutex);
+
+    // Notice we never unlocked the mutex, since we know the dequeue() is not
+    // waiting and we are in the process of destroying the session.
+    // No need: pthread_mutex_unlock(&D->mutex);
 }
 
 client_session_t*

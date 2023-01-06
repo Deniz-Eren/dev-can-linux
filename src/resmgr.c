@@ -28,8 +28,6 @@
 
 static can_resmgr_t* root_resmgr = NULL;
 
-static pthread_mutex_t rx_mutex = PTHREAD_MUTEX_INITIALIZER;
-
 IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr);
 void can_ocb_free (IOFUNC_OCB_T* ocb);
 
@@ -407,7 +405,26 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
         ocb->rx.queue = &ocb->session->rx_queue;
         ocb->rx.rcvid = -1;
 
-        if (pthread_cond_init(&ocb->rx.cond, NULL) != EOK) {
+        int result;
+        if ((result = pthread_mutex_init(&ocb->rx.mutex, NULL)) != EOK) {
+            log_err("can_ocb_calloc pthread_mutex_init failed: %d\n",
+                    result);
+
+            destroy_client_session(ocb->session);
+            free(ocb);
+
+            return NULL;
+        }
+
+        if ((result = pthread_cond_init(&ocb->rx.cond, NULL)) != EOK) {
+            log_err("create_device_session pthread_cond_init failed: %d\n",
+                    result);
+
+            pthread_mutex_destroy(&ocb->rx.mutex);
+            destroy_client_session(ocb->session);
+            free(ocb);
+
+            return NULL;
         }
 
         pthread_attr_init(&ocb->rx.thread_attr);
@@ -424,10 +441,10 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
 void can_ocb_free (IOFUNC_OCB_T* ocb) {
     log_trace("can_ocb_free -> %s\n", ocb->resmgr->name);
 
-    pthread_mutex_lock(&rx_mutex);
+    pthread_mutex_lock(&ocb->rx.mutex);
     ocb->rx.queue = NULL;
     pthread_cond_signal(&ocb->rx.cond);
-    pthread_mutex_unlock(&rx_mutex);
+    pthread_mutex_unlock(&ocb->rx.mutex);
 
     destroy_client_session(ocb->session);
 
@@ -435,16 +452,24 @@ void can_ocb_free (IOFUNC_OCB_T* ocb) {
     if (ocb->resmgr->channel_type == RX_CHANNEL) {
         pthread_join(ocb->rx.thread, NULL);
 
-        pthread_mutex_lock(&rx_mutex);
+        pthread_mutex_lock(&ocb->rx.mutex);
         if (ocb->rx.rcvid != -1) {
             // Don't leave any blocking clients hanging
             MsgError(ocb->rx.rcvid, EBADF);
             ocb->rx.rcvid = -1;
         }
-        pthread_mutex_unlock(&rx_mutex);
+        pthread_mutex_unlock(&ocb->rx.mutex);
     }
 
+    pthread_mutex_lock(&ocb->rx.mutex);
+    pthread_mutex_destroy(&ocb->rx.mutex);
+    pthread_cond_destroy(&ocb->rx.cond);
+
     free(ocb);
+
+    // Notice we never unlocked the mutex, since we know the dequeue() is not
+    // waiting and we are in the process of destroying the session.
+    // No need: pthread_mutex_unlock(&ocb->rx.mutex);
 }
 
 int msg_again_callback (message_context_t* ctp, int type, unsigned flags,
@@ -485,16 +510,16 @@ void* rx_loop (void* arg) {
     }
 
     while (1) {
-        pthread_mutex_lock(&rx_mutex);
+        pthread_mutex_lock(&ocb->rx.mutex);
 
         while ((!resmgr->shutdown)
                 && (ocb->rx.queue != NULL)
                 && (ocb->rx.rcvid == -1))
         {
-            pthread_cond_wait(&ocb->rx.cond, &rx_mutex);
+            pthread_cond_wait(&ocb->rx.cond, &ocb->rx.mutex);
         }
 
-        pthread_mutex_unlock(&rx_mutex);
+        pthread_mutex_unlock(&ocb->rx.mutex);
 
         if (resmgr->shutdown || (ocb->rx.queue == NULL)) {
             log_trace("rx_loop exit\n");
@@ -509,9 +534,9 @@ void* rx_loop (void* arg) {
                 continue;
             }
 
-            pthread_mutex_lock(&rx_mutex);
+            pthread_mutex_lock(&ocb->rx.mutex);
             msg_again.rcvid = ocb->rx.rcvid;
-            pthread_mutex_unlock(&rx_mutex);
+            pthread_mutex_unlock(&ocb->rx.mutex);
 
             if (ocb->rx.queue != NULL && msg_again.rcvid != -1) {
                 if (MsgSend(coid, &msg_again, sizeof(msg_again_t), NULL, 0)
@@ -750,12 +775,12 @@ int io_unblock (resmgr_context_t* ctp, io_pulse_t* msg, RESMGR_OCB_T* _ocb) {
         return status;
     }
 
-    pthread_mutex_lock(&rx_mutex);
+    pthread_mutex_lock(&_ocb->rx.mutex);
     if (_ocb->rx.rcvid != -1) {
         // Don't leave any blocking clients hanging
         _ocb->rx.rcvid = -1;
     }
-    pthread_mutex_unlock(&rx_mutex);
+    pthread_mutex_unlock(&_ocb->rx.mutex);
 
     return 0;
 }
@@ -912,16 +937,16 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                     canmsg->dat[6],
                     canmsg->dat[7]);
 
-            pthread_mutex_lock(&rx_mutex);
+            pthread_mutex_lock(&_ocb->rx.mutex);
             _ocb->rx.rcvid = -1;
-            pthread_mutex_unlock(&rx_mutex);
+            pthread_mutex_unlock(&_ocb->rx.mutex);
         }
         else {
-            pthread_mutex_lock(&rx_mutex);
+            pthread_mutex_lock(&_ocb->rx.mutex);
             _ocb->rx.rcvid = ctp->rcvid;
 
             pthread_cond_signal(&_ocb->rx.cond);
-            pthread_mutex_unlock(&rx_mutex);
+            pthread_mutex_unlock(&_ocb->rx.mutex);
 
             return _RESMGR_NOREPLY;
         }
@@ -1224,16 +1249,16 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                     canmsg->dat[6],
                     canmsg->dat[7]);
 
-            pthread_mutex_lock(&rx_mutex);
+            pthread_mutex_lock(&_ocb->rx.mutex);
             _ocb->rx.rcvid = -1;
-            pthread_mutex_unlock(&rx_mutex);
+            pthread_mutex_unlock(&_ocb->rx.mutex);
         }
         else if (msg->i.dcmd == CAN_DEVCTL_RX_FRAME_RAW_BLOCK) {
-            pthread_mutex_lock(&rx_mutex);
+            pthread_mutex_lock(&_ocb->rx.mutex);
             _ocb->rx.rcvid = ctp->rcvid;
 
             pthread_cond_signal(&_ocb->rx.cond);
-            pthread_mutex_unlock(&rx_mutex);
+            pthread_mutex_unlock(&_ocb->rx.mutex);
 
             return _RESMGR_NOREPLY; /* put the client in block state */
         }

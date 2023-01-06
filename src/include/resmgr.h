@@ -103,6 +103,7 @@ typedef struct can_ocb {
     struct rx_t {
         pthread_attr_t thread_attr;
         pthread_t thread;
+        pthread_mutex_t mutex;
         pthread_cond_t cond;
 
         int rcvid; // resmgr_msg_again() entry; -1 when no blocking client
