@@ -33,14 +33,14 @@ extern "C" {
 
 #define FLOOD_TEST_SIZE 1024
 
-bool receive_loop0_started = false, receive_loop1_started = false;
-bool receive_loop0_stop = false, receive_loop1_stop = false;
+static volatile bool receive_loop0_started = false, receive_loop1_started = false;
+static volatile bool receive_loop0_stop = false, receive_loop1_stop = false;
 
-struct can_msg record0[FLOOD_TEST_SIZE];
-volatile size_t record0_size = 0;
+static struct can_msg record0[FLOOD_TEST_SIZE];
+static volatile size_t record0_size = 0;
 
-struct can_msg record1[FLOOD_TEST_SIZE];
-volatile size_t record1_size = 0;
+static struct can_msg record1[FLOOD_TEST_SIZE];
+static volatile size_t record1_size = 0;
 
 void* receive_loop0 (void* arg) {
     struct can_msg canmsg;
@@ -48,7 +48,7 @@ void* receive_loop0 (void* arg) {
     int fd = open("/dev/can0/rx0", O_RDWR);
 
     // set latency limit to 0 (i.e. no limit)
-    int latency_ret = set_latency_limit_ms(fd, 0);
+    set_latency_limit_ms(fd, 0);
 
     receive_loop0_started = true;
 
@@ -56,6 +56,10 @@ void* receive_loop0 (void* arg) {
         if (read_frame_raw_block(fd, &canmsg) == EOK) {
             record0[record0_size++] = canmsg;
         }
+    }
+
+    while (read_frame_raw_noblock(fd, &canmsg) != EAGAIN) {
+        record0[record0_size++] = canmsg;
     }
 
     close(fd);
@@ -68,7 +72,7 @@ void* receive_loop1 (void* arg) {
     int fd = open("/dev/can1/rx0", O_RDWR);
 
     // set latency limit to 0 (i.e. no limit)
-    int latency_ret = set_latency_limit_ms(fd, 0);
+    set_latency_limit_ms(fd, 0);
 
     receive_loop1_started = true;
 
@@ -76,6 +80,10 @@ void* receive_loop1 (void* arg) {
         if (read_frame_raw_block(fd, &canmsg) == EOK) {
             record1[record1_size++] = canmsg;
         }
+    }
+
+    while (read_frame_raw_noblock(fd, &canmsg) != EAGAIN) {
+        record1[record1_size++] = canmsg;
     }
 
     close(fd);
@@ -141,43 +149,58 @@ TEST( Driver, FloodSend ) {
     uint32_t initial_tx_frames1 = stats1.transmitted_frames;
     uint32_t initial_rx_frames1 = stats1.received_frames;
 
-    uint32_t t0_ms = get_clock_time_us()/1000;
+    // ensure all channels are empty
+    int fd = open("/dev/can0/rx0", O_RDWR);
 
-    for (int i = 0; i < FLOOD_TEST_SIZE; ++i) {
+    int err = read_frame_raw_noblock(fd, NULL);
+
+    EXPECT_EQ(err, EAGAIN);
+
+    close(fd);
+
+    fd = open("/dev/can1/rx0", O_RDWR);
+
+    err = read_frame_raw_noblock(fd, NULL);
+
+    EXPECT_EQ(err, EAGAIN);
+
+    close(fd);
+
+    // flood messages
+    for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
         write_frame_raw(fd0_tx, &canmsg);
     }
 
-    uint32_t t1_ms = get_clock_time_us()/1000;
-
-    for (int i = 0; i < FLOOD_TEST_SIZE; ++i) {
+    for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
         write_frame_raw(fd1_tx, &canmsg);
     }
 
-    size_t last_record0_size = record0_size;
-    size_t last_record1_size = record1_size;
-
-    uint32_t t2_ms = get_clock_time_us()/1000;
-
+    usleep(10000);
     receive_loop0_stop = receive_loop1_stop = true;
 
     write_frame_raw(fd0_tx, &canmsg);
     write_frame_raw(fd1_tx, &canmsg);
 
-    pthread_join(thread0, NULL);
-    pthread_join(thread1, NULL);
+    err = pthread_join(thread0, NULL);
+
+    EXPECT_EQ(err, EOK);
+
+    err = pthread_join(thread1, NULL);
+
+    EXPECT_EQ(err, EOK);
 
     // At least some of the data should have been received
-    EXPECT_GE(last_record0_size, FLOOD_TEST_SIZE/10);
-    EXPECT_GE(last_record1_size, FLOOD_TEST_SIZE/10);
-    EXPECT_LE(last_record0_size, FLOOD_TEST_SIZE);
-    EXPECT_LE(last_record1_size, FLOOD_TEST_SIZE);
+    EXPECT_GE(record0_size, FLOOD_TEST_SIZE/10);
+    EXPECT_GE(record1_size, FLOOD_TEST_SIZE/10);
+    EXPECT_LE(record0_size, FLOOD_TEST_SIZE);
+    EXPECT_LE(record1_size, FLOOD_TEST_SIZE);
 
     // It seems QEmu CAN interface doesn't emulate baud rate correctly, so the
     // following checks cannot be done.
     //
     // 2.0a (SFF) message is 47bits and 2.0b (EFF) message is 67bits
-    //EXPECT_NEAR(1000*last_record0_size*67/(t2_ms - t1_ms), 250000, 50000);
-    //EXPECT_NEAR(1000*last_record1_size*67/(t1_ms - t0_ms), 250000, 50000);
+    //EXPECT_NEAR(1000*record0_size*67/(t2_ms - t1_ms), 250000, 50000);
+    //EXPECT_NEAR(1000*record1_size*67/(t1_ms - t0_ms), 250000, 50000);
 
     get_stats_ret = get_stats(fd0_tx, &stats0);
 
@@ -187,9 +210,7 @@ TEST( Driver, FloodSend ) {
 
     EXPECT_EQ(get_stats_ret, EOK);
 
-    EXPECT_NEAR(stats0.transmitted_frames - initial_tx_frames0,
-            last_record0_size + 1, 5);
-
+    EXPECT_EQ(stats0.transmitted_frames - initial_tx_frames0, record0_size);
     EXPECT_EQ(stats0.received_frames - initial_rx_frames0, 0);
     EXPECT_EQ(stats0.missing_ack, 0);
     EXPECT_EQ(stats0.total_frame_errors, 0);
@@ -211,9 +232,7 @@ TEST( Driver, FloodSend ) {
     EXPECT_EQ(stats0.tx_interrupts, 0);
     EXPECT_EQ(stats0.total_interrupts, 0);
 
-    EXPECT_NEAR(stats1.transmitted_frames - initial_tx_frames1,
-            last_record1_size + 1, 5);
-
+    EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, record1_size);
     EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
     EXPECT_EQ(stats1.missing_ack, 0);
     EXPECT_EQ(stats1.total_frame_errors, 0);

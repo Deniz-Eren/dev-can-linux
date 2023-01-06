@@ -1233,8 +1233,11 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
             nbytes = sizeof(data->dcmd.canmsg);
 
-            log_trace("CAN_DEVCTL_READ_CANMSG_EXT; %s TS: %ums [%s] %X [%d] " \
+            log_trace("%s; %s TS: %ums [%s] %X [%d] " \
                       "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                    (msg->i.dcmd == CAN_DEVCTL_RX_FRAME_RAW_BLOCK
+                        ? "CAN_DEVCTL_RX_FRAME_RAW_BLOCK"
+                        : "CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK"),
                     _ocb->resmgr->name,
                     canmsg->ext.timestamp,
                     canmsg->ext.is_extended_mid ? "EFF" : "SFF",
@@ -1325,7 +1328,7 @@ void log_trace_bittiming_info (struct net_device* device) {
     log_trace("  bitrate: %ubits/second\n", priv->bittiming.bitrate);
 
     /* Sample point in one-tenth of a percent */
-    log_trace("  sample_point: %u (1/10 of 1%)\n",
+    log_trace("  sample_point: %u (1/10 of percent)\n",
             priv->bittiming.sample_point);
 
     /* Time quanta (TQ) in nanoseconds */

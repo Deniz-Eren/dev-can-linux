@@ -24,10 +24,10 @@
 
 int main (int argc, char* argv[]) {
     int opt;
-    char buffer[1024];
+    char* buffer;
 
     int optu_unit;
-    char optu_mailbox_str[8];
+    char optu_mailbox_str[32];
     int optu_mailbox_is_tx = 0;
     int optu_mailbox = 0;
 
@@ -38,8 +38,8 @@ int main (int argc, char* argv[]) {
     while ((opt = getopt(argc, argv, "u:w:?h")) != -1) {
         switch (opt) {
         case 'u':
-            sscanf(optarg, "%d,%s", &optu_unit, &optu_mailbox_str);
-            strncpy(buffer, optu_mailbox_str, 8);
+            buffer = optu_mailbox_str;
+            sscanf(optarg, "%d,%s", &optu_unit, buffer);
             buffer[2] = 0;
 
             if (strncmp(buffer, "tx", 2) == 0) {
@@ -56,8 +56,8 @@ int main (int argc, char* argv[]) {
             break;
 
         case 'w':
-            sscanf( optarg, "0x%x,%d,0x%s",
-                    &optw_mid, &optw_mid_type, &optw_data_str );
+            buffer = optw_data_str;
+            sscanf(optarg, "0x%x,%d,0x%s", &optw_mid, &optw_mid_type, buffer);
 
             break;
 
@@ -74,17 +74,18 @@ int main (int argc, char* argv[]) {
     int     fd;
     struct  can_msg canmsg;
 
-    int n = sscanf( optw_data_str, "%2x%2x%2x%2x%2x%2x%2x%2x",
-            &canmsg.dat[0],
-            &canmsg.dat[1],
-            &canmsg.dat[2],
-            &canmsg.dat[3],
-            &canmsg.dat[4],
-            &canmsg.dat[5],
-            &canmsg.dat[6],
-            &canmsg.dat[7] );
+    int n = strnlen(optw_data_str, 32);
+    n = n/2 + n%2;
 
     int i;
+    for (i = 0; i < n; ++i) {
+        unsigned int k;
+
+        sscanf(optw_data_str + 2*i, "%2x", &k);
+
+        canmsg.dat[i] = k;
+    }
+
     for (i = n; i < 8; ++i) {
         canmsg.dat[i] = 0;
     }
@@ -92,7 +93,7 @@ int main (int argc, char* argv[]) {
     canmsg.mid = optw_mid;
     canmsg.ext.timestamp = 0;
     canmsg.ext.is_extended_mid = optw_mid_type;
-    canmsg.len = strnlen(optw_data_str, 16)/2;
+    canmsg.len = n;
 
     char OPEN_FILE[16];
 

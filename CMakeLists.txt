@@ -49,6 +49,8 @@ file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_QNX_RESMGR_SINGLE_THREAD"
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_QNX_RESMGR_THREAD_POOL"
     CONFIG_QNX_RESMGR_THREAD_POOL )
 
+add_compile_options( -Wall )
+
 add_compile_definitions( PROGRAM_VERSION="${PROGRAM_VERSION}" )
 add_compile_definitions( CONFIG_HZ=${CONFIG_HZ} )
 add_compile_definitions(

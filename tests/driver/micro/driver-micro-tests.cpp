@@ -28,7 +28,9 @@ extern "C" {
     #include <dev-can-linux/commands.h>
 }
 
-bool receive_loop0_started = false, receive_loop1_started = false;
+static bool receive_loop0_started = false, receive_loop1_started = false;
+static volatile size_t record0_size = 0;
+static volatile size_t record1_size = 0;
 
 void* receive_loop0 (void* arg) {
     struct can_msg* canmsg = (struct can_msg*)arg;
@@ -38,6 +40,8 @@ void* receive_loop0 (void* arg) {
     receive_loop0_started = true;
 
     if (read_frame_raw_block(fd, canmsg) == EOK) {
+        record0_size++;
+
         close(fd);
         pthread_exit(canmsg);
     }
@@ -53,6 +57,8 @@ void* receive_loop1 (void* arg) {
     receive_loop1_started = true;
 
     if (read_frame_raw_block(fd, canmsg) == EOK) {
+        record1_size++;
+
         close(fd);
         pthread_exit(canmsg);
     }
@@ -95,6 +101,22 @@ TEST( Driver, SingleSendReceive ) {
     while (!receive_loop0_started || !receive_loop1_started) {
         usleep(1000);
     }
+
+    struct can_devctl_stats stats0, stats1;
+
+    int get_stats_ret = get_stats(fd0, &stats0);
+
+    EXPECT_EQ(get_stats_ret, EOK);
+
+    uint32_t initial_tx_frames0 = stats0.transmitted_frames;
+    uint32_t initial_rx_frames0 = stats0.received_frames;
+
+    get_stats_ret = get_stats(fd1, &stats1);
+
+    EXPECT_EQ(get_stats_ret, EOK);
+
+    uint32_t initial_tx_frames1 = stats1.transmitted_frames;
+    uint32_t initial_rx_frames1 = stats1.received_frames;
 
     int write_ret = write_frame_raw(fd0, &canmsg);
 
@@ -140,6 +162,58 @@ TEST( Driver, SingleSendReceive ) {
     EXPECT_GE(canmsg1.ext.timestamp - start_ms, 4);
     EXPECT_EQ(canmsg1.ext.is_extended_mid, 1);
     EXPECT_EQ(canmsg1.ext.is_remote_frame, 0);
+
+    get_stats_ret = get_stats(fd0, &stats0);
+
+    EXPECT_EQ(get_stats_ret, EOK);
+
+    get_stats_ret = get_stats(fd1, &stats1);
+
+    EXPECT_EQ(get_stats_ret, EOK);
+
+    EXPECT_EQ(stats0.transmitted_frames - initial_tx_frames0, 1);
+    EXPECT_EQ(stats0.received_frames - initial_rx_frames0, 0);
+    EXPECT_EQ(stats0.missing_ack, 0);
+    EXPECT_EQ(stats0.total_frame_errors, 0);
+    EXPECT_EQ(stats0.stuff_errors, 0);
+    EXPECT_EQ(stats0.form_errors, 0);
+    EXPECT_EQ(stats0.dom_bit_recess_errors, 0);
+    EXPECT_EQ(stats0.recess_bit_dom_errors, 0);
+    EXPECT_EQ(stats0.parity_errors, 0);
+    EXPECT_EQ(stats0.crc_errors, 0);
+    EXPECT_EQ(stats0.hw_receive_overflows, 0);
+    EXPECT_EQ(stats0.sw_receive_q_full, 0);
+    EXPECT_EQ(stats0.error_warning_state_count, 0);
+    EXPECT_EQ(stats0.error_passive_state_count, 0);
+    EXPECT_EQ(stats0.bus_off_state_count, 0);
+    EXPECT_EQ(stats0.bus_idle_count, 0);
+    EXPECT_EQ(stats0.power_down_count, 0);
+    EXPECT_EQ(stats0.wake_up_count, 0);
+    EXPECT_EQ(stats0.rx_interrupts, 0);
+    EXPECT_EQ(stats0.tx_interrupts, 0);
+    EXPECT_EQ(stats0.total_interrupts, 0);
+
+    EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, 1);
+    EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
+    EXPECT_EQ(stats1.missing_ack, 0);
+    EXPECT_EQ(stats1.total_frame_errors, 0);
+    EXPECT_EQ(stats1.stuff_errors, 0);
+    EXPECT_EQ(stats1.form_errors, 0);
+    EXPECT_EQ(stats1.dom_bit_recess_errors, 0);
+    EXPECT_EQ(stats1.recess_bit_dom_errors, 0);
+    EXPECT_EQ(stats1.parity_errors, 0);
+    EXPECT_EQ(stats1.crc_errors, 0);
+    EXPECT_EQ(stats1.hw_receive_overflows, 0);
+    EXPECT_EQ(stats1.sw_receive_q_full, 0);
+    EXPECT_EQ(stats1.error_warning_state_count, 0);
+    EXPECT_EQ(stats1.error_passive_state_count, 0);
+    EXPECT_EQ(stats1.bus_off_state_count, 0);
+    EXPECT_EQ(stats1.bus_idle_count, 0);
+    EXPECT_EQ(stats1.power_down_count, 0);
+    EXPECT_EQ(stats1.wake_up_count, 0);
+    EXPECT_EQ(stats1.rx_interrupts, 0);
+    EXPECT_EQ(stats1.tx_interrupts, 0);
+    EXPECT_EQ(stats1.total_interrupts, 0);
 
     close(fd0);
     close(fd1);

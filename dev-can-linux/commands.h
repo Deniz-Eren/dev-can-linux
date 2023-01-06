@@ -56,6 +56,12 @@
 
 
 static inline int write_frame_raw (int filedes, struct can_msg* canmsg) {
+    if (canmsg == NULL) {
+        log_error("write_frame_raw error: input is NULL\n");
+
+        return EFAULT; /* Bad address */
+    }
+
     int ret;
 
     if (EOK != (ret = devctl(
@@ -64,7 +70,7 @@ static inline int write_frame_raw (int filedes, struct can_msg* canmsg) {
     {
         log_error("devctl CAN_DEVCTL_TX_FRAME_RAW: %s\n", strerror(ret));
 
-        return -1;
+        return ret;
     }
 
     return EOK;
@@ -72,14 +78,20 @@ static inline int write_frame_raw (int filedes, struct can_msg* canmsg) {
 
 static inline int read_frame_raw_block (int filedes, struct can_msg* canmsg) {
     int ret;
+    struct can_msg canmsg_temp;
+    struct can_msg* _canmsg = &canmsg_temp;
+
+    if (canmsg) {
+        _canmsg = canmsg;
+    }
 
     if (EOK != (ret = devctl(
             filedes, CAN_DEVCTL_RX_FRAME_RAW_BLOCK,
-            canmsg, sizeof(struct can_msg), NULL )))
+            _canmsg, sizeof(struct can_msg), NULL )))
     {
         log_error("devctl CAN_DEVCTL_RX_FRAME_RAW_BLOCK: %s\n", strerror(ret));
 
-        return -1;
+        return ret;
     }
 
     return EOK;
@@ -87,15 +99,23 @@ static inline int read_frame_raw_block (int filedes, struct can_msg* canmsg) {
 
 static inline int read_frame_raw_noblock (int filedes, struct can_msg* canmsg) {
     int ret;
+    struct can_msg canmsg_temp;
+    struct can_msg* _canmsg = &canmsg_temp;
+
+    if (canmsg) {
+        _canmsg = canmsg;
+    }
 
     if (EOK != (ret = devctl(
             filedes, CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK,
-            canmsg, sizeof(struct can_msg), NULL )))
+            _canmsg, sizeof(struct can_msg), NULL )))
     {
-        log_error("devctl CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK: %s\n",
-                strerror(ret));
+        if (ret != EAGAIN) {
+            log_error("devctl CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK: %s\n",
+                    strerror(ret));
+        }
 
-        return -1;
+        return ret;
     }
 
     return EOK;
@@ -111,7 +131,7 @@ static inline int set_latency_limit_ms (int filedes, uint32_t value) {
         log_error("devctl EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS: %s\n",
                 strerror(ret));
 
-        return -1;
+        return ret;
     }
 
     return EOK;
@@ -127,7 +147,7 @@ static inline int set_bitrate (int filedes, uint32_t value) {
     {
         log_error("devctl CAN_DEVCTL_SET_TIMING: %s\n", strerror(ret));
 
-        return -1;
+        return ret;
     }
 
     return EOK;
@@ -142,7 +162,7 @@ static inline int set_bittiming (int filedes, struct can_devctl_timing* timing) 
     {
         log_error("devctl CAN_DEVCTL_SET_TIMING: %s\n", strerror(ret));
 
-        return -1;
+        return ret;
     }
 
     return EOK;
@@ -157,7 +177,7 @@ static inline int get_info (int filedes, struct can_devctl_info* info) {
     {
         log_error("devctl CAN_DEVCTL_GET_INFO: %s\n", strerror(ret));
 
-        return -1;
+        return ret;
     }
 
     return EOK;
@@ -172,7 +192,7 @@ static inline int get_stats (int filedes, struct can_devctl_stats* info) {
     {
         log_error("devctl CAN_DEVCTL_GET_STATS: %s\n", strerror(ret));
 
-        return -1;
+        return ret;
     }
 
     return EOK;

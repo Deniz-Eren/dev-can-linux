@@ -33,17 +33,18 @@ static void sigint_signal_handler (int sig_no) {
 
 int main (int argc, char* argv[]) {
     int opt;
-    char buffer[1024];
+    char* buffer;
 
     int optu_unit = 0;
-    char optu_mailbox_str[8];
+    char optu_mailbox_str[32];
     int optu_mailbox_is_tx = 0;
     int optu_mailbox = 0;
 
     while ((opt = getopt(argc, argv, "u:?h")) != -1) {
         switch (opt) {
         case 'u':
-            sscanf(optarg, "%d,%s", &optu_unit, &optu_mailbox_str);
+            buffer = optu_mailbox_str;
+            sscanf(optarg, "%d,%s", &optu_unit, buffer);
             strncpy(buffer, optu_mailbox_str, 8);
             buffer[2] = 0;
 

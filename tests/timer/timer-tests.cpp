@@ -40,7 +40,7 @@ extern "C" {
 
         test_data->trigger_time_ms = now;
 
-        for (int i = 0; i < test_data->size; ++i) {
+        for (size_t i = 0; i < test_data->size; ++i) {
             test_data->sum += test_data->numbers[i];
         }
     }
