@@ -197,3 +197,63 @@ static inline int get_stats (int filedes, struct can_devctl_stats* info) {
 
     return EOK;
 }
+
+static inline int set_mid (int filedes, uint32_t value) {
+    int ret;
+
+    if (EOK != (ret = devctl(
+            filedes, CAN_DEVCTL_SET_MID,
+            &value, sizeof(uint32_t), NULL )))
+    {
+        log_error("devctl CAN_DEVCTL_SET_MID: %s\n", strerror(ret));
+
+        return ret;
+    }
+
+    return EOK;
+}
+
+static inline int get_mid (int filedes, uint32_t* value) {
+    int ret;
+
+    if (EOK != (ret = devctl(
+            filedes, CAN_DEVCTL_GET_MID,
+            value, sizeof(uint32_t), NULL )))
+    {
+        log_error("devctl CAN_DEVCTL_GET_MID: %s\n", strerror(ret));
+
+        return ret;
+    }
+
+    return EOK;
+}
+
+static inline int set_mfilter (int filedes, uint32_t value) {
+    int ret;
+
+    if (EOK != (ret = devctl(
+            filedes, CAN_DEVCTL_SET_MFILTER,
+            &value, sizeof(uint32_t), NULL )))
+    {
+        log_error("devctl CAN_DEVCTL_SET_MFILTER: %s\n", strerror(ret));
+
+        return ret;
+    }
+
+    return EOK;
+}
+
+static inline int get_mfilter (int filedes, uint32_t* value) {
+    int ret;
+
+    if (EOK != (ret = devctl(
+            filedes, CAN_DEVCTL_GET_MFILTER,
+            value, sizeof(uint32_t), NULL )))
+    {
+        log_error("devctl CAN_DEVCTL_GET_MFILTER: %s\n", strerror(ret));
+
+        return ret;
+    }
+
+    return EOK;
+}

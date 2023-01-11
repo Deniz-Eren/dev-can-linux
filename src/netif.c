@@ -181,7 +181,9 @@ int netif_rx (struct sk_buff* skb) {
 
     client_session_t** it = &ds->root_client_session;
     while (it != NULL && *it != NULL) {
-        if (enqueue(&(*it)->rx_queue, &canmsg) != EOK) {
+        if ((canmsg.mid & *(*it)->mfilter) == canmsg.mid) {
+            if (enqueue(&(*it)->rx_queue, &canmsg) != EOK) {
+            }
         }
 
         it = &(*it)->next;

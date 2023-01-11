@@ -213,7 +213,7 @@ struct can_msg* dequeue (queue_t* Q, uint32_t latency_limit_ms) {
     return result;
 }
 
-struct can_msg* dequeue_nonblock (queue_t* Q, uint32_t latency_limit_ms) {
+struct can_msg* dequeue_noblock (queue_t* Q, uint32_t latency_limit_ms) {
     if (Q == NULL) {
         return NULL;
     }
@@ -291,6 +291,33 @@ struct can_msg* dequeue_peek (queue_t* Q) {
 
         return NULL; // Zero size queue cannot store anything and this response
                      // is OK for such a queue created knowing this fact.
+    }
+
+    // handle data in queue here, i.e. when Q->begin != Q-end
+    result = &Q->data[Q->begin];
+
+    pthread_mutex_unlock(&Q->mutex);
+
+    return result;
+}
+
+struct can_msg* dequeue_peek_noblock (queue_t* Q) {
+    if (Q == NULL) {
+        return NULL;
+    }
+
+    if (Q->session_up == 0) {
+        return NULL;
+    }
+
+    struct can_msg* result = NULL;
+
+    pthread_mutex_lock(&Q->mutex);
+
+    if (Q->attr.size == 0 || Q->begin == Q->end) {
+        pthread_mutex_unlock(&Q->mutex);
+
+        return NULL;
     }
 
     // handle data in queue here, i.e. when Q->begin != Q-end

@@ -31,6 +31,10 @@ typedef struct client_session {
     struct client_session *prev, *next;
     struct device_session* device_session;
 
+    uint32_t* mid;       /* CAN message identifier */
+    uint32_t* mfilter;   /* CAN message filter */
+    uint32_t* prio;      /* CAN priority - not used */
+
     queue_t rx_queue;
 } client_session_t;
 
@@ -59,7 +63,8 @@ extern device_session_t* create_device_session (
 extern void destroy_device_session (device_session_t* D);
 
 extern client_session_t* create_client_session (
-        struct net_device* dev, const queue_attr_t* rx_attr);
+        struct net_device* dev, const queue_attr_t* rx_attr,
+        uint32_t* mid, uint32_t* mfilter, uint32_t* prio);
 
 extern void destroy_client_session (client_session_t* S);
 

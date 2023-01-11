@@ -1,6 +1,6 @@
 /**
- * \file    driver-micro-tests.cpp
- * \brief   Driver micro-level integration tests definition file; basic single
+ * \file    driver-raw-tests.cpp
+ * \brief   Driver RAW message integration tests definition file; basic single
  *          send and receive testing.
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
@@ -66,7 +66,7 @@ void* receive_loop1 (void* arg) {
     pthread_exit(NULL);
 }
 
-TEST( Driver, SingleSendReceive ) {
+TEST( Raw, SingleSendReceive ) {
     int fd0 = open("/dev/can0/tx0", O_RDWR);
 
     EXPECT_NE(fd0, -1);
@@ -219,7 +219,7 @@ TEST( Driver, SingleSendReceive ) {
     close(fd1);
 }
 
-TEST( Driver, SingleSendMultiReceive ) {
+TEST( Raw, SingleSendMultiReceive ) {
     int fd = open("/dev/can0/tx0", O_RDWR);
 
     EXPECT_NE(fd, -1);
@@ -241,16 +241,10 @@ TEST( Driver, SingleSendMultiReceive ) {
 
     struct can_msg canmsg0, canmsg1;
 
-    pthread_attr_t attr0;
     pthread_t thread0;
-    pthread_attr_init(&attr0);
-    pthread_attr_setdetachstate(&attr0, PTHREAD_CREATE_DETACHED);
     pthread_create(&thread0, NULL, &receive_loop0, &canmsg0);
 
-    pthread_attr_t attr1;
     pthread_t thread1;
-    pthread_attr_init(&attr1);
-    pthread_attr_setdetachstate(&attr1, PTHREAD_CREATE_DETACHED);
     pthread_create(&thread1, NULL, &receive_loop0, &canmsg1);
 
     while (!receive_loop0_started) {

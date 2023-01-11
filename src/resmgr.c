@@ -176,8 +176,8 @@ int register_netdev(struct net_device *dev) {
              * For now, we'll just use defaults by setting the
              * attribute structure to zeroes. */
             memset(&resmgr->resmgr_attr, 0, sizeof(resmgr_attr_t));
-            resmgr->resmgr_attr.nparts_max = 256;
-            resmgr->resmgr_attr.msg_max_size = 8192;
+            resmgr->resmgr_attr.nparts_max = 1;
+            resmgr->resmgr_attr.msg_max_size = 2048;
 
             if (j == 0) {
                 snprintf( resmgr->name, MAX_NAME_SIZE,
@@ -223,7 +223,11 @@ int register_netdev(struct net_device *dev) {
                 return -1;
             }
 
-            resmgr->latency_limit_ms = 0;
+            resmgr->latency_limit_ms = 0;   /* Maximum allowed latency in
+                                               milliseconds */
+            resmgr->mid = 0x00000000;       /* CAN message identifier */
+            resmgr->mfilter = 0xFFFFFFFF;   /* CAN message filter */
+            resmgr->prio = 0;               /* CAN priority - not used */
             resmgr->shutdown = 0;
 
             /* Attach a callback (handler) for two message types */
@@ -314,13 +318,13 @@ void unregister_netdev(struct net_device *dev) {
         char name[MAX_NAME_SIZE];
         strncpy(name, resmgr->name, MAX_NAME_SIZE);
 
-        resmgr->shutdown = 1;
-
         if (resmgr->device_session->device != dev) {
             location = &(*location)->next;
 
             continue;
         }
+
+        resmgr->shutdown = 1;
 
         destroy_device_session(resmgr->device_session);
 
@@ -401,14 +405,27 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
         rx_attr.size = 0;
     }
 
-    if ((ocb->session = create_client_session(device, &rx_attr)) == NULL) {
+    if ((ocb->session =
+            create_client_session( device, &rx_attr,
+                &resmgr->mid,
+                &resmgr->mfilter,
+                &resmgr->prio )) == NULL)
+    {
         log_err("create_client_session failed: %s\n", ocb->resmgr->name);
     }
+
+    ocb->rx.read_size = 0;
+    ocb->rx.read_buffer = NULL;
+    ocb->rx.nbytes = 0;
+    ocb->rx.offset = 0;
 
     // Every rx session has it's own rx thread to call resmgr_msg_again()
     if (ocb->resmgr->channel_type == RX_CHANNEL) {
         ocb->rx.queue = &ocb->session->rx_queue;
-        ocb->rx.rcvid = -1;
+        ocb->rx.blocked_clients = NULL;
+
+        ocb->rx.read_size = 4096;
+        ocb->rx.read_buffer = malloc(ocb->rx.read_size);
 
         int result;
         if ((result = pthread_mutex_init(&ocb->rx.mutex, NULL)) != EOK) {
@@ -451,24 +468,39 @@ void can_ocb_free (IOFUNC_OCB_T* ocb) {
     pthread_cond_signal(&ocb->rx.cond);
     pthread_mutex_unlock(&ocb->rx.mutex);
 
-    destroy_client_session(ocb->session);
+    if (ocb->session) {
+        destroy_client_session(ocb->session);
+        ocb->session = NULL;
+    }
 
     // Wait for rx thread to exit
     if (ocb->resmgr->channel_type == RX_CHANNEL) {
         pthread_join(ocb->rx.thread, NULL);
 
         pthread_mutex_lock(&ocb->rx.mutex);
-        if (ocb->rx.rcvid != -1) {
-            // Don't leave any blocking clients hanging
-            MsgError(ocb->rx.rcvid, EBADF);
-            ocb->rx.rcvid = -1;
+
+        // Don't leave any blocking clients hanging
+        blocked_client_t *client = ocb->rx.blocked_clients;
+
+        while (client != NULL) {
+            MsgError(client->rcvid, EBADF);
+
+            client = client->next;
         }
+
+        free_all_blocked_clients(&ocb->rx.blocked_clients);
         pthread_mutex_unlock(&ocb->rx.mutex);
     }
 
     pthread_mutex_lock(&ocb->rx.mutex);
     pthread_mutex_destroy(&ocb->rx.mutex);
     pthread_cond_destroy(&ocb->rx.cond);
+
+    ocb->rx.read_size = 0;
+    if (ocb->rx.read_buffer) {
+       free(ocb->rx.read_buffer);
+       ocb->rx.read_buffer = NULL;
+    }
 
     free(ocb);
 
@@ -519,7 +551,7 @@ void* rx_loop (void* arg) {
 
         while ((!resmgr->shutdown)
                 && (ocb->rx.queue != NULL)
-                && (ocb->rx.rcvid == -1))
+                && (ocb->rx.blocked_clients == NULL))
         {
             pthread_cond_wait(&ocb->rx.cond, &ocb->rx.mutex);
         }
@@ -532,23 +564,29 @@ void* rx_loop (void* arg) {
             pthread_exit(NULL);
         }
 
-        if (ocb->rx.rcvid != -1) {
+        if (ocb->rx.blocked_clients != NULL) {
             struct can_msg* canmsg = dequeue_peek(ocb->rx.queue);
 
             if (canmsg == NULL) {
                 continue;
             }
 
-            pthread_mutex_lock(&ocb->rx.mutex);
-            msg_again.rcvid = ocb->rx.rcvid;
-            pthread_mutex_unlock(&ocb->rx.mutex);
+            blocked_client_t* client = ocb->rx.blocked_clients;
 
-            if (ocb->rx.queue != NULL && msg_again.rcvid != -1) {
-                if (MsgSend(coid, &msg_again, sizeof(msg_again_t), NULL, 0)
-                        == -1)
-                {
-                    log_err("rx_loop MsgSend error: %s\n", strerror(errno));
+            while (client != NULL) {
+                pthread_mutex_lock(&ocb->rx.mutex);
+                msg_again.rcvid = client->rcvid;
+                pthread_mutex_unlock(&ocb->rx.mutex);
+
+                if (ocb->rx.queue != NULL && msg_again.rcvid != -1) {
+                    if (MsgSend(coid, &msg_again, sizeof(msg_again_t), NULL, 0)
+                            == -1)
+                    {
+                        log_err("rx_loop MsgSend error: %s\n", strerror(errno));
+                    }
                 }
+
+                client = client->next;
             }
         }
     }
@@ -607,10 +645,8 @@ void* dispatch_receive_loop (void* arg) {
 int io_open (resmgr_context_t* ctp, io_open_t* msg,
         RESMGR_HANDLE_T* handle, void* extra)
 {
-    can_resmgr_t* resmgr = get_resmgr(&root_resmgr, ctp->id);
-
-    log_trace( "io_open -> %s (id: %d, rcvid: %d)\n",
-            resmgr->name, ctp->id, ctp->rcvid);
+    log_trace( "io_open -> (id: %d, rcvid: %d)\n",
+            ctp->id, ctp->rcvid);
 
     return (iofunc_open_default (ctp, msg, handle, extra));
 }
@@ -626,70 +662,144 @@ int io_close_ocb (resmgr_context_t* ctp, void* reserved, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
+    _ocb->rx.nbytes = 0;
+    _ocb->rx.offset = 0;
+
     return iofunc_close_ocb_default(ctp, reserved, ocb);
 }
 
 /*
- *  io_read
+ * io_read
  *
- *  At this point, the client has called the library read()
- *  function, and expects zero or more bytes.  Since this is
- *  the /dev/Null resource manager, we return zero bytes to
- *  indicate EOF -- no more bytes expected.
+ * At this point, the client has called the library read() function, and
+ * expects zero or more bytes.
+ *
+ * The message that we received can be accessed via the pointer *msg. A pointer
+ * to the OCB that belongs to this read is the *ocb. The *ctp pointer points to
+ * a context structure that is used by the resource manager framework to
+ * determine whom to reply to, and more.
  */
-
-/* The message that we received can be accessed via the
- * pointer *msg. A pointer to the OCB that belongs to this
- * read is the *ocb. The *ctp pointer points to a context
- * structure that is used by the resource manager framework
- * to determine whom to reply to, and more. */
 int io_read (resmgr_context_t* ctp, io_read_t* msg, RESMGR_OCB_T* _ocb) {
-    int status;
+    int     nparts;
+    int     status;
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("io_read -> id: %d\n", ctp->id);
+    log_trace("io_read -> (id: %d, rcvid: %d)\n", ctp->id, ctp->rcvid);
 
-    /* Here we verify if the client has the access
-     * rights needed to read from our device */
+    /* Verify the client has the access rights needed to read from our device */
     if ((status = iofunc_read_verify(ctp, msg, ocb, NULL)) != EOK) {
         return (status);
     }
 
-    /* We check if our read callback was called because of
-     * a pread() or a normal read() call. If pread(), we return
-     * with an error code indicating that we don't support it.*/
-    if ((msg->i.xtype & _IO_XTYPE_MASK) != _IO_XTYPE_NONE) {
-        return (ENOSYS);
-    }
-    /* Here we set the number of bytes we will return. As we
-     * are the null device, we will return 0 bytes. Normally,
-     * here you would write the number of bytes you
-     * are actually returning. */
-    _IO_SET_READ_NBYTES(ctp, 0);
-
-    /* The next line (commented) is used to tell the system how
-     * large your buffer is in which you want to return your
-     * data for the read() call. We don't set it here because
-     * as a null device, we return 0 data. See the "time
-     * resource manager" example for an actual use.
+    /* Check if the read callback was called because of a pread() or a normal
+     * read() call. If pread(), return with an error code indicating that it
+     * isn't supported.
      */
-    //  SETIOV( ctp->iov, buf, sizeof(buf));
+    if ((msg->i.xtype & _IO_XTYPE_MASK) != _IO_XTYPE_NONE) {
+        return ENOSYS;
+    }
 
+    if (_ocb->session->rx_queue.attr.size == 0) {
+        _IO_SET_READ_NBYTES(ctp, 0);
+
+        return (_RESMGR_NPARTS(0));
+    }
+
+    if (_ocb->rx.read_buffer == NULL
+        || _ocb->rx.read_size < _IO_READ_GET_NBYTES(msg))
+    {
+        if (_ocb->rx.read_buffer) {
+            free(_ocb->rx.read_buffer);
+        }
+
+        _ocb->rx.read_size += _IO_READ_GET_NBYTES(msg);
+        _ocb->rx.read_buffer = malloc(_ocb->rx.read_size);
+
+        if (_ocb->rx.read_buffer == NULL) {
+            _ocb->rx.read_buffer = NULL;
+            _ocb->rx.read_size = 0;
+
+            return ENOMEM; // Not enough memory
+        }
+    }
+
+    while (_ocb->rx.nbytes < _IO_READ_GET_NBYTES(msg)) {
+        struct can_msg* canmsg =
+            dequeue_peek_noblock(&_ocb->session->rx_queue);
+
+        if (canmsg == NULL) {
+            break;
+        }
+
+        if (_ocb->rx.nbytes + canmsg->len - _ocb->rx.offset
+                <= _IO_READ_GET_NBYTES(msg))
+        {
+            size_t nbytes = canmsg->len - _ocb->rx.offset;
+
+            memcpy( _ocb->rx.read_buffer + _ocb->rx.nbytes,
+                    canmsg->dat + _ocb->rx.offset, nbytes );
+
+            _ocb->rx.nbytes += nbytes;
+            _ocb->rx.offset = 0;
+
+            dequeue_noblock(&_ocb->session->rx_queue, 0);
+        }
+        else {
+            size_t nbytes = _IO_READ_GET_NBYTES(msg) - _ocb->rx.nbytes;
+
+            memcpy( _ocb->rx.read_buffer + _ocb->rx.nbytes,
+                    canmsg->dat + _ocb->rx.offset, nbytes );
+
+            _ocb->rx.nbytes = _IO_READ_GET_NBYTES(msg);
+            _ocb->rx.offset += nbytes;
+        }
+    }
+
+    if (_ocb->rx.nbytes < _IO_READ_GET_NBYTES(msg)) {
+        pthread_mutex_lock(&_ocb->rx.mutex);
+
+        blocked_client_t *client =
+            get_blocked_client(&_ocb->rx.blocked_clients, ctp->rcvid);
+
+        if (client == NULL) {
+            blocked_client_t* new_block = malloc(sizeof(blocked_client_t));
+            new_block->prev = new_block->next = NULL;
+            new_block->rcvid = ctp->rcvid;
+
+            store_blocked_client(&_ocb->rx.blocked_clients, new_block);
+        }
+
+        pthread_cond_signal(&_ocb->rx.cond);
+        pthread_mutex_unlock(&_ocb->rx.mutex);
+
+        return _RESMGR_NOREPLY;
+    }
+    else {
+        /* Set up the return data IOV.
+         * This is used to tell the system how large the buffer is in which we
+         * want to return the data for the read() call.
+         */
+        SETIOV(ctp->iov, _ocb->rx.read_buffer, _ocb->rx.nbytes);
+
+        /* Set up the number of bytes (returned by client's read()) */
+        _IO_SET_READ_NBYTES(ctp, _ocb->rx.nbytes);
+
+        nparts = 1;
+
+        pthread_mutex_lock(&_ocb->rx.mutex);
+        remove_blocked_client(&_ocb->rx.blocked_clients, ctp->rcvid);
+        pthread_mutex_unlock(&_ocb->rx.mutex);
+    }
+
+    /* Mark the access time as invalid (we just accessed it) */
     if (msg->i.nbytes > 0) {
         ocb->attr->flags |= IOFUNC_ATTR_ATIME;
     }
 
-    /* We return 0 parts, because we are the null device.
-     * Normally, if you return actual data, you would return at
-     * least 1 part. A pointer to and a buffer length for 1 part
-     * are located in the ctp structure.  */
-    return (_RESMGR_NPARTS (0));
-    /* What you return could also be several chunks of
-     * data. In this case, you would return more
-     * than 1 part. See the "time resource manager" example
-     * on how to use this. */
+    _ocb->rx.nbytes = 0;
 
+    return (_RESMGR_NPARTS(nparts));
 }
 
 /*
@@ -698,18 +808,14 @@ int io_read (resmgr_context_t* ctp, io_read_t* msg, RESMGR_OCB_T* _ocb) {
  *  At this point, the client has called the library write()
  *  function, and expects that our resource manager will write
  *  the number of bytes that have been specified to the device.
- *
- *  Since this is /dev/Null, all of the clients' writes always
- *  work -- they just go into Deep Outer Space.
  */
-
 int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
     int status;
     char *buf;
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("io_write -> id: %d\n", ctp->id);
+    log_trace("io_write -> (id: %d, rcvid: %d)\n", ctp->id, ctp->rcvid);
 
     /* Check the access permissions of the client */
     if ((status = iofunc_write_verify(ctp, msg, ocb, NULL)) != EOK) {
@@ -721,47 +827,114 @@ int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
         return (ENOSYS);
     }
 
-    /* Set the number of bytes successfully written for
-     * the client. This information will be passed to the
-     * client by the resource manager framework upon reply.
-     * In this example, we just take the number of  bytes that
-     * were sent to us and claim we successfully wrote them. */
-    _IO_SET_WRITE_NBYTES (ctp, msg -> i.nbytes);
-    printf("got write of %d bytes, data:\n", msg->i.nbytes);
-
-    /* Here we print the data. This is a good example for the case
-     * where you actually would like to do something with the data.
+    /* Set the number of bytes successfully written for the client. This
+     * information will be passed to the client by the resource manager
+     * framework upon reply.
      */
-    /* First check if our message buffer was large enough
-     * to receive the whole write at once. If yes, print data.*/
-    if( (msg->i.nbytes <= ctp->info.msglen - ctp->offset - sizeof(msg->i)) &&
-            (ctp->info.msglen < ctp->msg_max_size))  { // space for NUL byte
+    _IO_SET_WRITE_NBYTES (ctp, msg -> i.nbytes);
+    log_trace("io_write: got write of %d bytes, data:\n", msg->i.nbytes);
+
+    struct can_msg canmsg = {
+        .mid = _ocb->resmgr->mid,
+        .ext = { .is_extended_mid = 1 } // TODO: does this need to be an option?
+    };
+
+    /* First check if our message buffer was large enough to receive the whole
+     * write at once. If yes, print data.
+     */
+    if ((msg->i.nbytes <= ctp->info.msglen - ctp->offset - sizeof(msg->i)) &&
+            (ctp->info.msglen < ctp->msg_max_size))
+    {
         buf = (char *)(msg+1);
+
         buf[msg->i.nbytes] = '\0';
-        printf("%s\n", buf );
-    } else {
-        /* If we did not receive the whole message because the
-         * client wanted to send more than we could receive, we
-         * allocate memory for all the data and use resmgr_msgread()
-         * to read all the data at once. Although we did not receive
-         * the data completely first, because our buffer was not big
-         * enough, the data is still fully available on the client
-         * side, because its write() call blocks until we return
-         * from this callback! */
-        buf = malloc( msg->i.nbytes + 1);
-        resmgr_msgread( ctp, buf, msg->i.nbytes, sizeof(msg->i));
+        log_trace("io_write: buf: %s\n", buf);
+
+        int n = msg->i.nbytes/8 + (msg->i.nbytes%8 ? 1 : 0);
+
+        int i;
+        for (i = 0; i < n; ++i) {
+            canmsg.len = msg->i.nbytes - 8*i;
+
+            if (canmsg.len > 8) {
+                canmsg.len = 8;
+            }
+
+            memcpy(canmsg.dat, buf+8*i, canmsg.len);
+
+            log_trace("io_write; %s TS: %ums [%s] %X [%d] " \
+                      "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                    _ocb->resmgr->name,
+                    canmsg.ext.timestamp,
+                    canmsg.ext.is_extended_mid ? "EFF" : "SFF",
+                    canmsg.mid,
+                    canmsg.len,
+                    canmsg.dat[0],
+                    canmsg.dat[1],
+                    canmsg.dat[2],
+                    canmsg.dat[3],
+                    canmsg.dat[4],
+                    canmsg.dat[5],
+                    canmsg.dat[6],
+                    canmsg.dat[7]);
+
+            enqueue(&_ocb->resmgr->device_session->tx_queue, &canmsg);
+        }
+    }
+    else {
+        /* If we did not receive the whole message because the client wanted to
+         * send more than we could receive, we allocate memory for all the data
+         * and use resmgr_msgread() to read all the data at once. Although we
+         * did not receive the data completely first, because our buffer was not
+         * big enough, the data is still fully available on the client side,
+         * because its write() call blocks until we return from this callback.
+         */
+        buf = malloc(msg->i.nbytes + 1);
+        resmgr_msgread(ctp, buf, msg->i.nbytes, sizeof(msg->i));
+
         buf[msg->i.nbytes] = '\0';
-        printf("%s\n", buf );
+        log_trace("io_write: buf: %s\n", buf);
+
+        int n = msg->i.nbytes/8 + (msg->i.nbytes%8 ? 1 : 0);
+
+        int i;
+        for (i = 0; i < n; ++i) {
+            canmsg.len = msg->i.nbytes - 8*i;
+
+            if (canmsg.len > 8) {
+                canmsg.len = 8;
+            }
+
+            memcpy(canmsg.dat, buf+8*i, canmsg.len);
+
+            log_trace("io_write; %s TS: %ums [%s] %X [%d] " \
+                      "%02X %02X %02X %02X %02X %02X %02X %02X\n",
+                    _ocb->resmgr->name,
+                    canmsg.ext.timestamp,
+                    canmsg.ext.is_extended_mid ? "EFF" : "SFF",
+                    canmsg.mid,
+                    canmsg.len,
+                    canmsg.dat[0],
+                    canmsg.dat[1],
+                    canmsg.dat[2],
+                    canmsg.dat[3],
+                    canmsg.dat[4],
+                    canmsg.dat[5],
+                    canmsg.dat[6],
+                    canmsg.dat[7]);
+
+            enqueue(&_ocb->resmgr->device_session->tx_queue, &canmsg);
+        }
+
         free(buf);
     }
 
-    /* Finally, if we received more than 0 bytes, we mark the
-     * file information for the device to be updated:
-     * modification time and change of file status time. To
-     * avoid constant update of the real file status information
-     * (which would involve overhead getting the current time), we
-     * just set these flags. The actual update is done upon
-     * closing, which is valid according to POSIX. */
+    /* Finally, if we received more than 0 bytes, we mark the file information
+     * for the device to be updated: modification time and change of file status
+     * time. To avoid constant update of the real file status information (which
+     * would involve overhead getting the current time), we just set these
+     * flags. The actual update is done upon closing, which is valid according
+     * to POSIX. */
     if (msg->i.nbytes > 0) {
         ocb->attr->flags |= IOFUNC_ATTR_MTIME | IOFUNC_ATTR_CTIME;
     }
@@ -776,16 +949,10 @@ int io_unblock (resmgr_context_t* ctp, io_pulse_t* msg, RESMGR_OCB_T* _ocb) {
 
     int status;
     if((status = iofunc_unblock_default(ctp, msg, ocb)) != _RESMGR_DEFAULT) {
-        printf("returning here\n");
+        log_dbg("iofunc_unblock_default: No client connection was found.\n");
+
         return status;
     }
-
-    pthread_mutex_lock(&_ocb->rx.mutex);
-    if (_ocb->rx.rcvid != -1) {
-        // Don't leave any blocking clients hanging
-        _ocb->rx.rcvid = -1;
-    }
-    pthread_mutex_unlock(&_ocb->rx.mutex);
 
     return 0;
 }
@@ -847,7 +1014,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
      */
     case CAN_DEVCTL_GET_MID: // e.g. canctl -u1,rx0 -M
     {
-        data->dcmd.mid = 0x0; // <- set MID
+        data->dcmd.mid = _ocb->resmgr->mid; // <- set MID
         nbytes = sizeof(data->dcmd.mid);
 
         log_trace("CAN_DEVCTL_GET_MID: %x\n", data->dcmd.mid);
@@ -858,12 +1025,14 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         uint32_t mid = data->dcmd.mid;
         nbytes = 0;
 
+        _ocb->resmgr->mid = mid;
+
         log_trace("CAN_DEVCTL_SET_MID: %x\n", mid);
         break;
     }
     case CAN_DEVCTL_GET_MFILTER: // e.g. #canctl -u0,tx0 -F
     {
-        data->dcmd.mfilter = 0x0; // set MFILTER
+        data->dcmd.mfilter = _ocb->resmgr->mfilter; // set MFILTER
         nbytes = sizeof(data->dcmd.mfilter);
 
         log_trace("CAN_DEVCTL_GET_MFILTER: %x\n", data->dcmd.mfilter);
@@ -874,12 +1043,14 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         uint32_t mfilter = data->dcmd.mfilter;
         nbytes = 0;
 
+        _ocb->resmgr->mfilter = mfilter;
+
         log_trace("CAN_DEVCTL_SET_MFILTER: %x\n", mfilter);
         break;
     }
     case CAN_DEVCTL_GET_PRIO: // canctl -u1,tx1 -P
     {
-        data->dcmd.prio = 0x0; // set PRIO
+        data->dcmd.prio = _ocb->resmgr->prio; // set PRIO
         nbytes = sizeof(data->dcmd.prio);
 
         log_trace("CAN_DEVCTL_GET_PRIO: %x\n", data->dcmd.prio);
@@ -889,6 +1060,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     {
         uint32_t prio = data->dcmd.prio;
         nbytes = 0;
+
+        _ocb->resmgr->prio = prio;
 
         log_trace("CAN_DEVCTL_SET_PRIO: %x\n", prio);
         break;
@@ -932,7 +1105,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         }
 
         struct can_msg* canmsg =
-            dequeue_nonblock( &_ocb->session->rx_queue,
+            dequeue_noblock( &_ocb->session->rx_queue,
                     _ocb->resmgr->latency_limit_ms );
 
         if (canmsg != NULL) { // Could be a zero size rx queue, i.e. a tx queue
@@ -957,12 +1130,17 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                     canmsg->dat[7]);
 
             pthread_mutex_lock(&_ocb->rx.mutex);
-            _ocb->rx.rcvid = -1;
+            remove_blocked_client(&_ocb->rx.blocked_clients, ctp->rcvid);
             pthread_mutex_unlock(&_ocb->rx.mutex);
         }
         else {
             pthread_mutex_lock(&_ocb->rx.mutex);
-            _ocb->rx.rcvid = ctp->rcvid;
+
+            blocked_client_t* new_block = malloc(sizeof(blocked_client_t));
+            new_block->prev = new_block->next = NULL;
+            new_block->rcvid = ctp->rcvid;
+
+            store_blocked_client(&_ocb->rx.blocked_clients, new_block);
 
             pthread_cond_signal(&_ocb->rx.cond);
             pthread_mutex_unlock(&_ocb->rx.mutex);
@@ -1244,7 +1422,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         }
 
         struct can_msg* canmsg =
-            dequeue_nonblock( &_ocb->session->rx_queue,
+            dequeue_noblock( &_ocb->session->rx_queue,
                     _ocb->resmgr->latency_limit_ms );
 
         if (canmsg != NULL) { // Could be a zero size rx queue, i.e. a tx queue
@@ -1272,12 +1450,17 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
                     canmsg->dat[7]);
 
             pthread_mutex_lock(&_ocb->rx.mutex);
-            _ocb->rx.rcvid = -1;
+            remove_blocked_client(&_ocb->rx.blocked_clients, ctp->rcvid);
             pthread_mutex_unlock(&_ocb->rx.mutex);
         }
         else if (msg->i.dcmd == CAN_DEVCTL_RX_FRAME_RAW_BLOCK) {
             pthread_mutex_lock(&_ocb->rx.mutex);
-            _ocb->rx.rcvid = ctp->rcvid;
+
+            blocked_client_t* new_block = malloc(sizeof(blocked_client_t));
+            new_block->prev = new_block->next = NULL;
+            new_block->rcvid = ctp->rcvid;
+
+            store_blocked_client(&_ocb->rx.blocked_clients, new_block);
 
             pthread_cond_signal(&_ocb->rx.cond);
             pthread_mutex_unlock(&_ocb->rx.mutex);

@@ -19,5 +19,6 @@
 #
 
 add_subdirectory( baud )
-add_subdirectory( flood )
-add_subdirectory( micro )
+add_subdirectory( integrity )
+add_subdirectory( io )
+add_subdirectory( raw )

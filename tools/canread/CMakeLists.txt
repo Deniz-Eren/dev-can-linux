@@ -1,5 +1,6 @@
 # \file     CMakeLists.txt
-# \brief    CMake listing file for tools
+#
+# \details  CMake file for canread tool
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -18,6 +19,19 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-add_subdirectory( candump )
-add_subdirectory( canread )
-add_subdirectory( cansend )
+add_executable( canread
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/canread.c )
+
+target_include_directories( canread PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/> )
+
+if( CMAKE_BUILD_TYPE MATCHES Profiling )
+    target_link_libraries( canread ${QNX_PROFILING_LIBRARY} )
+else()
+    target_link_libraries( canread )
+endif()
+
+install( TARGETS canread
+    DESTINATION bin/
+    COMPONENT bin )

@@ -1,6 +1,7 @@
 /*
- * \file    cansend.c
- * \brief   This program writes CAN messages to dev-can-* driver devices.
+ * \file    canread.c
+ * \brief   This program reads CAN messages from dev-can-* driver devices and
+ *          dump the data to screen as string.
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -22,24 +23,31 @@
 #include <dev-can-linux/commands.h>
 
 
+static int fd = -1;
+
+static void sigint_signal_handler (int sig_no) {
+    close(fd);
+
+    exit(0);
+}
+
 int main (int argc, char* argv[]) {
     int opt;
     char* buffer;
 
-    int optu_unit;
+    int optu_unit = 0;
     char optu_mailbox_str[32];
     int optu_mailbox_is_tx = 0;
     int optu_mailbox = 0;
 
-    int optw_mid = 0;
-    int optw_mid_type = 0;
-    char optw_data_str[32];
+    int optW = 1;
 
-    while ((opt = getopt(argc, argv, "u:w:?h")) != -1) {
+    while ((opt = getopt(argc, argv, "u:W:?h")) != -1) {
         switch (opt) {
         case 'u':
             buffer = optu_mailbox_str;
             sscanf(optarg, "%d,%s", &optu_unit, buffer);
+            strncpy(buffer, optu_mailbox_str, 8);
             buffer[2] = 0;
 
             if (strncmp(buffer, "tx", 2) == 0) {
@@ -55,10 +63,8 @@ int main (int argc, char* argv[]) {
             sscanf(optu_mailbox_str+2, "%d", &optu_mailbox);
             break;
 
-        case 'w':
-            buffer = optw_data_str;
-            sscanf(optarg, "0x%x,%d,0x%s", &optw_mid, &optw_mid_type, buffer);
-
+        case 'W':
+            optW = atoi(optarg);
             break;
 
         case '?':
@@ -71,44 +77,37 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    int     fd;
-    struct  can_msg canmsg;
+    signal(SIGINT, sigint_signal_handler);
 
-    int n = strnlen(optw_data_str, 32);
-    n = n/2 + n%2;
-
-    int i;
-    for (i = 0; i < n; ++i) {
-        unsigned int k;
-
-        sscanf(optw_data_str + 2*i, "%2x", &k);
-
-        canmsg.dat[i] = k;
-    }
-
-    for (i = n; i < 8; ++i) {
-        canmsg.dat[i] = 0;
-    }
-
-    canmsg.mid = optw_mid;
-    canmsg.ext.timestamp = 0;
-    canmsg.ext.is_extended_mid = optw_mid_type;
-    canmsg.len = n;
+    int     ret = EOK;
 
     char OPEN_FILE[16];
+    char buf[1024];
 
     snprintf( OPEN_FILE, 16, "/dev/can%d/%s%d",
             optu_unit,
             (optu_mailbox_is_tx ? "tx" : "rx"), optu_mailbox );
 
     if ((fd = open(OPEN_FILE, O_RDWR)) == -1) {
-        printf("cansend error: %s\n", strerror(errno));
+        printf("candump error: %s\n", strerror(errno));
 
         exit(EXIT_FAILURE);
     }
 
-    write_frame_raw(fd, &canmsg);
+    while (ret == EOK) {
+        ssize_t n = read(fd, (void*)buf, optW);
+
+        if (n == -1) {
+            printf("canread error: %s\n", strerror(errno));
+
+            exit(EXIT_FAILURE);
+        }
+
+        buf[n] = '\0';
+        printf("%s", buf);
+        fflush(stdout);
+    }
 
     close(fd);
-    return EXIT_SUCCESS;
+    return ret;
 }

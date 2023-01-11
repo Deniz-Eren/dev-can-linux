@@ -1,8 +1,6 @@
 # \file     CMakeLists.txt
-# \brief    CMake listing file for driver flood TX tests; this tests the drivers
-#           ability to queue message and talk to the hardware while feeding TX
-#           messages under flood conditions without triggering hardware fault
-#           interrupts.
+# \brief    CMake listing file for driver raw message tests; basic single
+#           message sending and receiving.
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
 #
@@ -21,10 +19,10 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-add_executable( driver-flood-tests ${C_SOURCE_FILES}
-    driver-flood-tests.cpp )
+add_executable( driver-raw-tests ${C_SOURCE_FILES}
+    driver-raw-tests.cpp )
 
-target_include_directories( driver-flood-tests PUBLIC
+target_include_directories( driver-raw-tests PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
@@ -34,28 +32,28 @@ target_include_directories( driver-flood-tests PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/arch/x86/include> )
 
 if( CMAKE_BUILD_TYPE MATCHES Profiling )
-    target_link_libraries( driver-flood-tests PRIVATE
+    target_link_libraries( driver-raw-tests PRIVATE
         -lpci
         ${GTEST_LIBRARIES}
         ${QNX_PROFILING_LIBRARY} )
 else()
-    target_link_libraries( driver-flood-tests PRIVATE
+    target_link_libraries( driver-raw-tests PRIVATE
         -lpci
         ${GTEST_LIBRARIES} )
 endif()
 
-add_custom_target( ssh-driver-flood-tests ALL
+add_custom_target( ssh-driver-raw-tests ALL
     COMMAND ${CMAKE_SOURCE_DIR}/cmake/Modules/MakeSSHCommand.sh
         -p ${SSH_PORT}
-        -s ${CMAKE_CURRENT_BINARY_DIR}/driver-flood-tests
+        -s ${CMAKE_CURRENT_BINARY_DIR}/driver-raw-tests
         -r ${CMAKE_BINARY_DIR}
-        -o ssh-driver-flood-tests.sh
-    BYPRODUCTS ssh-driver-flood-tests.sh
-    DEPENDS driver-flood-tests )
+        -o ssh-driver-raw-tests.sh
+    BYPRODUCTS ssh-driver-raw-tests.sh
+    DEPENDS driver-raw-tests )
 
-add_test( NAME ssh-driver-flood-tests COMMAND ssh-driver-flood-tests.sh )
+add_test( NAME ssh-driver-raw-tests COMMAND ssh-driver-raw-tests.sh )
 
-code_coverage_run( ssh-driver-flood-tests )
+code_coverage_run( ssh-driver-raw-tests )
 
 # TODO: implement profiling for unit tests
-#valgrind_profiling_run( ssh-driver-flood-tests )
+#valgrind_profiling_run( ssh-driver-raw-tests )

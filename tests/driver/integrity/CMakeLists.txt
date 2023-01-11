@@ -1,5 +1,5 @@
 # \file     CMakeLists.txt
-# \brief    CMake listing file for driver micro level tests; basic single
+# \brief    CMake listing file for driver integrity level tests; basic single
 #           message sending and receiving.
 #
 # Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
@@ -19,11 +19,11 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-add_executable( driver-micro-tests ${C_SOURCE_FILES}
-    driver-micro-tests.cpp
+add_executable( driver-integrity-tests ${C_SOURCE_FILES}
+    driver-flood-tests.cpp
     driver-latency-tests.cpp )
 
-target_include_directories( driver-micro-tests PUBLIC
+target_include_directories( driver-integrity-tests PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
@@ -33,28 +33,28 @@ target_include_directories( driver-micro-tests PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/arch/x86/include> )
 
 if( CMAKE_BUILD_TYPE MATCHES Profiling )
-    target_link_libraries( driver-micro-tests PRIVATE
+    target_link_libraries( driver-integrity-tests PRIVATE
         -lpci
         ${GTEST_LIBRARIES}
         ${QNX_PROFILING_LIBRARY} )
 else()
-    target_link_libraries( driver-micro-tests PRIVATE
+    target_link_libraries( driver-integrity-tests PRIVATE
         -lpci
         ${GTEST_LIBRARIES} )
 endif()
 
-add_custom_target( ssh-driver-micro-tests ALL
+add_custom_target( ssh-driver-integrity-tests ALL
     COMMAND ${CMAKE_SOURCE_DIR}/cmake/Modules/MakeSSHCommand.sh
         -p ${SSH_PORT}
-        -s ${CMAKE_CURRENT_BINARY_DIR}/driver-micro-tests
+        -s ${CMAKE_CURRENT_BINARY_DIR}/driver-integrity-tests
         -r ${CMAKE_BINARY_DIR}
-        -o ssh-driver-micro-tests.sh
-    BYPRODUCTS ssh-driver-micro-tests.sh
-    DEPENDS driver-micro-tests )
+        -o ssh-driver-integrity-tests.sh
+    BYPRODUCTS ssh-driver-integrity-tests.sh
+    DEPENDS driver-integrity-tests )
 
-add_test( NAME ssh-driver-micro-tests COMMAND ssh-driver-micro-tests.sh )
+add_test( NAME ssh-driver-integrity-tests COMMAND ssh-driver-integrity-tests.sh )
 
-code_coverage_run( ssh-driver-micro-tests )
+code_coverage_run( ssh-driver-integrity-tests )
 
 # TODO: implement profiling for unit tests
-#valgrind_profiling_run( ssh-driver-micro-tests )
+#valgrind_profiling_run( ssh-driver-integrity-tests )

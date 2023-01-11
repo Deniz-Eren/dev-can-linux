@@ -211,7 +211,7 @@ TEST( Queue, NonBlockZeroQueueSize ) {
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
-    struct can_msg* dequeue_can_msg = dequeue_nonblock(&queue, 0);
+    struct can_msg* dequeue_can_msg = dequeue_noblock(&queue, 0);
 
     EXPECT_EQ(dequeue_can_msg, nullptr);
     EXPECT_EQ(queue.begin, 0);
@@ -252,7 +252,7 @@ TEST( Queue, NullInput ) {
     can_msg* dequeue_ret = dequeue(NULL, 0);
     EXPECT_EQ(dequeue_ret, nullptr);
 
-    dequeue_ret = dequeue_nonblock(NULL, 0);
+    dequeue_ret = dequeue_noblock(NULL, 0);
     EXPECT_EQ(dequeue_ret, nullptr);
 
     dequeue_ret = dequeue_peek(NULL);
@@ -284,7 +284,7 @@ TEST( Queue, SimpleUse ) {
     msg.mid = 0x112233;
     msg.len = 0;
 
-    struct can_msg* dequeue_can_msg = dequeue_nonblock(&queue, 0);
+    struct can_msg* dequeue_can_msg = dequeue_noblock(&queue, 0);
 
     EXPECT_EQ(dequeue_can_msg, nullptr);
     EXPECT_EQ(queue.begin, 0);
@@ -317,7 +317,7 @@ TEST( Queue, SimpleUse ) {
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
     enqueue_code = enqueue(&queue, &msg);
-    dequeue_can_msg = dequeue_nonblock(&queue, 0);
+    dequeue_can_msg = dequeue_noblock(&queue, 0);
 
     EXPECT_EQ(enqueue_code, EOK /* No error */);
     EXPECT_EQ(dequeue_can_msg->mid, 0x112233);
@@ -721,7 +721,7 @@ TEST( Queue, WrapEnqueueThenWrapDequeueNonBlock ) {
     struct can_msg* dequeue_can_msg;
 
     for (int i = 0; i < 7; ++i) {
-        dequeue_can_msg = dequeue_nonblock(&queue, 0);
+        dequeue_can_msg = dequeue_noblock(&queue, 0);
 
         EXPECT_EQ(dequeue_can_msg->mid, 102+i);
         EXPECT_EQ(dequeue_can_msg->len, 0);
@@ -732,7 +732,7 @@ TEST( Queue, WrapEnqueueThenWrapDequeueNonBlock ) {
         EXPECT_EQ(queue.dequeue_waiting, 0);
     }
 
-    dequeue_can_msg = dequeue_nonblock(&queue, 0);
+    dequeue_can_msg = dequeue_noblock(&queue, 0);
 
     EXPECT_EQ(dequeue_can_msg->mid, 109);
     EXPECT_EQ(dequeue_can_msg->len, 0);
@@ -742,7 +742,7 @@ TEST( Queue, WrapEnqueueThenWrapDequeueNonBlock ) {
     EXPECT_EQ(queue.session_up, 1);
     EXPECT_EQ(queue.dequeue_waiting, 0);
 
-    dequeue_can_msg = dequeue_nonblock(&queue, 0);
+    dequeue_can_msg = dequeue_noblock(&queue, 0);
 
     EXPECT_EQ(dequeue_can_msg->mid, 1000);
     EXPECT_EQ(dequeue_can_msg->len, 0);
@@ -855,7 +855,7 @@ TEST( Queue, DequeueNonBlockAllFromFullQueue ) {
     }
 
     for (int i = 0; i < 9; ++i) {
-        struct can_msg* dequeue_can_msg = dequeue_nonblock(&queue, 0);
+        struct can_msg* dequeue_can_msg = dequeue_noblock(&queue, 0);
 
         EXPECT_EQ(dequeue_can_msg->mid, 100+i);
         EXPECT_EQ(dequeue_can_msg->len, 0);
@@ -866,7 +866,7 @@ TEST( Queue, DequeueNonBlockAllFromFullQueue ) {
         EXPECT_EQ(queue.dequeue_waiting, 0);
     }
 
-    struct can_msg* dequeue_can_msg = dequeue_nonblock(&queue, 0);
+    struct can_msg* dequeue_can_msg = dequeue_noblock(&queue, 0);
 
     EXPECT_EQ(dequeue_can_msg->mid, 109);
     EXPECT_EQ(dequeue_can_msg->len, 0);

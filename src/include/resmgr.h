@@ -89,6 +89,12 @@ struct resmgr_ops {
     int     (*fill_xstats)(struct sk_buff* skb, const struct net_device* dev);
 };
 
+typedef struct blocked_client {
+    struct blocked_client *prev, *next;
+
+    int rcvid; // resmgr_msg_again() entry; -1 when no blocking client
+} blocked_client_t;
+
 /*
  * Extended OCB structure
  */
@@ -106,8 +112,13 @@ typedef struct can_ocb {
         pthread_mutex_t mutex;
         pthread_cond_t cond;
 
-        int rcvid; // resmgr_msg_again() entry; -1 when no blocking client
+        blocked_client_t* blocked_clients;
+
         queue_t* queue;
+
+        char* read_buffer;
+        size_t read_size;
+        size_t nbytes, offset;
     } rx;
 } can_ocb_t;
 
@@ -142,7 +153,10 @@ typedef struct can_resmgr {
     iofunc_mount_t mount;
     iofunc_funcs_t mount_funcs;
 
-    uint32_t latency_limit_ms;
+    uint32_t latency_limit_ms;  /* Maximum allowed latency in milliseconds */
+    uint32_t mid;               /* CAN message identifier */
+    uint32_t mfilter;           /* CAN message filter */
+    uint32_t prio;              /* CAN priority - not used */
 
     int shutdown;
 } can_resmgr_t;
@@ -185,6 +199,90 @@ static inline void free_all_resmgrs (can_resmgr_t** root) {
 
     while (*location != NULL) {
         can_resmgr_t** next = &(*location)->next;
+
+        free(*location);
+
+        *location = *next;
+    }
+}
+
+static inline void store_blocked_client (
+        blocked_client_t** root, blocked_client_t* r)
+{
+    if (*root == NULL) {
+        *root = r;
+        r->prev = r->next = NULL;
+        return;
+    }
+
+    blocked_client_t** last = root;
+
+    while ((*last)->next != NULL) {
+        last = &(*last)->next;
+    }
+
+    (*last)->next = r;
+    r->prev = (*last);
+    r->next = NULL;
+}
+
+static inline blocked_client_t* get_blocked_client (
+        blocked_client_t** root, int rcvid)
+{
+    blocked_client_t** location = root;
+
+    while (*location != NULL) {
+        if ((*location)->rcvid == rcvid) {
+            return *location;
+        }
+
+        location = &(*location)->next;
+    }
+
+    return NULL;
+}
+
+static inline void remove_blocked_client (blocked_client_t** root, int rcvid) {
+    blocked_client_t** location = root;
+
+    while (*location != NULL) {
+        if ((*location)->rcvid == rcvid) {
+            if ((*location)->prev == NULL) {
+                *root = (*location)->next;
+
+                if (*root != NULL) {
+                    (*root)->prev = NULL;
+                }
+            }
+            else {
+                (*location)->prev->next = (*location)->next;
+
+                if ((*location)->next) {
+                    (*location)->next->prev = (*location)->prev;
+                }
+            }
+
+            blocked_client_t* next = NULL;
+
+            if (*location != NULL) {
+                next = (*location)->next;
+            }
+
+            free(*location);
+
+            *location = next;
+        }
+        else {
+            *location = (*location)->next;
+        }
+    }
+}
+
+static inline void free_all_blocked_clients (blocked_client_t** root) {
+    blocked_client_t** location = root;
+
+    while (*location != NULL) {
+        blocked_client_t** next = &(*location)->next;
 
         free(*location);
 

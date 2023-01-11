@@ -157,7 +157,9 @@ void destroy_device_session (device_session_t* D) {
 }
 
 client_session_t*
-create_client_session (struct net_device* dev, const queue_attr_t* rx_attr) {
+create_client_session (struct net_device* dev, const queue_attr_t* rx_attr,
+        uint32_t* mid, uint32_t* mfilter, uint32_t* prio)
+{
     if (dev == NULL) {
         return NULL;
     }
@@ -168,6 +170,7 @@ create_client_session (struct net_device* dev, const queue_attr_t* rx_attr) {
         return NULL;
     }
 
+    pthread_mutex_lock(&device_session_create_mutex);
     client_session_t* new_client = malloc(sizeof(client_session_t));
 
     client_session_t* last = get_last_client_session(ds);
@@ -183,15 +186,20 @@ create_client_session (struct net_device* dev, const queue_attr_t* rx_attr) {
     }
 
     new_client->device_session = ds;
+    new_client->mid = mid;          /* CAN message identifier */
+    new_client->mfilter = mfilter;  /* CAN message filter */
+    new_client->prio = prio;        /* CAN priority - not used */
 
     int err;
     if ((err = create_queue(&new_client->rx_queue, rx_attr)) != EOK) {
         log_err("create_client_session fail: create_queue err: %d\n", err);
 
         destroy_client_session(new_client);
+        pthread_mutex_unlock(&device_session_create_mutex);
         return NULL;
     }
 
+    pthread_mutex_unlock(&device_session_create_mutex);
     return new_client;
 }
 
@@ -205,6 +213,8 @@ void destroy_client_session (client_session_t* S) {
     if (ds == NULL) {
         return;
     }
+
+    pthread_mutex_lock(&device_session_create_mutex);
 
     if (S->prev && S->next) {
         S->prev->next = S->next;
@@ -231,4 +241,6 @@ void destroy_client_session (client_session_t* S) {
 
     destroy_queue(&S->rx_queue);
     free(S);
+
+    pthread_mutex_unlock(&device_session_create_mutex);
 }
