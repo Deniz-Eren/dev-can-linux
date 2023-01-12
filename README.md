@@ -15,39 +15,39 @@ The compiled program is used as follows:
 
 Options:
 
-    -V             - print application version and exit
-    -C             - print build configurations and exit
-    -i             - list supported hardware and exit
-    -ii            - list supported hardware details and exit
-    -d {vid}:{did} - target desired device, e.g. -d 13fe:c302
-    -w             - print warranty message and exit
-    -c             - print license details and exit
-    -q             - quiet mode turns of all terminal printing and trumps all
-                     verbose modes. Both stdout and stderr are turned off!
-                     Errors and warnings are printed to stderr normally when
-                     this option is not selected. Logging to syslog is not
-                     impacted by this option.
-    -s             - silent mode disables all CAN-bus TX capability
-    -t             - user timestamp mode disables internal timestamping of
-                     CAN-bus messages. Instead the driver expects devctl()
-                     CAN_DEVCTL_SET_TIMESTAMP command (or set_timestamp()
-                     function in dev-can-linux headers) to set the timestamps.
-                     In the absence of this option the devctl() set_timestamp()
-                     command will synchronize the internal timestamp to the supplied
-                     timestamp (in milliseconds). By default this timestamp is with
-                     reference to boot-up time.
-    -v             - verbose 1; prints out info to stdout
-    -vv            - verbose 2; prints out info & debug to stdout
-    -vvv           - verbose 3; prints out info, debug & trace to stdout;
-                     do NOT enable this for general usage, it is only intended for
-                     debugging during development.
-    -l             - log 1; syslog entries for info
-    -ll            - log 2; syslog entries for info & debug
-    -lll           - log 3; syslog entries for info, debug & trace; NOT for
-                     general use.
-    -?/h           - print help menu and exit
+    -V         - Print application version and exit.
+    -C         - Print build configurations and exit.
+    -i         - List supported hardware and exit.
+    -ii        - List supported hardware details and exit.
+    -d vid:did - Target desired device, e.g. -d 13fe:c302
+    -w         - Print warranty message and exit.
+    -c         - Print license details and exit.
+    -q         - Quiet mode turns of all terminal printing and trumps all
+                 verbose modes. Both stdout and stderr are turned off!
+                 Errors and warnings are printed to stderr normally when this
+                 option is not selected. Logging to syslog is not impacted by
+                 this option.
+    -s         - Silent mode disables all CAN-bus TX capability
+    -t         - User timestamp mode disables internal timestamping of CAN-bus
+                 messages. Instead the driver expects devctl()
+                 CAN_DEVCTL_SET_TIMESTAMP command (or set_timestamp() function
+                 in dev-can-linux headers) to set the timestamps.
+                 In the absence of this option the devctl() set_timestamp()
+                 command will synchronize the internal timestamp to the supplied
+                 timestamp (in milliseconds). By default this timestamp is with
+                 reference to boot-up time.
+    -v         - Verbose 1; prints out info to stdout.
+    -vv        - Verbose 2; prints out info & debug to stdout.
+    -vvv       - Verbose 3; prints out info, debug & trace to stdout.
+                 Do NOT enable this for general usage, it is only intended for
+                 debugging during development.
+    -l         - Log 1; syslog entries for info.
+    -ll        - Log 2; syslog entries for info & debug.
+    -lll       - Log 3; syslog entries for info, debug & trace.
+                 NOT for general use.
+    -?/h       - Print help menu and exit.
 
-    Notes:
+    NOTES
     
       (i) use command slog2info to check output to syslog
      (ii) stdout is the standard output stream you are reading now on screen
