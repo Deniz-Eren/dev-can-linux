@@ -30,25 +30,52 @@ results get cluttered with irrelevant differences.
 
 ### Testability
 
+Testability through automated Continuous Integration is very important to the
+ongoing updates to the Linux Kernel we propagate to this project. For this
+reason we have setup everything using Docker-compose containerization and have
+made Jenkins CI pipelines fundamental to our workflows.
+
+See [Jenkins Pipeline](../../ci/jenkins/).
+
+Another consideration is that testing drivers often means we must test using
+hardware. For this reason, we have adopted the use of QEmu virtualisation, which
+has emulated CAN-bus hardware configuration options.
+
+See [QEmu CAN-bus Hardware Emulation](../../tests/emulation/).
+
+An added challenge posed by implementing for QNX means we are developing in
+Linux, then cross-compiling and testing on QNX. For this reason, we have
+embedded our test image setup for our QNX target environment into our workflow.
+That is, Jenkins pipelines creates the QNX target image, then starts the QEmu
+hardware emulation and then runs our tests over local SSH and presents the
+results; complete integration, together with extreme ease of setup thanks to the
+entire setup being done in containers.
+
 See [Test Platform](../../tests/image/).
 
-### Integrity
-
-### Minimalist
-
-### Explicitness
 
 ## Structure
 
-To read the file chart presented in text format below, please interpret the words "items", "replaced", "added" and "unchanged" in the context of the text in those files, as follows:
+To read the file chart presented in text format below, please interpret the
+words "items", "replaced", "added" and "unchanged" in the context of the text in
+those files, as follows:
 
 - Items: can be structures and/or functions.
-- Replaced: original names, arguments and member variables (or just their names) have been kept the same but their contents and functionality has been completed replaced with QNX application specific functionality.
+- Replaced: original names, arguments and member variables (or just their names)
+have been kept the same but their contents and functionality has been completed
+replaced with QNX application specific functionality.
 - Added: completely new structure and/or functions added.
-- Unchanged: left as-is from the original Linux Kernel source-code; there could be minor cosmetic changes, which can be reviewed using the documented _Meld_ comparison process.
-- Removed: items not applicable or needed; completely removed and not replaced and no new items added in it's place.
+- Unchanged: left as-is from the original Linux Kernel source-code; there could
+be minor cosmetic changes, which can be reviewed using the documented _Meld_
+comparison process.
+- Removed: items not applicable or needed; completely removed and not replaced
+and no new items added in it's place.
 
-To elaborate, this is a textual analysis only, intended to provide some guidance on how to rebase changes from the Linux Kernel and what where to focus. Otherwise the actual functionality of timers, delays, hardware interface function calls, etc, have all been redirected to QNX equivalent functions; e.g. "unchanged" refers to the textual contents of the file being unchanged.
+To elaborate, this is a textual analysis only, intended to provide some guidance
+on how to rebase changes from the Linux Kernel and what where to focus.
+Otherwise the actual functionality of timers, delays, hardware interface
+function calls, etc, have all been redirected to QNX equivalent functions;
+e.g. "unchanged" refers to the textual contents of the file being unchanged.
 
 File modification chart:
 
@@ -57,62 +84,84 @@ File modification chart:
     │   └── x86
     │       └── include
     │           └── asm
-    │               └── div64.h <------
+    │               └── div64.h <------------ Unchanged
     ├── drivers
     │   └── net
     │       └── can
-    │           ├── dev.c <------------
+    │           ├── dev
+    │           │   ├── bittiming.c <-------- Unchanged
+    │           │   ├── calc_bittiming.c <--- Unchanged
+    │           │   ├── dev.c <-------------- Replaced all schedule delayed work
+    │           │   │                         implementation.
+    │           │   │                         All CAN network device mallocs are
+    │           │   │                         modified.
+    │           │   │                         GPIO Termination functionality
+    │           │   │                         removed for now.
+    │           │   ├── netlink.c <---------- Only can_changelink remains.
+    │           │   │                         TODO: can_fill_xstats
+    │           │   └── skb.c <-------------- Heavily modified / reduced.
     │           └── sja1000
-    │               ├── adv_pci.c <---- added driver (not from Linux)
-    │               ├── ems_pci.c <---- unchanged
-    │               ├── kvaser_pci.c <- unchanged
-    │               ├── peak_pci.c <--- unchanged
-    │               ├── plx_pci.c <---- unchanged
-    │               ├── sja1000.c <----
-    │               └── sja1000.h <----
+    │               ├── adv_pci.c <---------- Added driver (not from Linux)
+    │               ├── ems_pci.c <---------- Unchanged
+    │               ├── kvaser_pci.c <------- Unchanged
+    │               ├── peak_pci.c <--------- Unchanged
+    │               ├── plx_pci.c <---------- Unchanged
+    │               ├── sja1000.c <---------- Only spinlock and priv data have
+    │               └── sja1000.h <---------- been replaced.
     ├── include
     │   ├── asm-generic
     │   │   ├── bitops
-    │   │   │   ├── fls64.h <----------
-    │   │   │   └── __fls.h <----------
-    │   │   └── div64.h <--------------
+    │   │   │   ├── fls64.h <---------------- Unchanged
+    │   │   │   └── __fls.h <---------------- Unchanged
+    │   │   └── div64.h <-------------------- Unchanged
     │   ├── linux
-    │   │   ├── bitops.h <-------------
+    │   │   ├── bitops.h <------------------- Only kept fls_long()
+    │   │   ├── bits.h <--------------------- Only kept include vdso/bits.h
     │   │   ├── can
-    │   │   │   ├── dev.h <------------
-    │   │   │   ├── led.h <------------
+    │   │   │   ├── bittiming.h <------------ Unchanged
+    │   │   │   ├── dev.h <------------------ Some removed
+    │   │   │   ├── length.h <--------------- Unchanged
     │   │   │   ├── platform
-    │   │   │   │   └── sja1000.h <----
-    │   │   │   └── skb.h <------------
-    │   │   ├── compiler.h <-----------
-    │   │   ├── delay.h <--------------
-    │   │   ├── device.h <-------------
-    │   │   ├── interrupt.h <----------
-    │   │   ├── io.h <-----------------
-    │   │   ├── irqreturn.h <----------
-    │   │   ├── kernel.h <-------------
-    │   │   ├── log2.h <---------------
-    │   │   ├── mod_devicetable.h <----
-    │   │   ├── module.h <-------------
-    │   │   ├── netdevice.h <----------
-    │   │   ├── pci.h <----------------
-    │   │   ├── pci_ids.h <------------
-    │   │   ├── skbuff.h <------------- 2 items replaced; others removed
-    │   │   ├── slab.h <---------------
-    │   │   └── types.h <-------------- all removed; project types added
-    │   └── uapi
-    │       └── linux
-    │           ├── can
-    │           │   ├── error.h <------
-    │           │   └── netlink.h <----
-    │           ├── can.h <------------
-    │           ├── if.h <-------------
-    │           ├── pci.h <------------
-    │           └── pci_regs.h <-------
-    ├── net
-    │   └── core
-    │       └── skbuff.c <-------------
-    └── README.md <-------------------- This document.
+    │   │   │   │   └── sja1000.h <---------- Unchanged
+    │   │   │   └── skb.h <------------------ Changed to struct sk_buff
+    │   │   ├── compiler.h <----------------- Unchanged
+    │   │   ├── compiler_types.h <----------- Kept only __PASTE macro
+    │   │   ├── const.h <-------------------- Unchanged
+    │   │   ├── delay.h <-------------------- Replaced with QNX udelay()
+    │   │   ├── device.h <------------------- Reduced struct device to 1 member
+    │   │   ├── interrupt.h <---------------- request_irq() and free_irq() are
+    │   │   │                                 only stubs for QNX implementation.
+    │   │   ├── io.h <----------------------- Replaced all with QNX in*() and
+    │   │   │                                 out*() functions.
+    │   │   ├── irqreturn.h <---------------- Unchanged
+    │   │   ├── kernel.h <------------------- Kept only includes of some headers
+    │   │   ├── log2.h <--------------------- Unchanged
+    │   │   ├── math.h <--------------------- Unchanged
+    │   │   ├── minmax.h <------------------- Minor changes
+    │   │   ├── mod_devicetable.h <---------- Only kept struct pci_device_id
+    │   │   ├── module.h <------------------- Turning macros MODULE_*() to null
+    │   │   ├── netdevice.h <---------------- Heavily reduced and key functions
+    │   │   │                                 that are needed turned into stubs
+    │   │   │                                 that are reimplemented in QNX.
+    │   │   ├── pci.h <---------------------- Heavily reduced
+    │   │   ├── pci_ids.h <------------------ Unchanged
+    │   │   ├── skbuff.h <------------------- 2 items replaced; others removed
+    │   │   ├── slab.h <--------------------- All removed; using malloc()/free()
+    │   │   ├── stddef.h <------------------- Unchanged
+    │   │   ├── types.h <-------------------- All removed; project types added
+    │   │   └── units.h <-------------------- Unchanged
+    │   ├── uapi
+    │   │   └── linux
+    │   │       ├── can
+    │   │       │   ├── error.h <------------ Unchanged
+    │   │       │   └── netlink.h <---------- Unchanged
+    │   │       ├── can.h <------------------ Unchanged
+    │   │       ├── const.h <---------------- Unchanged
+    │   │       ├── if.h <------------------- Only kept enum net_device_flags
+    │   │       ├── pci.h <------------------ Minor changes to prevent clash
+    │   │       └── pci_regs.h <------------- Unchanged
+    │   └── vdso
+    │       ├── bits.h <--------------------- Unchanged
+    │       └── const.h <-------------------- Unchanged
+    └── README.md <-------------------------- This document.
 
-
-## Method
