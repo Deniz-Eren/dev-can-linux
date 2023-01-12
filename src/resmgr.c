@@ -700,6 +700,10 @@ int io_read (resmgr_context_t* ctp, io_read_t* msg, RESMGR_OCB_T* _ocb) {
         return ENOSYS;
     }
 
+    if (_ocb->resmgr->channel_type == TX_CHANNEL) {
+        return EIO; // Input/output error
+    }
+
     if (_ocb->session->rx_queue.attr.size == 0) {
         _IO_SET_READ_NBYTES(ctp, 0);
 
@@ -825,6 +829,10 @@ int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
     /* Check if pwrite() or normal write() */
     if ((msg->i.xtype & _IO_XTYPE_MASK) != _IO_XTYPE_NONE) {
         return (ENOSYS);
+    }
+
+    if (_ocb->resmgr->channel_type == RX_CHANNEL) {
+        return EIO; // Input/output error
     }
 
     /* Set the number of bytes successfully written for the client. This
@@ -1054,7 +1062,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         nbytes = sizeof(data->dcmd.prio);
 
         log_trace("CAN_DEVCTL_GET_PRIO: %x\n", data->dcmd.prio);
-        break;
+
+        return ENOTSUP; // Not supported
     }
     case CAN_DEVCTL_SET_PRIO: // e.g. canctl -u1,tx1 -p 5
     {
@@ -1064,7 +1073,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         _ocb->resmgr->prio = prio;
 
         log_trace("CAN_DEVCTL_SET_PRIO: %x\n", prio);
-        break;
+
+        return ENOTSUP; // Not supported
     }
     case CAN_DEVCTL_GET_TIMESTAMP: // e.g. canctl -u1 -T
     {
@@ -1098,10 +1108,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_READ_CANMSG_EXT: // e.g. canctl -u0,rx0 -r
     {
-        if (_ocb->session->rx_queue.attr.size == 0) {
-            nbytes = 0;
-
-            break;
+        if (_ocb->resmgr->channel_type == TX_CHANNEL) {
+            return EIO; // Input/output error
         }
 
         struct can_msg* canmsg =
@@ -1152,6 +1160,10 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_WRITE_CANMSG_EXT: // e.g. canctl -u0,rx0 -w0x22,1,0x55
     {
+        if (_ocb->resmgr->channel_type == RX_CHANNEL) {
+            return EIO; // Input/output error
+        }
+
         struct can_msg canmsg = data->dcmd.canmsg;
         nbytes = 0;
 
@@ -1415,10 +1427,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     case CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK:
     case CAN_DEVCTL_RX_FRAME_RAW_BLOCK: // e.g. candump -u0,rx0
     {
-        if (_ocb->session->rx_queue.attr.size == 0) {
-            nbytes = 0;
-
-            break;
+        if (_ocb->resmgr->channel_type == TX_CHANNEL) {
+            return EIO; // Input/output error
         }
 
         struct can_msg* canmsg =
@@ -1475,6 +1485,10 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     }
     case CAN_DEVCTL_TX_FRAME_RAW: // e.g. cansend -u0,tx0 -w0x1234,1,0xABCD
     {
+        if (_ocb->resmgr->channel_type == RX_CHANNEL) {
+            return EIO; // Input/output error
+        }
+
         struct can_msg canmsg = data->dcmd.canmsg;
         nbytes = 0;
 
