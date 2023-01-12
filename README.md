@@ -223,6 +223,19 @@ To run QEmu VM with CAN-bus hardware emulation for testing see
 Please refer to the ["Development"](dev/) documentation.
 
 
+## Example Applications
+
+If you are interested in developing applications that utilize CAN-bus through
+our driver, then take a look at the [cansend](tools/cansend),
+[candump](tools/candump) and [canread](tools/canread) applications. These double
+up as excellent testing tools and examples of applications that talke to our
+driver.
+
+Note also that together with our driver installer package a '-dev' variant
+installer is also packaged. This contains the necessary C headers to develop
+applications, intended to be installed onto your development environment.
+
+
 ## Check Supported Hardware
 
 Run with '-i' option to check what hardware is supported:
