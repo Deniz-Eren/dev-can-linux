@@ -217,7 +217,9 @@ One can use GDB within the Ubuntu development environment shell, simply running:
 
     $QNX_HOST/usr/bin/ntox86_64-gdb
 
-If you have a core dump file (for example _vgcore.704533_):
+If you have a core dump file (for example _dev-can-linux.core_):
 
     $QNX_HOST/usr/bin/ntox86_64-gdb dev-can-linux dev-can-linux.core
 
+Note our test image is configured to dump the core files in the path
+_/data/var/dumper/_ of the image.
