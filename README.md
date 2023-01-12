@@ -228,7 +228,7 @@ Please refer to the ["Development"](dev/) documentation.
 If you are interested in developing applications that utilize CAN-bus through
 our driver, then take a look at the [cansend](tools/cansend),
 [candump](tools/candump) and [canread](tools/canread) applications. These double
-up as excellent testing tools and examples of applications that talke to our
+up as excellent testing tools and examples of applications that talk to our
 driver.
 
 Note also that together with our driver installer package a '-dev' variant
