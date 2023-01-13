@@ -42,13 +42,100 @@ static void sigint_signal_handler (int sig_no) {
 
 int main (int argc, char* argv[]) {
     int opt;
+    char *options, *value;
 
-    while ((opt = getopt(argc, argv, "d:viqstlVCwc?h")) != -1) {
+    char *sub_opts[] = {
+#define CHANNEL_ID      0
+        "id",
+#define READ_CHANNELS   1
+        "rx",
+#define WRITE_CHANNELS  2
+        "tx",
+        NULL
+    };
+
+    while ((opt = getopt(argc, argv, "d:u:viqstlVCwc?h")) != -1) {
         switch (opt) {
         case 'd':
             optd = 1;
             sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
             log_info("manual device selection: %x:%x\n", opt_vid, opt_did);
+            break;
+
+        case 'u':
+            optu++;
+            if ((optarg = strdup(optarg)) == NULL)  {
+                printf("strdup failure\n");
+
+                return EXIT_FAILURE;
+            }
+            channel_config_t default_channel_config = {
+                .id = -1,
+                .num_rx_channels = DEFAULT_NUM_RX_CHANNELS,
+                .num_tx_channels = DEFAULT_NUM_TX_CHANNELS
+            };
+
+            channel_config_t new_channel_config = default_channel_config;
+
+            options = optarg;
+            while (*options != '\0') {
+                switch (getsubopt(&options, sub_opts, &value)) {
+                case CHANNEL_ID:        /* process id option */
+                    new_channel_config.id = atoi(value);
+                    break;
+
+                case READ_CHANNELS:     /* process rx option */
+                    new_channel_config.num_rx_channels = atoi(value);
+                    break;
+
+                case WRITE_CHANNELS:    /* process tx option */
+                    new_channel_config.num_tx_channels = atoi(value);
+                    break;
+
+                default :
+                    /* process unknown token */
+                    printf("unknown\n");
+                    break;
+                }
+            }
+            free(optarg);
+
+            int id = new_channel_config.id;
+
+            if (num_optu_configs < id + 1) {
+                channel_config_t* new_optu_config;
+
+                int new_num_optu_configs = id + 1;
+                new_optu_config =
+                    malloc(new_num_optu_configs*sizeof(channel_config_t));
+
+                /* Fill all newly created configs with default settings */
+                int i;
+                for (i = num_optu_configs; i < new_num_optu_configs; ++i) {
+                    new_optu_config[i] = default_channel_config;
+                }
+
+                /* Copy previous configs to the new configs */
+                if (optu_config != NULL) {
+                    memcpy( new_optu_config, optu_config,
+                            num_optu_configs*sizeof(channel_config_t) );
+
+                    free(optu_config);
+                }
+
+                /* Set the configs to the new configs */
+                num_optu_configs = new_num_optu_configs;
+                optu_config = new_optu_config;
+            }
+
+            if (id >= 0) {
+                optu_config[id] = new_channel_config;
+            }
+            else {
+                printf("channel id (%d) invalid\n", id);
+
+                return EXIT_FAILURE;
+            }
             break;
 
         case 'v':
@@ -156,6 +243,7 @@ int main (int argc, char* argv[]) {
     adv_pci_driver.remove(&pdev);
 
     free(device_sessions);
+    free(optu_config);
 
     return EXIT_SUCCESS;
 }

@@ -139,10 +139,21 @@ int register_netdev(struct net_device *dev) {
         io_funcs.devctl = io_devctl;
     }
 
-    int i, j;
+    int num_channels[2] = {
+        DEFAULT_NUM_RX_CHANNELS,
+        DEFAULT_NUM_TX_CHANNELS
+    };
 
-    for (i = 0; i < 1; ++i) { // default number of channels
-        for (j = 0; j < 2; ++j) { // 2 for rx & tx
+    if (id < num_optu_configs) {
+        if (id == optu_config[id].id) {
+            num_channels[0] = optu_config[id].num_rx_channels;
+            num_channels[1] = optu_config[id].num_tx_channels;
+        }
+    }
+
+    int i, j;
+    for (j = 0; j < 2; ++j) { // 2 for rx & tx
+        for (i = 0; i < num_channels[j]; ++i) { // number of channels
             can_resmgr_t* resmgr = (can_resmgr_t*)malloc(sizeof(can_resmgr_t));
 
             store_resmgr(&root_resmgr, resmgr);

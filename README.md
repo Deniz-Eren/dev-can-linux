@@ -20,6 +20,18 @@ Options:
     -i         - List supported hardware and exit.
     -ii        - List supported hardware details and exit.
     -d vid:did - Target desired device, e.g. -d 13fe:c302
+    -u subopts - Configure the device RX/TX file descriptors.
+
+                 Suboptions (subopts):
+
+                 id=#   - Specify ID number of the device to configure;
+                          e.g. /dev/can0/ is id=0
+                 rx=#   - Number of RX file descriptors to create
+                 tx=#   - Number of TX file descriptors to create
+
+                 Example:
+                     dev-can-linux -u id=0,rx=2,tx=0
+
     -w         - Print warranty message and exit.
     -c         - Print license details and exit.
     -q         - Quiet mode turns of all terminal printing and trumps all
@@ -234,6 +246,95 @@ driver.
 Note also that together with our driver installer package a '-dev' variant
 installer is also packaged. This contains the necessary C headers to develop
 applications, intended to be installed onto your development environment.
+
+
+## How Does It Work?
+
+When you start the driver a number of device RX/TX file descriptors are created
+that facilitate application interfaces to the driver.
+
+Diagram below illustrates device folders and RX/TX file descriptors and how to
+configure them.
+
+    dev-can-linux -u id=0,rx=n,tx=m     # Example driver start command
+    │                                   # Asking for n rx and m tx channels
+    │                                   # for port 0.
+    │                                   # Note n and m can be zero also.
+    │
+    ├── /dev/can0/  # When you start the driver these device directories
+    │   │           # appear in /dev; can0, can1, etc, as many as there
+    │   │           # are physical CAN ports on the device you are using.
+    │   │           # In this example diagram we illustrate with a 2 port
+    │   │           # device.
+    │   │
+    │   ├── rx0     # Has message ID filter configurable through canctl or
+    │   │   │       # via software functions in dev-can-linux/commands.h
+    │   │   │       # Filter applies to both character IO and raw CAN messages.
+    │   │   │
+    │   │   ├── client connection to read  1    e.g. canread or candump
+    │   │   ├── client connection to read  2         or custom application
+    │   │   ├── ...
+    │   │   └── "      "          "  "     N
+    │   │
+    │   ├── tx0     # Has configurable message ID for character mode IO
+    │   │   │       # transmission. This ID isn't applicable or RAW mode.
+    │   │   │
+    │   │   ├── client connection to write 1    e.g. cansend or custom
+    │   │   ├── client connection to write 2         application
+    │   │   ├── ...
+    │   │   └── "      "          "  "     N
+    │   │
+    │   ├── rx1
+    │   │   ├── client connection to read  1    RX channels can't be opened to
+    │   │   ├── client connection to read  2    write; you'll get an error
+    │   │   ├── ...
+    │   │   └── "      "          "  "     N
+    │   ├── tx1
+    │   │   ├── client connection to write 1    TX channels can't be opened to
+    │   │   ├── ...                             read; you'll get an error
+    │   │   └── "      "          "  "     N
+    │   │
+    │   ├── rx{n-1} # As example driver start command had -u0,rx{n},... there
+    │   │   │       # will be "n-1" RX file descriptors created, all with
+    │   │   │       # their own configurable message ID filter.
+    │   │   │
+    │   │   ├── client connection to read  1
+    │   │   ├── ...
+    │   │   └── "      "          "  "     N
+    │   │
+    │   └── tx{m-1} # As example driver start command had -u0,tx{m},... there
+    │       │       # will be "m-1" TX file descriptors created, all with
+    │       │       # their own configurable transmit message ID.
+    │       │
+    │       ├── client connection to write 1
+    │       ├── ...
+    │       └── "      "          "  "     N
+    │
+    └── /dev/can1/  Second device associated to second board port.
+        │           Example driver start command didn't specify anything for
+        │           this device, so the default behaviour of creating a single
+        │           RX and TX file decriptor will be performed.
+        │
+        ├── rx0
+        │   ├── client connection to read  1
+        │   ├── client connection to read  2
+        │   ├── ...
+        │   └── "      "          "  "     N
+        └── tx0
+            ├── client connection to write 1
+            ├── client connection to write 2
+            ├── ...
+            └── "      "          "  "     N
+
+Each RX file descriptor can have any number of _client connection to read_ and
+they will all have their own receive queues and they will all receive all the
+available messages. Each have the possibility to be configured independently.
+
+All TX file descriptors transmit to the same underlying device port and
+similarly can also be configured independently.
+
+All RX file descriptor clients have the possibility of receiving the TX echo
+back messages (unless they have their filters configured to mask them).
 
 
 ## Check Supported Hardware

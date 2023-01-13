@@ -44,6 +44,20 @@ extern int opt_vid;
 extern int opt_did;
 extern int opts;
 extern int optt;
+extern int optu;
+
+#define DEFAULT_NUM_RX_CHANNELS 1
+#define DEFAULT_NUM_TX_CHANNELS 1
+
+typedef struct channel_config {
+    int id;
+    int num_rx_channels;
+    int num_tx_channels;
+} channel_config_t;
+
+extern size_t num_optu_configs;
+extern channel_config_t* optu_config;
+
 
 /*
  * Linux Kernel platform and architecture macros
