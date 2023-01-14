@@ -25,15 +25,15 @@
 
 
 /* Structure used for driver selection processing */
-struct driver_selection_t {
+typedef struct driver_selection {
+    struct driver_selection *prev, *next;
+
     pci_vid_t vid;
     pci_did_t did;
 
-    int driver_auto;
-    int driver_pick;
-    int driver_ignored;
-    int driver_unsupported;
-};
+    /* Detected PCI driver */
+    struct pci_driver* driver;
+} driver_selection_t;
 
 /* Supported CAN-bus PCI drivers */
 extern struct pci_driver adv_pci_driver;
@@ -42,10 +42,97 @@ extern struct pci_driver ems_pci_driver;
 extern struct pci_driver peak_pci_driver;
 extern struct pci_driver plx_pci_driver;
 
-/* Detected PCI driver */
-extern struct pci_driver *detected_driver;
+extern int process_driver_selection();
+extern void print_driver_selection_results();
 
-extern int process_driver_selection (struct driver_selection_t* ds);
-extern void print_driver_selection_results (struct driver_selection_t* ds);
+extern driver_selection_t* driver_selection_root;
+extern driver_selection_t* probe_driver_selection;
+extern int device_id_count;
+
+
+static inline void store_driver_selection (
+        pci_vid_t vid, pci_did_t did, struct pci_driver* driver)
+{
+    driver_selection_t* new_driver_selection;
+    new_driver_selection = malloc(sizeof(driver_selection_t));
+
+    new_driver_selection->vid = vid;
+    new_driver_selection->did = did;
+    new_driver_selection->driver = driver;
+
+    if (driver_selection_root == NULL) {
+        driver_selection_root = new_driver_selection;
+        new_driver_selection->prev = new_driver_selection->next = NULL;
+        return;
+    }
+
+    driver_selection_t** last = &driver_selection_root;
+
+    while ((*last)->next != NULL) {
+        last = &(*last)->next;
+    }
+
+    (*last)->next = new_driver_selection;
+    new_driver_selection->prev = (*last);
+    new_driver_selection->next = NULL;
+}
+
+static inline int probe_all_driver_selections() {
+    static struct pci_dev pdev = {
+            .ba = NULL,
+            .vendor = 0,
+            .device = 0,
+            .dev = { .driver_data = NULL },
+            .irq = 0
+    };
+
+    driver_selection_t* location = driver_selection_root;
+
+    while (location != NULL) {
+        driver_selection_t** next = &location->next;
+
+        pdev.vendor = location->vid;
+        pdev.device = location->did;
+
+        probe_driver_selection = location;
+
+        if (location->driver->probe(&pdev, NULL)) {
+            return -1;
+        }
+
+        probe_driver_selection = NULL;
+
+        location = *next;
+    }
+
+    return 0;
+}
+
+static inline void remove_all_driver_selections() {
+    driver_selection_t** location = &driver_selection_root;
+
+    static struct pci_dev pdev = {
+            .ba = NULL,
+            .vendor = 0,
+            .device = 0,
+            .dev = { .driver_data = NULL },
+            .irq = 0
+    };
+
+    while (*location != NULL) {
+        driver_selection_t** next = &(*location)->next;
+
+        pdev.vendor = (*location)->vid;
+        pdev.device = (*location)->did;
+
+        log_info("Shutting down %s\n",
+                (*location)->driver->name);
+
+        (*location)->driver->remove(&pdev);
+        free(*location);
+
+        *location = *next;
+    }
+}
 
 #endif /* SRC_PCI_H_ */

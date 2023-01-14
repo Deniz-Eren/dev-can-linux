@@ -131,6 +131,7 @@ typedef struct can_resmgr {
     struct can_resmgr *prev, *next;
 
     device_session_t* device_session;
+    struct driver_selection* driver_selection;
 
     char name[MAX_NAME_SIZE];
     channel_type_t channel_type;

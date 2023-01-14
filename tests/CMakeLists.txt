@@ -37,7 +37,10 @@ add_subdirectory( timer )
 if( CMAKE_BUILD_TYPE MATCHES Coverage AND NOT DISABLE_COVERAGE_HTML_GEN )
     add_custom_target( all-cov-runs ALL
         DEPENDS # list all coverage run targets here:
-            ssh-driver-micro-tests-cov-run
+            ssh-driver-baud-tests-cov-run
+            ssh-driver-integrity-tests-cov-run
+            ssh-driver-io-tests-cov-run
+            ssh-driver-raw-tests-cov-run
             ssh-queue-tests-cov-run
             ssh-timer-tests-cov-run )
 

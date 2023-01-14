@@ -27,14 +27,6 @@
 #include <prints.h>
 #include <session.h>
 
-static struct pci_dev pdev = {
-        .ba = NULL,
-        .vendor = 0,
-        .device = 0,
-        .dev = { .driver_data = NULL },
-        .irq = 0
-};
-
 
 static void sigint_signal_handler (int sig_no) {
     terminate_run_wait();
@@ -57,9 +49,9 @@ int main (int argc, char* argv[]) {
     while ((opt = getopt(argc, argv, "d:u:viqstlVCwc?h")) != -1) {
         switch (opt) {
         case 'd':
-            optd = 1;
+            optd++;
             sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
-            log_info("manual device selection: %x:%x\n", opt_vid, opt_did);
+            log_info("manually disabling device: %x:%x\n", opt_vid, opt_did);
             break;
 
         case 'u':
@@ -189,6 +181,12 @@ int main (int argc, char* argv[]) {
         }
     }
 
+    if (optd > 1) {
+        printf("error: only a single device can be disabled.\n");
+
+        return -1;
+    }
+
 #if RELEASE_BUILD == 1
     if (optv > 2) {
         optv = 2;
@@ -215,22 +213,13 @@ int main (int argc, char* argv[]) {
 
     signal(SIGINT, sigint_signal_handler);
 
-    struct driver_selection_t ds;
-
-    if (process_driver_selection(&ds)) {
+    if (process_driver_selection()) {
         return -1;
     }
 
-    print_driver_selection_results(&ds);
+    print_driver_selection_results();
 
-    if (!detected_driver) {
-        return -1;
-    }
-
-    pdev.vendor = ds.vid;
-    pdev.device = ds.did;
-
-    if (detected_driver->probe(&pdev, NULL)) {
+    if (probe_all_driver_selections()) {
         return -1;
     }
 
@@ -240,9 +229,8 @@ int main (int argc, char* argv[]) {
      * In practice the program runs forever or until the user terminates it;
      * thus we can never reach here.
      */
-    adv_pci_driver.remove(&pdev);
+    remove_all_driver_selections();
 
-    free(device_sessions);
     free(optu_config);
 
     return EXIT_SUCCESS;

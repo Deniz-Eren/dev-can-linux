@@ -62,6 +62,7 @@ done
 docker exec --user root --workdir /root dev_env bash -c \
     "source .profile \
     && /root/dev-can-linux/dev/setup-profile.sh \
+    && source /root/dev-can-linux/tests/driver/common/env/dual-channel.env \
     && mkdir -p $BUILD_PATH \
     && cd $BUILD_PATH \
     && cmake -DSSH_PORT=$SSH_PORT -DCMAKE_BUILD_TYPE=$CMAKE_BUILD_TYPE \

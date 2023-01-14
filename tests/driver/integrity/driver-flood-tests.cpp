@@ -24,6 +24,7 @@
 
 #include <pthread.h>
 #include <gtest/gtest.h>
+#include <tests/driver/common/test_devices.h>
 
 extern "C" {
     #include <timer.h>
@@ -45,7 +46,7 @@ static volatile size_t record1_size = 0;
 void* receive_loop0 (void* arg) {
     struct can_msg canmsg;
 
-    int fd = open("/dev/can0/rx0", O_RDWR);
+    int fd = open(get_device0_rx0().c_str(), O_RDWR);
 
     // set latency limit to 0 (i.e. no limit)
     set_latency_limit_ms(fd, 0);
@@ -69,7 +70,7 @@ void* receive_loop0 (void* arg) {
 void* receive_loop1 (void* arg) {
     struct can_msg canmsg;
 
-    int fd = open("/dev/can1/rx0", O_RDWR);
+    int fd = open(get_device1_rx0().c_str(), O_RDWR);
 
     // set latency limit to 0 (i.e. no limit)
     set_latency_limit_ms(fd, 0);
@@ -91,22 +92,28 @@ void* receive_loop1 (void* arg) {
 }
 
 TEST( Driver, FloodSend ) {
-    int fd0_tx = open("/dev/can0/tx0", O_RDWR);
+    int fd0_tx = open(get_device0_tx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd0_tx, -1);
 
-    int fd1_tx = open("/dev/can1/tx0", O_RDWR);
+    int fd1_tx = -1;
 
-    EXPECT_NE(fd1_tx, -1);
+    if (get_device1_tx0() != std::string("")) {
+        fd1_tx = open(get_device1_tx0().c_str(), O_RDWR);
+
+        EXPECT_NE(fd1_tx, -1);
+    }
 
     // set latency limit to 0 (i.e. no limit)
     int latency_ret = set_latency_limit_ms(fd0_tx, 0);
 
     EXPECT_EQ(latency_ret, EOK);
 
-    latency_ret = set_latency_limit_ms(fd1_tx, 0);
+    if (fd1_tx != -1) {
+        latency_ret = set_latency_limit_ms(fd1_tx, 0);
 
-    EXPECT_EQ(latency_ret, EOK);
+        EXPECT_EQ(latency_ret, EOK);
+    }
 
     uint32_t start_ms = get_clock_time_us()/1000;
 
@@ -127,14 +134,20 @@ TEST( Driver, FloodSend ) {
     pthread_create(&thread0, NULL, &receive_loop0, NULL);
 
     pthread_t thread1;
-    pthread_create(&thread1, NULL, &receive_loop1, NULL);
 
-    while (!receive_loop0_started || !receive_loop1_started) {
+    if (fd1_tx != -1) {
+        pthread_create(&thread1, NULL, &receive_loop1, NULL);
+
+        while (!receive_loop1_started) {
+            usleep(1000);
+        }
+    }
+
+    while (!receive_loop0_started) {
         usleep(1000);
     }
 
     struct can_devctl_stats stats0, stats1;
-
     int get_stats_ret = get_stats(fd0_tx, &stats0);
 
     EXPECT_EQ(get_stats_ret, EOK);
@@ -142,15 +155,20 @@ TEST( Driver, FloodSend ) {
     uint32_t initial_tx_frames0 = stats0.transmitted_frames;
     uint32_t initial_rx_frames0 = stats0.received_frames;
 
-    get_stats_ret = get_stats(fd1_tx, &stats1);
+    uint32_t initial_tx_frames1 = 0;
+    uint32_t initial_rx_frames1 = 0;
 
-    EXPECT_EQ(get_stats_ret, EOK);
+    if (fd1_tx != -1) {
+        get_stats_ret = get_stats(fd1_tx, &stats1);
 
-    uint32_t initial_tx_frames1 = stats1.transmitted_frames;
-    uint32_t initial_rx_frames1 = stats1.received_frames;
+        EXPECT_EQ(get_stats_ret, EOK);
+
+        initial_tx_frames1 = stats1.transmitted_frames;
+        initial_rx_frames1 = stats1.received_frames;
+    }
 
     // ensure all channels are empty
-    int fd = open("/dev/can0/rx0", O_RDWR);
+    int fd = open(get_device0_rx0().c_str(), O_RDWR);
 
     int err = read_frame_raw_noblock(fd, NULL);
 
@@ -158,42 +176,55 @@ TEST( Driver, FloodSend ) {
 
     close(fd);
 
-    fd = open("/dev/can1/rx0", O_RDWR);
+    if (get_device1_rx0() != std::string("")) {
+        fd = open(get_device1_rx0().c_str(), O_RDWR);
 
-    err = read_frame_raw_noblock(fd, NULL);
+        err = read_frame_raw_noblock(fd, NULL);
 
-    EXPECT_EQ(err, EAGAIN);
+        EXPECT_EQ(err, EAGAIN);
 
-    close(fd);
+        close(fd);
+    }
 
     // flood messages
     for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
         write_frame_raw(fd0_tx, &canmsg);
     }
 
-    for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
-        write_frame_raw(fd1_tx, &canmsg);
+    if (fd1_tx != -1) {
+        for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
+            write_frame_raw(fd1_tx, &canmsg);
+        }
     }
 
     usleep(10000);
-    receive_loop0_stop = receive_loop1_stop = true;
+    receive_loop0_stop = true;
+    receive_loop1_stop = true;
 
     write_frame_raw(fd0_tx, &canmsg);
-    write_frame_raw(fd1_tx, &canmsg);
+
+    if (fd1_tx != -1) {
+        write_frame_raw(fd1_tx, &canmsg);
+    }
 
     err = pthread_join(thread0, NULL);
 
     EXPECT_EQ(err, EOK);
 
-    err = pthread_join(thread1, NULL);
+    if (fd1_tx != -1) {
+        err = pthread_join(thread1, NULL);
 
-    EXPECT_EQ(err, EOK);
+        EXPECT_EQ(err, EOK);
+    }
 
     // At least some of the data should have been received
     EXPECT_GE(record0_size, FLOOD_TEST_SIZE/10);
-    EXPECT_GE(record1_size, FLOOD_TEST_SIZE/10);
     EXPECT_LE(record0_size, FLOOD_TEST_SIZE);
-    EXPECT_LE(record1_size, FLOOD_TEST_SIZE);
+
+    if (fd1_tx != -1) {
+        EXPECT_GE(record1_size, FLOOD_TEST_SIZE/10);
+        EXPECT_LE(record1_size, FLOOD_TEST_SIZE);
+    }
 
     // It seems QEmu CAN interface doesn't emulate baud rate correctly, so the
     // following checks cannot be done.
@@ -203,10 +234,6 @@ TEST( Driver, FloodSend ) {
     //EXPECT_NEAR(1000*record1_size*67/(t1_ms - t0_ms), 250000, 50000);
 
     get_stats_ret = get_stats(fd0_tx, &stats0);
-
-    EXPECT_EQ(get_stats_ret, EOK);
-
-    get_stats_ret = get_stats(fd1_tx, &stats1);
 
     EXPECT_EQ(get_stats_ret, EOK);
 
@@ -232,28 +259,35 @@ TEST( Driver, FloodSend ) {
     EXPECT_EQ(stats0.tx_interrupts, 0);
     EXPECT_EQ(stats0.total_interrupts, 0);
 
-    EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, record1_size);
-    EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
-    EXPECT_EQ(stats1.missing_ack, 0);
-    EXPECT_EQ(stats1.total_frame_errors, 0);
-    EXPECT_EQ(stats1.stuff_errors, 0);
-    EXPECT_EQ(stats1.form_errors, 0);
-    EXPECT_EQ(stats1.dom_bit_recess_errors, 0);
-    EXPECT_EQ(stats1.recess_bit_dom_errors, 0);
-    EXPECT_EQ(stats1.parity_errors, 0);
-    EXPECT_EQ(stats1.crc_errors, 0);
-    EXPECT_EQ(stats1.hw_receive_overflows, 0);
-    EXPECT_EQ(stats1.sw_receive_q_full, 0);
-    EXPECT_EQ(stats1.error_warning_state_count, 0);
-    EXPECT_EQ(stats1.error_passive_state_count, 0);
-    EXPECT_EQ(stats1.bus_off_state_count, 0);
-    EXPECT_EQ(stats1.bus_idle_count, 0);
-    EXPECT_EQ(stats1.power_down_count, 0);
-    EXPECT_EQ(stats1.wake_up_count, 0);
-    EXPECT_EQ(stats1.rx_interrupts, 0);
-    EXPECT_EQ(stats1.tx_interrupts, 0);
-    EXPECT_EQ(stats1.total_interrupts, 0);
-
     close(fd0_tx);
-    close(fd1_tx);
+
+    if (fd1_tx != -1) {
+        get_stats_ret = get_stats(fd1_tx, &stats1);
+
+        EXPECT_EQ(get_stats_ret, EOK);
+
+        EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, record1_size);
+        EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
+        EXPECT_EQ(stats1.missing_ack, 0);
+        EXPECT_EQ(stats1.total_frame_errors, 0);
+        EXPECT_EQ(stats1.stuff_errors, 0);
+        EXPECT_EQ(stats1.form_errors, 0);
+        EXPECT_EQ(stats1.dom_bit_recess_errors, 0);
+        EXPECT_EQ(stats1.recess_bit_dom_errors, 0);
+        EXPECT_EQ(stats1.parity_errors, 0);
+        EXPECT_EQ(stats1.crc_errors, 0);
+        EXPECT_EQ(stats1.hw_receive_overflows, 0);
+        EXPECT_EQ(stats1.sw_receive_q_full, 0);
+        EXPECT_EQ(stats1.error_warning_state_count, 0);
+        EXPECT_EQ(stats1.error_passive_state_count, 0);
+        EXPECT_EQ(stats1.bus_off_state_count, 0);
+        EXPECT_EQ(stats1.bus_idle_count, 0);
+        EXPECT_EQ(stats1.power_down_count, 0);
+        EXPECT_EQ(stats1.wake_up_count, 0);
+        EXPECT_EQ(stats1.rx_interrupts, 0);
+        EXPECT_EQ(stats1.tx_interrupts, 0);
+        EXPECT_EQ(stats1.total_interrupts, 0);
+
+        close(fd1_tx);
+    }
 }

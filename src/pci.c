@@ -27,7 +27,9 @@
 #include "config.h"
 #include "pci.h"
 
-struct pci_driver *detected_driver = NULL;
+driver_selection_t* driver_selection_root = NULL;
+driver_selection_t* probe_driver_selection = NULL;
+int device_id_count = 0;
 
 
 /*
@@ -35,14 +37,14 @@ struct pci_driver *detected_driver = NULL;
  */
 
 static int check_driver_support (const struct pci_driver* driver,
-        const struct driver_selection_t* ds)
+        pci_vid_t vid, pci_did_t did)
 {
     if (driver->id_table != NULL) {
         const struct pci_device_id *id_table = driver->id_table;
 
         while (id_table->vendor != 0) {
-            if (id_table->vendor == ds->vid &&
-                id_table->device == ds->did)
+            if (id_table->vendor == vid &&
+                id_table->device == did)
             {
                 return 1;
             }
@@ -54,96 +56,50 @@ static int check_driver_support (const struct pci_driver* driver,
     return 0;
 }
 
-int process_driver_selection (struct driver_selection_t* ds) {
-    if (!ds) {
-        log_err("internal error; driver selection invalid!");
-
-        return -1;
-    }
-
-    ds->driver_auto = 0;
-    ds->driver_pick = 0;
-    ds->driver_ignored = 0;
-    ds->driver_unsupported = 0;
-
+int process_driver_selection() {
     uint_t idx = 0;
     pci_bdf_t bdf = 0;
 
     while ((bdf = pci_device_find(
             idx, PCI_VID_ANY, PCI_DID_ANY, PCI_CCODE_ANY) ) != PCI_BDF_NONE)
     {
-        pci_err_t r = pci_device_read_vid(bdf, &ds->vid);
+        pci_vid_t vid;
+        pci_did_t did;
+
+        pci_err_t r = pci_device_read_vid(bdf, &vid);
 
         if (r != PCI_ERR_OK) {
             continue;
         }
 
-        r = pci_device_read_did(bdf, &ds->did);
+        r = pci_device_read_did(bdf, &did);
 
         if (r == PCI_ERR_OK)
         {
             /* does this driver handle this device ? */
 
-            struct pci_driver *detected_driver_temp = NULL;
+            struct pci_driver* detected_driver_temp = NULL;
 
-            if (check_driver_support(&adv_pci_driver, ds)) {
+            if (check_driver_support(&adv_pci_driver, vid, did)) {
                 detected_driver_temp = &adv_pci_driver;
             }
-            else if (check_driver_support(&kvaser_pci_driver, ds)) {
+            else if (check_driver_support(&kvaser_pci_driver, vid, did)) {
                 detected_driver_temp = &kvaser_pci_driver;
             }
-            else if (check_driver_support(&ems_pci_driver, ds)) {
+            else if (check_driver_support(&ems_pci_driver, vid, did)) {
                 detected_driver_temp = &ems_pci_driver;
             }
-            else if (check_driver_support(&peak_pci_driver, ds)) {
+            else if (check_driver_support(&peak_pci_driver, vid, did)) {
                 detected_driver_temp = &peak_pci_driver;
             }
-            else if (check_driver_support(&plx_pci_driver, ds)) {
+            else if (check_driver_support(&plx_pci_driver, vid, did)) {
                 detected_driver_temp = &plx_pci_driver;
             }
 
             if (detected_driver_temp) {
-                if (!optd || (opt_vid == ds->vid && opt_did == ds->did)) {
-                    /* Only set if not set before thus enforcing the rule that
-                     * the first accepted device will be selected */
-                    if (!detected_driver) {
-                        detected_driver = detected_driver_temp;
-                    }
+                if (!optd || opt_vid != vid || opt_did != did) {
+                    store_driver_selection(vid, did, detected_driver_temp);
                 }
-            }
-
-            if (!optd && detected_driver &&
-                    detected_driver == detected_driver_temp)
-            {
-                ds->driver_auto = 1;
-
-                log_info("checking device: %x:%x <- auto (%s)\n",
-                        ds->vid, ds->did, detected_driver->name);
-            }
-            else if (optd && detected_driver &&
-                    detected_driver == detected_driver_temp)
-            {
-                ds->driver_pick = 1;
-
-                log_info("checking device: %x:%x <- pick (%s)\n",
-                        ds->vid, ds->did, detected_driver->name);
-            }
-            else if (detected_driver_temp) {
-                ds->driver_ignored = 1;
-
-                log_info("checking device: %x:%x <- ignored (%s)\n",
-                        ds->vid, ds->did, detected_driver_temp->name);
-            }
-            else if (!detected_driver_temp &&
-                    opt_vid == ds->vid && opt_did == ds->did)
-            {
-                ds->driver_unsupported = 1;
-
-                log_info("checking device: %x:%x <- unsupported\n",
-                        ds->vid, ds->did);
-            }
-            else {
-                log_info("checking device: %x:%x\n", ds->vid, ds->did);
             }
         }
 
@@ -154,7 +110,7 @@ int process_driver_selection (struct driver_selection_t* ds) {
     return 0;
 }
 
-int pci_enable_device(struct pci_dev *dev) {
+int pci_enable_device (struct pci_dev* dev) {
     log_trace("pci_enable_device: %x:%x\n",
             dev->vendor, dev->device);
 
@@ -336,7 +292,7 @@ int pci_enable_device(struct pci_dev *dev) {
     return 0;
 }
 
-void pci_disable_device(struct pci_dev *dev) {
+void pci_disable_device (struct pci_dev* dev) {
     log_trace("pci_disable_device\n");
 
     if (dev != NULL) {
@@ -346,7 +302,7 @@ void pci_disable_device(struct pci_dev *dev) {
     }
 }
 
-uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
+uintptr_t pci_iomap (struct pci_dev* dev, int bar, unsigned long max) {
     log_trace("pci_iomap; bar: %d, max: %lu\n", bar, max);
 
     if (bar >= dev->nba) {
@@ -371,7 +327,7 @@ uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max) {
     return dev->ba[bar].addr;
 }
 
-void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
+void pci_iounmap (struct pci_dev* dev, uintptr_t p) {
     int bar = -1;
     uint64_t size = 0u;
 
@@ -394,23 +350,26 @@ void pci_iounmap(struct pci_dev *dev, uintptr_t p) {
     }
 }
 
-int pci_request_regions(struct pci_dev *dev, const char *res_name) {
+int pci_request_regions (struct pci_dev* dev, const char* res_name) {
     log_trace("pci_request_regions\n");
 
-    return -1;
+    // Return OK we will perform this check during pci_enable_device()
+    return 0;
 }
 
-void pci_release_regions(struct pci_dev *dev) {
+void pci_release_regions (struct pci_dev* dev) {
     log_trace("pci_release_regions\n");
+
+    // We will perform this in pci_disable_device()
 }
 
-int pci_read_config_word(const struct pci_dev *dev, int where, u16 *val) {
+int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
     log_trace("pci_read_config_word\n");
 
     return -1;
 }
 
-int pci_write_config_word(const struct pci_dev *dev, int where, u16 val) {
+int pci_write_config_word (const struct pci_dev* dev, int where, u16 val) {
     log_trace("pci_write_config_word\n");
 
     return -1;

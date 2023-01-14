@@ -19,7 +19,6 @@ Options:
     -C         - Print build configurations and exit.
     -i         - List supported hardware and exit.
     -ii        - List supported hardware details and exit.
-    -d vid:did - Target desired device, e.g. -d 13fe:c302
     -u subopts - Configure the device RX/TX file descriptors.
 
                  Suboptions (subopts):
@@ -57,6 +56,10 @@ Options:
     -ll        - Log 2; syslog entries for info & debug.
     -lll       - Log 3; syslog entries for info, debug & trace.
                  NOT for general use.
+    -d vid:did - Disable device, e.g. -d 13fe:c302
+                 The driver detects and enables all supported PCI CAN-bus
+                 devices on the bus. However, if you want the driver to ignore
+                 a particular device use this option.
     -?/h       - Print help menu and exit.
 
     NOTES

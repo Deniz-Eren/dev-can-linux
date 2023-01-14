@@ -22,6 +22,7 @@
 
 #include <pthread.h>
 #include <gtest/gtest.h>
+#include <tests/driver/common/test_devices.h>
 
 extern "C" {
     #include <timer.h>
@@ -32,11 +33,11 @@ extern "C" {
 #if PROFILING_BUILD != 1
 
 TEST( Driver, LatencyFunctionality ) {
-    int fd_tx = open("/dev/can0/tx0", O_RDWR);
+    int fd_tx = open(get_device0_tx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd_tx, -1);
 
-    int fd_rx = open("/dev/can0/rx0", O_RDWR);
+    int fd_rx = open(get_device0_rx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd_rx, -1);
 

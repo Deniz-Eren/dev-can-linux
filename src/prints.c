@@ -63,26 +63,16 @@ void print_notice (void) {
     printf("under certain conditions; option `\e[1m-c\e[m' for details.\n");
 }
 
-void print_driver_selection_results (struct driver_selection_t* ds) {
-    if (ds->driver_auto) {
-        log_warn("Auto detected device (%x:%x) successfully; (driver \"%s\")\n",
-                ds->vid, ds->did, detected_driver->name);
-    }
-    else if (ds->driver_pick) {
-        log_warn("Device (%x:%x) accepted successfully; (driver \"%s\")\n",
-                ds->vid, ds->did, detected_driver->name);
-    }
-    else if (ds->driver_unsupported) {
-        log_warn("Device (%x:%x) not supported by any driver\n",
-                opt_vid, opt_did);
-    }
-    else {
-        log_warn("Device (%x:%x) not a valid device\n", opt_vid, opt_did);
-    }
+void print_driver_selection_results() {
+    driver_selection_t** location = &driver_selection_root;
 
-    if (ds->driver_ignored) {
-        log_warn("Note: one or more supported devices have been ignored "
-                "because of manual device selection\n");
+    while (*location != NULL) {
+        log_info("Auto detected device (%x:%x) successfully: (driver \"%s\")\n",
+                (*location)->vid,
+                (*location)->did,
+                (*location)->driver->name);
+
+        location = &(*location)->next;
     }
 }
 
@@ -157,7 +147,6 @@ void print_help (char* program_name) {
     printf("    \e[1m-C\e[m         - Print build configurations and exit.\n");
     printf("    \e[1m-i\e[m         - List supported hardware and exit.\n");
     printf("    \e[1m-ii\e[m        - List supported hardware details and exit.\n");
-    printf("    \e[1m-d vid:did\e[m - Target desired device, e.g. -d 13fe:c302\n");
     printf("    \e[1m-u subopts\e[m - Configure the device RX/TX file descriptors.\n");
     printf("\n");
     printf("                 Suboptions (\e[1msubopts\e[m):\n");
@@ -199,6 +188,10 @@ void print_help (char* program_name) {
     printf("    \e[1m-lll\e[m       - Log 3; syslog entries for info, debug & trace.\n");
     printf("                 NOT for general use.\n");
 #endif
+    printf("    \e[1m-d vid:did\e[m - Disable device, e.g. -d 13fe:c302\n");
+    printf("                 The driver detects and enables all supported PCI CAN-bus\n");
+    printf("                 devices on the bus. However, if you want the driver to ignore\n");
+    printf("                 a particular device use this option.\n");
     printf("    \e[1m-?/h\e[m       - Print help menu and exit.\n");
     printf("\n");
     printf("\e[1mNOTES\e[m\n");

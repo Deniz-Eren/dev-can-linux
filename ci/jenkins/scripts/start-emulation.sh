@@ -20,14 +20,10 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 #
 
-DEVICE="mioe3680_pci"   # default device selection
-SSH_PORT="6022"         # default SSH port number
+SSH_PORT="6022"     # default SSH port number
 
-while getopts d:i:p: opt; do
+while getopts i:p: opt; do
     case ${opt} in
-    d )
-        DEVICE=$OPTARG
-        ;;
     i )
         IMAGE_DIR=$OPTARG
         ;;
@@ -36,7 +32,6 @@ while getopts d:i:p: opt; do
         ;;
     \?)
         echo "Usage: start-emulation.sh [options]"
-        echo "  -d device selection (default: mioe3680_pci)" 
         echo "  -i local file full path to store images"
         echo "  -p ssh port number"
         echo ""
@@ -61,9 +56,12 @@ docker exec -d --user root --workdir /root qemu_env \
         -boot d \
         -object can-bus,id=c0 \
         -object can-bus,id=c1 \
-        -device $DEVICE,canbus0=c0,canbus1=c1 \
+        -object can-bus,id=c2 \
+        -device mioe3680_pci,canbus0=c0,canbus1=c1 \
+        -device kvaser_pci,canbus=c2 \
         -object can-host-socketcan,id=h0,if=c0,canbus=c0,if=vcan1000 \
         -object can-host-socketcan,id=h1,if=c1,canbus=c1,if=vcan1001 \
+        -object can-host-socketcan,id=h2,if=c2,canbus=c2,if=vcan1002 \
         -m size=4096 \
         -nic user,hostfwd=tcp::$SSH_PORT-:22 \
         -smp 2 \

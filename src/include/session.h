@@ -55,7 +55,6 @@ typedef struct device_session {
 } device_session_t;
 
 extern device_session_t* root_device_session;
-extern device_session_t** device_sessions; // Fast lookup array using dev_id
 
 extern device_session_t* create_device_session (
         struct net_device* dev, const queue_attr_t* tx_attr);

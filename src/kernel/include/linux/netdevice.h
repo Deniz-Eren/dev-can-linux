@@ -180,6 +180,7 @@ struct net_device {
     unsigned short          dev_id;
     unsigned long       tx_queue_len;
     void* priv;
+    struct device_session* device_session;
 };
 
 /**

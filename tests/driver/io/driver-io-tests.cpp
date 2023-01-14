@@ -22,6 +22,7 @@
 
 #include <pthread.h>
 #include <gtest/gtest.h>
+#include <tests/driver/common/test_devices.h>
 
 extern "C" {
     #include <timer.h>
@@ -38,7 +39,7 @@ void* receive_loop0 (void* arg) {
     char* msg = (char*)arg;
     uint32_t mid = 0xABC;
 
-    int fd = open("/dev/can0/rx0", O_RDWR);
+    int fd = open(get_device0_rx0().c_str(), O_RDWR);
 
     set_mfilter(fd, mid);
 
@@ -61,7 +62,7 @@ void* receive_loop1 (void* arg) {
     char* msg = (char*)arg;
     uint32_t mid = 0xABC;
 
-    int fd = open("/dev/can1/rx0", O_RDWR);
+    int fd = open(get_device1_rx0().c_str(), O_RDWR);
 
     set_mfilter(fd, mid);
 
@@ -84,7 +85,7 @@ void* receive_loop2 (void* arg) {
     char* msg = (char*)arg;
     uint32_t mid = 0xABC;
 
-    int fd = open("/dev/can0/rx0", O_RDWR);
+    int fd = open(get_device0_rx0().c_str(), O_RDWR);
 
     set_mfilter(fd, mid);
 
@@ -104,13 +105,17 @@ void* receive_loop2 (void* arg) {
 }
 
 TEST( IO, SingleSendReceive ) {
-    int fd0 = open("/dev/can0/tx0", O_RDWR);
+    int fd0 = open(get_device0_tx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd0, -1);
 
-    int fd1 = open("/dev/can1/tx0", O_RDWR);
+    int fd1 = -1;
 
-    EXPECT_NE(fd1, -1);
+    if (get_device1_tx0() != std::string("")) {
+        fd1 = open(get_device1_tx0().c_str(), O_RDWR);
+
+        EXPECT_NE(fd1, -1);
+    }
 
     char msg[] = "test message";
     char wrong_msg[] = "wrong message";
@@ -126,10 +131,19 @@ TEST( IO, SingleSendReceive ) {
     pthread_create(&thread0, NULL, &receive_loop0, msg0);
 
     pthread_t thread1;
-    pthread_create(&thread1, NULL, &receive_loop1, msg1);
 
-    while (!receive_loop0_started || !receive_loop1_started) {
+    if (fd1 != -1) {
+        pthread_create(&thread1, NULL, &receive_loop1, msg1);
+    }
+
+    while (!receive_loop0_started) {
         usleep(1000);
+    }
+
+    if (fd1 != -1) {
+        while (!receive_loop1_started) {
+            usleep(1000);
+        }
     }
 
     struct can_devctl_stats stats0, stats1;
@@ -141,12 +155,17 @@ TEST( IO, SingleSendReceive ) {
     uint32_t initial_tx_frames0 = stats0.transmitted_frames;
     uint32_t initial_rx_frames0 = stats0.received_frames;
 
-    get_stats_ret = get_stats(fd1, &stats1);
+    uint32_t initial_tx_frames1 = 0;
+    uint32_t initial_rx_frames1 = 0;
 
-    EXPECT_EQ(get_stats_ret, EOK);
+    if (fd1 != -1) {
+        get_stats_ret = get_stats(fd1, &stats1);
 
-    uint32_t initial_tx_frames1 = stats1.transmitted_frames;
-    uint32_t initial_rx_frames1 = stats1.received_frames;
+        EXPECT_EQ(get_stats_ret, EOK);
+
+        initial_tx_frames1 = stats1.transmitted_frames;
+        initial_rx_frames1 = stats1.received_frames;
+    }
 
     int set_mid_ret = set_mid(fd0, wrong_mid);
 
@@ -172,36 +191,41 @@ TEST( IO, SingleSendReceive ) {
     EXPECT_EQ(std::string(msg0), std::string("test message"));
 
     usleep(3000);
-    set_mid_ret = set_mid(fd1, wrong_mid);
 
-    EXPECT_EQ(set_mid_ret, EOK);
+    if (fd1 != -1) {
+        set_mid_ret = set_mid(fd1, wrong_mid);
 
-    n = write(fd1, wrong_msg, 12);
+        EXPECT_EQ(set_mid_ret, EOK);
 
-    set_mid_ret = set_mid(fd1, mid);
+        n = write(fd1, wrong_msg, 12);
 
-    EXPECT_EQ(set_mid_ret, EOK);
+        set_mid_ret = set_mid(fd1, mid);
 
-    n = write(fd1, msg, 12);
+        EXPECT_EQ(set_mid_ret, EOK);
 
-    EXPECT_EQ(n, 12);
+        n = write(fd1, msg, 12);
 
-    void* exit_ptr1;
-    pthread_join(thread1, &exit_ptr1);
+        EXPECT_EQ(n, 12);
 
-    EXPECT_EQ(exit_ptr1, msg1);
+        void* exit_ptr1;
+        pthread_join(thread1, &exit_ptr1);
 
-    msg1[n] = '\0';
+        EXPECT_EQ(exit_ptr1, msg1);
 
-    EXPECT_EQ(std::string(msg1), std::string("test message"));
+        msg1[n] = '\0';
+
+        EXPECT_EQ(std::string(msg1), std::string("test message"));
+    }
 
     get_stats_ret = get_stats(fd0, &stats0);
 
     EXPECT_EQ(get_stats_ret, EOK);
 
-    get_stats_ret = get_stats(fd1, &stats1);
+    if (fd1 != -1) {
+        get_stats_ret = get_stats(fd1, &stats1);
 
-    EXPECT_EQ(get_stats_ret, EOK);
+        EXPECT_EQ(get_stats_ret, EOK);
+    }
 
     EXPECT_EQ(stats0.transmitted_frames - initial_tx_frames0, 4);
     EXPECT_EQ(stats0.received_frames - initial_rx_frames0, 0);
@@ -225,34 +249,37 @@ TEST( IO, SingleSendReceive ) {
     EXPECT_EQ(stats0.tx_interrupts, 0);
     EXPECT_EQ(stats0.total_interrupts, 0);
 
-    EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, 4);
-    EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
-    EXPECT_EQ(stats1.missing_ack, 0);
-    EXPECT_EQ(stats1.total_frame_errors, 0);
-    EXPECT_EQ(stats1.stuff_errors, 0);
-    EXPECT_EQ(stats1.form_errors, 0);
-    EXPECT_EQ(stats1.dom_bit_recess_errors, 0);
-    EXPECT_EQ(stats1.recess_bit_dom_errors, 0);
-    EXPECT_EQ(stats1.parity_errors, 0);
-    EXPECT_EQ(stats1.crc_errors, 0);
-    EXPECT_EQ(stats1.hw_receive_overflows, 0);
-    EXPECT_EQ(stats1.sw_receive_q_full, 0);
-    EXPECT_EQ(stats1.error_warning_state_count, 0);
-    EXPECT_EQ(stats1.error_passive_state_count, 0);
-    EXPECT_EQ(stats1.bus_off_state_count, 0);
-    EXPECT_EQ(stats1.bus_idle_count, 0);
-    EXPECT_EQ(stats1.power_down_count, 0);
-    EXPECT_EQ(stats1.wake_up_count, 0);
-    EXPECT_EQ(stats1.rx_interrupts, 0);
-    EXPECT_EQ(stats1.tx_interrupts, 0);
-    EXPECT_EQ(stats1.total_interrupts, 0);
-
     close(fd0);
-    close(fd1);
+
+    if (fd1 != -1) {
+        EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, 4);
+        EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
+        EXPECT_EQ(stats1.missing_ack, 0);
+        EXPECT_EQ(stats1.total_frame_errors, 0);
+        EXPECT_EQ(stats1.stuff_errors, 0);
+        EXPECT_EQ(stats1.form_errors, 0);
+        EXPECT_EQ(stats1.dom_bit_recess_errors, 0);
+        EXPECT_EQ(stats1.recess_bit_dom_errors, 0);
+        EXPECT_EQ(stats1.parity_errors, 0);
+        EXPECT_EQ(stats1.crc_errors, 0);
+        EXPECT_EQ(stats1.hw_receive_overflows, 0);
+        EXPECT_EQ(stats1.sw_receive_q_full, 0);
+        EXPECT_EQ(stats1.error_warning_state_count, 0);
+        EXPECT_EQ(stats1.error_passive_state_count, 0);
+        EXPECT_EQ(stats1.bus_off_state_count, 0);
+        EXPECT_EQ(stats1.bus_idle_count, 0);
+        EXPECT_EQ(stats1.power_down_count, 0);
+        EXPECT_EQ(stats1.wake_up_count, 0);
+        EXPECT_EQ(stats1.rx_interrupts, 0);
+        EXPECT_EQ(stats1.tx_interrupts, 0);
+        EXPECT_EQ(stats1.total_interrupts, 0);
+
+        close(fd1);
+    }
 }
 
 TEST( IO, SingleSendMultiReceive ) {
-    int fd = open("/dev/can0/tx0", O_RDWR);
+    int fd = open(get_device0_tx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd, -1);
 

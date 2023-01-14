@@ -74,15 +74,21 @@ resmgr_io_funcs_t io_funcs;
 void log_trace_bittiming_info (struct net_device* device);
 
 
-int register_netdev(struct net_device *dev) {
+int register_netdev (struct net_device* dev) {
     if (dev == NULL) {
         log_err("register_netdev failed: invalid net_device\n");
         return -1;
     }
 
-    int id = dev->dev_id;
+    if (probe_driver_selection == NULL) {
+        log_err("register_netdev failed: invalid probe_driver_selection\n");
+        return -1;
+    }
 
-    snprintf(dev->name, IFNAMSIZ, "can%d", id);
+    int id = device_id_count++;
+
+    snprintf( dev->name, IFNAMSIZ, "%s-can%d",
+            probe_driver_selection->driver->name, dev->dev_id );
 
     log_trace("register_netdev: %s\n", dev->name);
 
@@ -116,6 +122,8 @@ int register_netdev(struct net_device *dev) {
     device_session_t* device_session;
     if ((device_session = create_device_session(dev, &tx_attr)) != NULL) {
     }
+
+    dev->device_session = device_session;
 
     static int io_created = 0;
 
@@ -159,6 +167,7 @@ int register_netdev(struct net_device *dev) {
             store_resmgr(&root_resmgr, resmgr);
 
             resmgr->device_session = device_session;
+            resmgr->driver_selection = probe_driver_selection;
 
 #if CONFIG_QNX_RESMGR_THREAD_POOL == 1
             /* initialize dispatch interface */
@@ -1309,7 +1318,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         snprintf( data->dcmd.info.description, 64,
                 "dev-can-linux dev: %s, driver: %s",
                 _ocb->resmgr->name,
-                detected_driver->name );
+                _ocb->resmgr->driver_selection->driver->name );
 
         /* Number of message queue objects */
         data->dcmd.info.msgq_size = 0; // TODO: set msgq_size

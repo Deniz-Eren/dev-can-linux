@@ -53,7 +53,9 @@ services:
                  ip link add dev vcan0 type vcan &&
                  ip link set up vcan0 &&
                  ip link add dev vcan1 type vcan &&
-                 ip link set up vcan1; \
+                 ip link set up vcan1 &&
+                 ip link add dev vcan2 type vcan &&
+                 ip link set up vcan2; \
              else echo \"VCAN already setup\"; fi &&
              qemu-system-x86_64 --version &&
              qemu-system-x86_64 \
@@ -64,9 +66,12 @@ services:
                 -boot d \
                 -object can-bus,id=canbus0 \
                 -object can-bus,id=canbus1 \
+                -object can-bus,id=canbus2 \
                 -device mioe3680_pci,canbus0=canbus0,canbus1=canbus1 \
+                -device kvaser_pci,canbus=canbus2 \
                 -object can-host-socketcan,id=canhost0,if=can0,canbus=canbus0,if=vcan0 \
                 -object can-host-socketcan,id=canhost1,if=can1,canbus=canbus1,if=vcan1 \
+                -object can-host-socketcan,id=canhost2,if=can2,canbus=canbus2,if=vcan2 \
                 -m size=4096 \
                 -nic user,hostfwd=tcp::6022-:22,hostfwd=tcp::8000-:8000 \
                 -smp 2 \

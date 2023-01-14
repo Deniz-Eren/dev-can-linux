@@ -57,8 +57,7 @@ node('jenkins_agent') {
             sh(script: """
                 /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
-                    -p $sshport \
-                    -d mioe3680_pci
+                    -p $sshport
 
                 /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
                     -v \
@@ -119,8 +118,7 @@ node('jenkins_agent') {
 
                 /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
-                    -p $sshport \
-                    -d mioe3680_pci
+                    -p $sshport
 
                 #
                 # Run Valgrind with tool memcheck

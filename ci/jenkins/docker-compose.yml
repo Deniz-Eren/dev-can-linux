@@ -74,7 +74,9 @@ services:
             ip link add dev vcan1000 type vcan &&
             ip link set up vcan1000 &&
             ip link add dev vcan1001 type vcan &&
-            ip link set up vcan1001; \
+            ip link set up vcan1001 &&
+            ip link add dev vcan1002 type vcan &&
+            ip link set up vcan1002; \
         else echo \"VCAN already setup\"; fi \
         && /opt/dev-can-linux/ci/jenkins/scripts/setup-ssh-port.sh \
         && groupmod -g $DOCKER_GROUP docker \

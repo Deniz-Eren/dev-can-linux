@@ -24,8 +24,6 @@
 #include "netif.h"
 
 device_session_t* root_device_session = NULL;
-device_session_t** device_sessions = NULL; // Fast lookup array using dev_id
-static size_t device_sessions_size = 0;
 
 /* must ensure session create, destroy and handling are atomic */
 pthread_mutex_t device_session_create_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -82,26 +80,6 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
 
     pthread_create( &new_device->tx_thread, &new_device->tx_thread_attr,
             &netif_tx, new_device );
-
-    /*
-     * Update the device_sessions quick lookup array
-     */
-    if (dev->dev_id >= device_sessions_size) {
-        device_session_t** new_device_sessions =
-            malloc((dev->dev_id + 1)*sizeof(device_session_t*));
-
-        memcpy( new_device_sessions, device_sessions,
-                device_sessions_size*sizeof(device_session_t*) );
-
-        if (device_sessions_size != 0) {
-            free(device_sessions);
-        }
-
-        device_sessions = new_device_sessions;
-        device_sessions_size = dev->dev_id + 1;
-    }
-
-    device_sessions[dev->dev_id] = new_device;
 
     pthread_mutex_unlock(&device_session_create_mutex);
     return new_device;

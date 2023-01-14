@@ -21,6 +21,7 @@
 
 #include <pthread.h>
 #include <gtest/gtest.h>
+#include <tests/driver/common/test_devices.h>
 
 extern "C" {
     #include <timer.h>
@@ -29,11 +30,11 @@ extern "C" {
 
 
 TEST( Driver, DefaultBitTiming ) {
-    int fd_tx = open("/dev/can0/tx0", O_RDWR);
+    int fd_tx = open(get_device0_tx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd_tx, -1);
 
-    int fd_rx = open("/dev/can0/rx0", O_RDWR);
+    int fd_rx = open(get_device0_rx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd_rx, -1);
 
@@ -42,10 +43,6 @@ TEST( Driver, DefaultBitTiming ) {
     int get_info_ret = get_info(fd_tx, &info_tx);
 
     EXPECT_EQ(get_info_ret, EOK);
-
-    /* Default CAN device description */
-    EXPECT_EQ(std::string(info_tx.description), \
-              std::string("dev-can-linux dev: /dev/can0/tx0, driver: adv_pci"));
 
     /* Default bit rate */
     EXPECT_EQ(info_tx.bit_rate, 250000);
@@ -68,10 +65,6 @@ TEST( Driver, DefaultBitTiming ) {
 
     EXPECT_EQ(get_info_ret, EOK);
 
-    /* Default CAN device description */
-    EXPECT_EQ(std::string(info_rx.description), \
-              std::string("dev-can-linux dev: /dev/can0/rx0, driver: adv_pci"));
-
     /* Default bit rate */
     EXPECT_EQ(info_rx.bit_rate, 250000);
 
@@ -91,11 +84,11 @@ TEST( Driver, DefaultBitTiming ) {
 }
 
 TEST( Driver, SetBitRate ) {
-    int fd_tx = open("/dev/can0/tx0", O_RDWR);
+    int fd_tx = open(get_device0_tx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd_tx, -1);
 
-    int fd_rx = open("/dev/can0/rx0", O_RDWR);
+    int fd_rx = open(get_device0_rx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd_rx, -1);
 
@@ -108,10 +101,6 @@ TEST( Driver, SetBitRate ) {
     int get_info_ret = get_info(fd_tx, &info_tx);
 
     EXPECT_EQ(get_info_ret, EOK);
-
-    /* Default CAN device description */
-    EXPECT_EQ(std::string(info_tx.description), \
-              std::string("dev-can-linux dev: /dev/can0/tx0, driver: adv_pci"));
 
     /* Default bit rate */
     EXPECT_EQ(info_tx.bit_rate, 1000000);
@@ -131,10 +120,6 @@ TEST( Driver, SetBitRate ) {
     get_info_ret = get_info(fd_rx, &info_rx);
 
     EXPECT_EQ(get_info_ret, EOK);
-
-    /* Default CAN device description */
-    EXPECT_EQ(std::string(info_rx.description), \
-              std::string("dev-can-linux dev: /dev/can0/rx0, driver: adv_pci"));
 
     /* Default bit rate */
     EXPECT_EQ(info_rx.bit_rate, 1000000);
@@ -161,11 +146,11 @@ TEST( Driver, SetBitRate ) {
 }
 
 TEST( Driver, SetBitTiming ) {
-    int fd_tx = open("/dev/can0/tx0", O_RDWR);
+    int fd_tx = open(get_device0_tx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd_tx, -1);
 
-    int fd_rx = open("/dev/can0/rx0", O_RDWR);
+    int fd_rx = open(get_device0_rx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd_rx, -1);
 
@@ -187,10 +172,6 @@ TEST( Driver, SetBitTiming ) {
 
     EXPECT_EQ(get_info_ret, EOK);
 
-    /* Default CAN device description */
-    EXPECT_EQ(std::string(info_tx.description), \
-              std::string("dev-can-linux dev: /dev/can0/tx0, driver: adv_pci"));
-
     /* Default bit rate */
     EXPECT_EQ(info_tx.bit_rate, 500000);
 
@@ -209,10 +190,6 @@ TEST( Driver, SetBitTiming ) {
     get_info_ret = get_info(fd_rx, &info_rx);
 
     EXPECT_EQ(get_info_ret, EOK);
-
-    /* Default CAN device description */
-    EXPECT_EQ(std::string(info_rx.description), \
-              std::string("dev-can-linux dev: /dev/can0/rx0, driver: adv_pci"));
 
     /* Default bit rate */
     EXPECT_EQ(info_rx.bit_rate, 500000);
