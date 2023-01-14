@@ -68,8 +68,8 @@ void print_driver_selection_results() {
 
     while (*location != NULL) {
         log_info("Auto detected device (%x:%x) successfully: (driver \"%s\")\n",
-                (*location)->vid,
-                (*location)->did,
+                (*location)->pdev.vendor,
+                (*location)->pdev.device,
                 (*location)->driver->name);
 
         location = &(*location)->next;

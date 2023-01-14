@@ -27,9 +27,7 @@
 /* Structure used for driver selection processing */
 typedef struct driver_selection {
     struct driver_selection *prev, *next;
-
-    pci_vid_t vid;
-    pci_did_t did;
+    struct pci_dev pdev;
 
     /* Detected PCI driver */
     struct pci_driver* driver;
@@ -56,8 +54,8 @@ static inline void store_driver_selection (
     driver_selection_t* new_driver_selection;
     new_driver_selection = malloc(sizeof(driver_selection_t));
 
-    new_driver_selection->vid = vid;
-    new_driver_selection->did = did;
+    new_driver_selection->pdev.vendor = vid;
+    new_driver_selection->pdev.device = did;
     new_driver_selection->driver = driver;
 
     if (driver_selection_root == NULL) {
@@ -78,25 +76,14 @@ static inline void store_driver_selection (
 }
 
 static inline int probe_all_driver_selections() {
-    static struct pci_dev pdev = {
-            .ba = NULL,
-            .vendor = 0,
-            .device = 0,
-            .dev = { .driver_data = NULL },
-            .irq = 0
-    };
-
     driver_selection_t* location = driver_selection_root;
 
     while (location != NULL) {
         driver_selection_t** next = &location->next;
 
-        pdev.vendor = location->vid;
-        pdev.device = location->did;
-
         probe_driver_selection = location;
 
-        if (location->driver->probe(&pdev, NULL)) {
+        if (location->driver->probe(&location->pdev, NULL)) {
             return -1;
         }
 
@@ -111,24 +98,13 @@ static inline int probe_all_driver_selections() {
 static inline void remove_all_driver_selections() {
     driver_selection_t** location = &driver_selection_root;
 
-    static struct pci_dev pdev = {
-            .ba = NULL,
-            .vendor = 0,
-            .device = 0,
-            .dev = { .driver_data = NULL },
-            .irq = 0
-    };
-
     while (*location != NULL) {
         driver_selection_t** next = &(*location)->next;
-
-        pdev.vendor = (*location)->vid;
-        pdev.device = (*location)->did;
 
         log_info("Shutting down %s\n",
                 (*location)->driver->name);
 
-        (*location)->driver->remove(&pdev);
+        (*location)->driver->remove(&(*location)->pdev);
         free(*location);
 
         *location = *next;
