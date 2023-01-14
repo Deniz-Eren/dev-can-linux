@@ -32,6 +32,10 @@ extern "C" {
 }
 
 
+/* Flood tests are unreliable and time consuming during Profiling so we will
+ * skip these */
+#if PROFILING_BUILD != 1
+
 #define FLOOD_TEST_SIZE 1024
 
 static volatile bool receive_loop0_started = false, receive_loop1_started = false;
@@ -291,3 +295,5 @@ TEST( Driver, FloodSend ) {
         close(fd1_tx);
     }
 }
+
+#endif

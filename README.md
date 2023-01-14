@@ -83,10 +83,10 @@ Check syslog for errors & warnings:
 
     slog2info
 
-If multiple supported cards are installed, the first supported card will be
-automatically chosen. To override this behaviour and manually specify the
-desired device, first find out what the vendor ID (vid) and device ID (did) of
-the desired card is as follows:
+If multiple supported cards are installed, all supported cards will be
+automatically loaded. To override this behaviour and manually specify a device
+to ignore, find out the vendor ID (vid) and device ID (did) of the card. To do
+this run the command:
 
     pci-tool -v
 
@@ -98,10 +98,16 @@ An example output looks like this:
             class/subclass/reg: 0c/09/00
                     CANbus Serial Bus Controller
 
-In this example we would chose the numbers vid/did: 13fe/c302
+    B000:D06:F00 @ idx 8
+            vid/did: 10e8/8406
+                    <vendor id - unknown>, <device id - unknown>
+            class/subclass/reg: ff/00/00
+                    Unknown Class code
 
-Target specific hardware detection of hardware and enable max verbose mode for
-debugging:
+In this example, say we would like to disable the card with numbers
+vid/did: 13fe/c302
+
+Target specific hardware to disable and enable max verbose mode for debugging:
 
     dev-can-linux -d 13fe:c302 -vv -ll
 
