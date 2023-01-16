@@ -69,10 +69,10 @@ static void create (timer_record_t* timer) {
 
     /* Get our priority. */
     if (SchedGet(0, 0, &scheduling_params) != -1) {
-       prio = scheduling_params.sched_priority;
+        prio = scheduling_params.sched_priority;
     }
     else {
-       prio = 10;
+        prio = 10;
     }
 
     timer->event.sigev_notify = SIGEV_PULSE;
@@ -92,10 +92,16 @@ static void create (timer_record_t* timer) {
                 strerror(errno) );
     }
 
+    timer->started = 0;
+
     /* Start the timer thread */
     pthread_attr_init(&timer->attr);
     pthread_attr_setdetachstate(&timer->attr, PTHREAD_CREATE_DETACHED);
     pthread_create(NULL, &timer->attr, &timer_loop, timer);
+
+    while (timer->started == 0) {
+        usleep(1000);
+    }
 
     timer->created = 1;
 }
@@ -142,9 +148,7 @@ void setup_timer (timer_record_t* timer, void (*callback)(void*), void *data) {
         return;
     }
 
-    log_trace( "setup_timer (%x%x)\n",
-            (u32)(~(u32)0 & ((u64)timer >> 32)),
-            (u32)(~(u32)0 & (u64)timer) );
+    log_trace( "setup_timer (%p)\n", timer);
 
     timer->created = 0;
     timer->callback = callback;
@@ -158,6 +162,8 @@ static void* timer_loop (void* arg) {
 
     int             rcvid;
     struct _pulse   pulse;
+
+    timer->started = 1;
 
     for (;;) {
         rcvid = MsgReceive(timer->chid, &pulse, sizeof(struct _pulse), NULL);
@@ -183,9 +189,7 @@ void cancel_delayed_work_sync (timer_record_t* timer) {
         return;
     }
 
-    log_trace( "cancel_delayed_work_sync (%x%x)\n",
-            (u32)(~(u32)0 & ((u64)timer >> 32)),
-            (u32)(~(u32)0 & (u64)timer) );
+    log_trace( "cancel_delayed_work_sync (%p)\n", timer);
 
     destroy(timer);
 }
@@ -197,9 +201,7 @@ void schedule_delayed_work (timer_record_t* timer, int ticks) {
         return;
     }
 
-    log_trace( "schedule_delayed_work (%x%x)\n",
-            (u32)(~(u32)0 & ((u64)timer >> 32)),
-            (u32)(~(u32)0 & (u64)timer) );
+    log_trace( "schedule_delayed_work (%p)\n", timer);
 
     create(timer);
 

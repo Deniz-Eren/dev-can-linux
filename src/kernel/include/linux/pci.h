@@ -62,8 +62,8 @@
 
 struct pci_dev;
 
-extern uintptr_t pci_iomap(struct pci_dev *dev, int bar, unsigned long max);
-extern void pci_iounmap(struct pci_dev *dev, uintptr_t p);
+extern void __iomem* pci_iomap(struct pci_dev *dev, int bar, unsigned long max);
+extern void pci_iounmap(struct pci_dev *dev, void __iomem* addr);
 
 
 /*
@@ -71,8 +71,9 @@ extern void pci_iounmap(struct pci_dev *dev, uintptr_t p);
  */
 struct pci_dev {
 	pci_devhdl_t hdl; /* QNX type */
-	pci_ba_t *ba; /* QNX type */
+	pci_ba_t* ba; /* QNX type */
 	int_t nba;
+    void __iomem** addr;
 
 	unsigned int	devfn;		/* encoded device & function index */
 	unsigned short	vendor;
@@ -151,5 +152,7 @@ static inline void pci_set_drvdata(struct pci_dev *pdev, void *data)
 {
 	dev_set_drvdata(&pdev->dev, data);
 }
+
+extern uintptr_t pci_resource_start (struct pci_dev* dev, int bar);
 
 #endif /* LINUX_PCI_H */

@@ -213,6 +213,12 @@ int main (int argc, char* argv[]) {
 
     signal(SIGINT, sigint_signal_handler);
 
+    if (fixed_memory_init()) {
+        log_err("fixed_memory_init fail\n");
+
+        return -1;
+    }
+
     if (process_driver_selection()) {
         return -1;
     }

@@ -4,11 +4,6 @@
  * \brief   This file is originally from the Linux Kernel source-code and has
  *          been very slightly modified to integrate to QNX RTOS.
  *
- * \details Changes have been made to integrate to QNX ROS including
- *          'void __iomem *' has been changed to 'uintptr_t' together with minor
- *          associated changes of 'NULL' to '0', and logging functionality
- *          changes.
- *
  * Copyright (C) 2007 Wolfgang Grandegger <wg@grandegger.com>
  * Copyright (C) 2008 Markus Plessing <plessing@ems-wuensche.com>
  * Copyright (C) 2008 Sebastian Haas <haas@ems-wuensche.com>
@@ -62,8 +57,8 @@ struct ems_pci_card {
 	struct pci_dev *pci_dev;
 	struct net_device *net_dev[EMS_PCI_MAX_CHAN];
 
-	uintptr_t conf_addr;
-	uintptr_t base_addr;
+	void __iomem *conf_addr;
+	void __iomem *base_addr;
 };
 
 #define EMS_PCI_CAN_CLOCK (16000000 / 2)
@@ -213,10 +208,10 @@ static void ems_pci_del_card(struct pci_dev *pdev)
 		free_sja1000dev(dev);
 	}
 
-	if (card->base_addr != 0)
+	if (card->base_addr != NULL)
 		pci_iounmap(card->pci_dev, card->base_addr);
 
-	if (card->conf_addr != 0)
+	if (card->conf_addr != NULL)
 		pci_iounmap(card->pci_dev, card->conf_addr);
 
 	kfree(card);
@@ -276,13 +271,13 @@ static int ems_pci_add_card(struct pci_dev *pdev,
 
 	/* Remap configuration space and controller memory area */
 	card->conf_addr = pci_iomap(pdev, 0, conf_size);
-	if (card->conf_addr == 0) {
+	if (card->conf_addr == NULL) {
 		err = -ENOMEM;
 		goto failure_cleanup;
 	}
 
 	card->base_addr = pci_iomap(pdev, base_bar, EMS_PCI_BASE_SIZE);
-	if (card->base_addr == 0) {
+	if (card->base_addr == NULL) {
 		err = -ENOMEM;
 		goto failure_cleanup;
 	}
@@ -361,7 +356,7 @@ static int ems_pci_add_card(struct pci_dev *pdev,
 
 			card->channels++;
 
-			dev_info(&pdev->dev, "Channel #%d at 0x%lu, irq %d\n",
+			dev_info(&pdev->dev, "Channel #%d at 0x%p, irq %d\n",
 					i + 1, priv->reg_base, dev->irq);
 		} else {
 			free_sja1000dev(dev);

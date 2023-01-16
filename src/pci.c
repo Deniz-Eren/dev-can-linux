@@ -31,6 +31,11 @@ driver_selection_t* driver_selection_root = NULL;
 driver_selection_t* probe_driver_selection = NULL;
 int device_id_count = 0;
 
+/* Helper structures */
+bar_t* bar_list_root = NULL;
+ioblock_t* ioblock_root = NULL;
+pthread_mutex_t ioblock_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 
 /*
  * TODO: use these error codes PCIBIOS_* from linux/pci.h for return values
@@ -113,12 +118,6 @@ int process_driver_selection() {
 int pci_enable_device (struct pci_dev* dev) {
     log_trace("pci_enable_device: %x:%x\n",
             dev->vendor, dev->device);
-
-    if (fixed_memory_init()) {
-        log_err("fixed_memory_init fail\n");
-
-        return -1;
-    }
 
     uint_t idx = 0;
     pci_bdf_t bdf = 0;
@@ -215,24 +214,23 @@ int pci_enable_device (struct pci_dev* dev) {
                 cs, PCI_SLOT(cs), PCI_FUNC(bdf), dev->devfn);
 
         /*
-         * Currently no device capabilities are needed to be processed thus
-         * commenting out following section
+         * Currently no device capabilities are needed to be processed
          */
 
-//        /* optionally determine capabilities of device */
-//        uint_t capid_idx = 0;
-//        pci_capid_t capid;
-//
-//        /* instead of looping could use pci_device_find_capid() to select
-//         * which capabilities to use */
-//        while ((r = pci_device_read_capid(
-//                bdf, &capid, capid_idx) ) == PCI_ERR_OK)
-//        {
-//            log_info("read capability[%d]: %x\n", capid_idx, capid);
-//
-//            /* get next capability ID */
-//            ++capid_idx;
-//        }
+        /* optionally determine capabilities of device */
+        uint_t capid_idx = 0;
+        pci_capid_t capid;
+
+        /* instead of looping could use pci_device_find_capid() to select
+         * which capabilities to use */
+        while ((r = pci_device_read_capid(
+                bdf, &capid, capid_idx) ) == PCI_ERR_OK)
+        {
+            log_info("read capability[%d]: %x\n", capid_idx, capid);
+
+            /* get next capability ID */
+            ++capid_idx;
+        }
 
         /*
          * Process bar info
@@ -250,13 +248,27 @@ int pci_enable_device (struct pci_dev* dev) {
         {
             dev->nba = nba;
             dev->ba = (pci_ba_t*)malloc(nba*sizeof(pci_ba_t));
+            dev->addr = (void __iomem**)malloc(nba*sizeof(void*));
 
             for (int_t i=0; i<nba; i++)
             {
                 dev->ba[i] = ba[i];
+                store_bar(ba[i]);
 
-                log_info("read ba[%d] { addr: %x, size: %x }\n",
-                        i, (u32)ba[i].addr, (u32)ba[i].size);
+                char type[16];
+
+                if (dev->ba[i].type == pci_asType_e_IO) {
+                    snprintf(type, 16, "I/O");
+                }
+                else if (dev->ba[i].type == pci_asType_e_MEM) {
+                    snprintf(type, 16, "MEM");
+                }
+                else {
+                    snprintf(type, 16, "NONE");
+                }
+
+                log_info("read ba[%d] %s { addr: %x, size: %x }\n",
+                        i, type, (u32)dev->ba[i].addr, (u32)dev->ba[i].size);
             }
         }
 #undef MAX_NUM_BA
@@ -302,52 +314,149 @@ void pci_disable_device (struct pci_dev* dev) {
     }
 }
 
-uintptr_t pci_iomap (struct pci_dev* dev, int bar, unsigned long max) {
-    log_trace("pci_iomap; bar: %d, max: %lu\n", bar, max);
+void __iomem* pci_iomap (struct pci_dev* dev, int bar, unsigned long max) {
+    log_trace("pci_iomap; bar: %d, addr: %p, max: %p\n", bar,
+            (void*)dev->ba[bar].addr, (void*)max);
 
     if (bar >= dev->nba) {
         log_err("internal error; bar: %d, nba: %d\n", bar, dev->nba);
     }
 
-    if (dev->ba[bar].size > max) {
-        dev->ba[bar].size = max;
-    }
-
     /* mmap() the address space(s) */
 
-    if (mmap_device_io(
-            dev->ba[bar].size, dev->ba[bar].addr ) == MAP_DEVICE_FAILED)
-    {
-        log_err("pci device address mapping failed; %s\n", strerror(errno));
+    void __iomem* memptr = NULL;
+
+    if (dev->ba[bar].type == pci_asType_e_MEM) {
+        memptr = mmap_device_memory(
+                0,
+                dev->ba[bar].size,
+                PROT_READ | PROT_WRITE | PROT_NOCACHE,
+                0,
+                dev->ba[bar].addr );
+
+        if (memptr == MAP_FAILED) {
+            log_err("pci device address mapping failed; %s\n", strerror(errno));
+
+            return NULL;
+        }
+    }
+    else if (dev->ba[bar].type == pci_asType_e_IO) {
+        memptr = (void __iomem*)mmap_device_io(
+                dev->ba[bar].size, dev->ba[bar].addr );
+
+        if ((uintptr_t)memptr == MAP_DEVICE_FAILED) {
+            log_err("pci device address mapping failed; %s\n", strerror(errno));
+
+            return NULL;
+        }
     }
     else {
-        log_dbg("ba[%d] mapping successful\n", bar);
+        log_err("ioremap error: unknown ba type\n");
+
+        return NULL;
     }
+
+    log_dbg("ba[%d] mapping successful\n", bar);
+
+    dev->addr[bar] = memptr;
+    store_block(dev->addr[bar], dev->ba[bar].size, dev->ba[bar]);
+
+    return dev->addr[bar];
+}
+
+uintptr_t pci_resource_start (struct pci_dev* dev, int bar) {
+    log_trace("pci_resource_start; bar: %d, addr: %p\n", bar,
+            (void*)dev->ba[bar].addr);
 
     return dev->ba[bar].addr;
 }
 
-void pci_iounmap (struct pci_dev* dev, uintptr_t p) {
-    int bar = -1;
-    uint64_t size = 0u;
+void __iomem* ioremap (uintptr_t offset, size_t size) {
+    log_trace("ioremap; offset: %p, size: %p\n",
+            (void*)offset, (void*)size);
 
-    for (int i = 0; i < dev->nba; ++i) {
-        if (dev->ba[i].addr == p) {
-            bar = i;
-            size = dev->ba[i].size;
-            break;
+    /* mmap() the address space(s) */
+
+    bar_t* bar = get_bar(offset);
+
+    if (bar == NULL) {
+        log_err("get_bar fail\n");
+
+        return NULL;
+    }
+
+    void __iomem* memptr = NULL;
+
+    if (bar->ba.type == pci_asType_e_MEM) {
+        memptr = mmap_device_memory(
+                0,
+                size,
+                PROT_READ | PROT_WRITE | PROT_NOCACHE,
+                0,
+                offset );
+
+        if (memptr == MAP_FAILED) {
+            log_err("pci device address mapping failed; %s\n", strerror(errno));
+
+            return NULL;
         }
     }
+    else if (bar->ba.type == pci_asType_e_IO) {
+        memptr = (void __iomem*)mmap_device_io(size, offset);
 
-    log_trace("pci_iounmap; bar: %d, size: %lu\n", bar, size);
+        if ((uintptr_t)memptr == MAP_DEVICE_FAILED) {
+            log_err("pci device address mapping failed; %s\n", strerror(errno));
 
-    if (bar == -1 || !size) {
-        log_err("internal error; bar size failure during pci_iounmap\n");
+            return NULL;
+        }
+    }
+    else {
+        log_err("ioremap error: unknown ba type\n");
+
+        return NULL;
     }
 
-    if (munmap_device_io(p, size) == -1) {
-        log_err("internal error; munmap_device_io failure\n");
+    log_dbg("ioremap [%p] mapping to [%p] successful\n",
+            (void*)offset, memptr);
+
+    store_block(memptr, size, bar->ba);
+
+    return memptr;
+}
+
+void pci_iounmap (struct pci_dev* dev, void __iomem* addr) {
+    log_trace("pci_iounmap; addr: %p\n", addr);
+
+    ioblock_t* block = remove_block(addr);
+
+    if (block == NULL) {
+        log_err("pci_iounmap; remove_block error\n");
+
+        return;
     }
+
+    log_trace("pci_iounmap; addr: %p, size: %p\n",
+            block->addr, (void*)block->size);
+
+    if (block->ba.type == pci_asType_e_MEM) {
+        if (munmap_device_memory((void*)block->addr, block->size) == -1) {
+            log_err("internal error; munmap_device_memory failure: %s\n",
+                    strerror(errno));
+        }
+    }
+    else if (block->ba.type == pci_asType_e_IO) {
+        if (munmap_device_io((uintptr_t)block->addr, block->size) == -1) {
+            log_err("internal error; munmap_device_io failure: %s\n",
+                    strerror(errno));
+        }
+    }
+    else {
+        log_err("pci_iounmap error: unknown ba type\n");
+
+        return;
+    }
+
+    free(block);
 }
 
 int pci_request_regions (struct pci_dev* dev, const char* res_name) {

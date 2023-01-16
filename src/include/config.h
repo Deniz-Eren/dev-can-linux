@@ -64,6 +64,7 @@ extern channel_config_t* optu_config;
  */
 
 #define __KERNEL__
+#define __iomem volatile
 
 #define BITS_PER_LONG (64)
 

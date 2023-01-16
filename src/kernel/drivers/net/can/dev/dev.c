@@ -301,7 +301,7 @@ struct net_device *alloc_candev_mqs(int sizeof_priv, unsigned int echo_skb_max,
 
 	priv->state = CAN_STATE_STOPPED;
 
-	setup_timer(&priv->restart_work, can_restart_work, priv);
+	setup_timer(&priv->restart_work, &can_restart_work, priv);
 
 	return dev;
 }

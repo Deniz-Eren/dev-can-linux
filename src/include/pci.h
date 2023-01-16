@@ -111,4 +111,131 @@ static inline void remove_all_driver_selections() {
     }
 }
 
+/*
+ * Helper structures and functions
+ */
+
+typedef struct bar { // Needed to track bars for ioremap()
+    struct bar *next, *prev;
+    pci_ba_t ba;
+} bar_t;
+
+typedef struct ioblock {
+    struct ioblock *prev, *next;
+
+    void __iomem* addr;
+    size_t size;
+
+    pci_ba_t ba; // The block is part of this bar, not necessarily the entire
+                 // bar is dedicated to this block.
+} ioblock_t;
+
+extern bar_t* bar_list_root;
+extern ioblock_t* ioblock_root;
+extern pthread_mutex_t ioblock_mutex;
+
+static inline void store_bar (pci_ba_t ba) {
+    bar_t* new_bar = malloc(sizeof(bar_t));
+    new_bar->ba = ba;
+
+    if (bar_list_root == NULL) {
+        bar_list_root = new_bar;
+        new_bar->prev = new_bar->next = NULL;
+        return;
+    }
+
+    bar_t** last = &bar_list_root;
+
+    while ((*last)->next != NULL) {
+        last = &(*last)->next;
+    }
+
+    (*last)->next = new_bar;
+    new_bar->prev = (*last);
+    new_bar->next = NULL;
+}
+
+static inline bar_t* get_bar (uintptr_t addr) {
+    bar_t** location = &bar_list_root;
+
+    while (*location != NULL) {
+        if (addr >= (*location)->ba.addr &&
+            addr < (*location)->ba.addr + (*location)->ba.size)
+        {
+            return *location;
+        }
+
+        location = &(*location)->next;
+    }
+
+    return NULL;
+}
+
+static inline void store_block (void __iomem* addr, size_t size, pci_ba_t ba) {
+    pthread_mutex_lock(&ioblock_mutex);
+
+    ioblock_t* new_block = malloc(sizeof(ioblock_t));
+    new_block->addr = addr;
+    new_block->size = size;
+    new_block->ba = ba;
+
+    if (ioblock_root == NULL) {
+        ioblock_root = new_block;
+        ioblock_root->prev = ioblock_root->next = NULL;
+
+        pthread_mutex_unlock(&ioblock_mutex);
+        return;
+    }
+
+    ioblock_t** last = &ioblock_root;
+
+    while ((*last)->next != NULL) {
+        last = &(*last)->next;
+    }
+
+    (*last)->next = new_block;
+    new_block->prev = (*last);
+    new_block->next = NULL;
+    pthread_mutex_unlock(&ioblock_mutex);
+}
+
+static inline ioblock_t* remove_block (void __iomem* addr) {
+    pthread_mutex_lock(&ioblock_mutex);
+    ioblock_t** location = &ioblock_root;
+
+    while (*location != NULL) {
+        if ((*location)->addr == addr) {
+            ioblock_t* result = (*location);
+
+            if (result->prev == NULL) {
+                ioblock_root = result->next;
+
+                if (ioblock_root != NULL) {
+                    ioblock_root->prev = NULL;
+                }
+            }
+            else {
+                result->prev->next = result->next;
+
+                if (result->next != NULL) {
+                    result->next->prev = result->prev;
+                }
+            }
+
+            if (result != NULL) {
+                result->prev = NULL;
+                result->next = NULL;
+            }
+
+            pthread_mutex_unlock(&ioblock_mutex);
+            return result;
+        }
+
+        location = &(*location)->next;
+    }
+
+    pthread_mutex_unlock(&ioblock_mutex);
+    return NULL;
+}
+
 #endif /* SRC_PCI_H_ */

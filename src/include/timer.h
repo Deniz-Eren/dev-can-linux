@@ -43,7 +43,7 @@
 typedef struct timer_record {
     timer_t id;
 
-    int created, chid;
+    int created, chid, started;
 
     void (*callback)(void*);
     void *data;

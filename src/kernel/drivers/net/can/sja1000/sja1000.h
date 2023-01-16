@@ -9,8 +9,6 @@
  *          with changes to some structure internals. For example net_device
  *          structure has been greatly simplified by removing networking
  *          specific functionality and retaining only CAN-bus critical features.
- *          PCI memory address types 'void __iomem *' have been changed to QNX
- *          equivalent type 'uintptr_t'.
  *
  * sja1000.h -  Philips SJA1000 network device driver
  *
@@ -180,7 +178,7 @@ struct sja1000_priv {
 	void *priv;		/* for board-specific data */
 	struct net_device *dev;
 
-	uintptr_t reg_base;	 /* ioremap'ed address to registers */
+	void __iomem* reg_base;	 /* ioremap'ed address to registers */
 	unsigned long irq_flags; /* for request_irq() */
 
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 && \

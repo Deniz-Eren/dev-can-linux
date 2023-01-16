@@ -109,6 +109,8 @@ int register_netdev (struct net_device* dev) {
         return -1;
     }
 
+    dev->device_session = NULL;
+
     log_trace_bittiming_info(dev);
 
     if (dev->netdev_ops->ndo_open(dev)) {
@@ -326,8 +328,10 @@ void unregister_netdev(struct net_device *dev) {
 
     dev->flags &= ~IFF_UP;
 
-    if (dev->netdev_ops->ndo_stop(dev)) {
-        log_err("internal error; ndo_stop failure\n");
+    if (dev->netdev_ops) {
+        if (dev->netdev_ops->ndo_stop(dev)) {
+            log_err("internal error; ndo_stop failure\n");
+        }
     }
 
     can_resmgr_t** location = &root_resmgr;

@@ -32,6 +32,7 @@
 #include <linux/slab.h>
 #include <linux/pci.h>
 #include <linux/io.h>
+#include <asm/io.h>
 
 #include "sja1000.h"
 
@@ -58,23 +59,37 @@ struct adv_board_data {
 /*
 * Depends on the board configuration
 */
-#define ADV_PCI_OCR            (OCR_TX0_PUSHPULL | OCR_TX1_PUSHPULL | OCR_TX1_INVERT)
+#define ADV_PCI_OCR            (OCR_TX0_PULLDOWN | OCR_TX0_PULLUP)
 
 /*
 * In the CDR register, you should set CBP to 1.
 */
-#define ADV_PCI_CDR            (CDR_CBP)
+#define ADV_PCI_CDR            (CDR_CBP | CDR_CLKOUT_MASK)
 
 /*
 * The PCI device and vendor IDs
 */
 #define ADV_PCI_VENDOR_ID         0x13fe
 
-/* 2-port CAN UniversalPCI Communication Card with Isolation */
-#define ADV_PCI_DEVICE_ID1    	0xc302
-
 static const struct pci_device_id adv_pci_tbl[] = {
-	{ADV_PCI_VENDOR_ID, ADV_PCI_DEVICE_ID1, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0x1680, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0x3680, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0x2052, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0x1681, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc001, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc002, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc004, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc101, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc102, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc104, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc201, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc202, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc204, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc301, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc302, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0xc304, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0x00c5, PCI_ANY_ID, PCI_ANY_ID,},
+	{ADV_PCI_VENDOR_ID, 0x00d7, PCI_ANY_ID, PCI_ANY_ID,},
 	{0,}
 };
 
@@ -118,7 +133,124 @@ static int adv_pci_device_support_check(const struct pci_dev *pdev)
 
 static int number_of_sja1000_chips(const struct pci_dev *pdev)
 {
-	return pdev->device & 0x7;
+	int no_of_chips = 0;
+
+	switch (pdev->device) {
+	case 0x1680:
+	case 0x2052:
+	case 0x00c5:
+	case 0x00d7:
+		no_of_chips = 2;
+		break;
+	case 0x1681:
+		no_of_chips = 1;
+		break;
+	default:
+		no_of_chips = pdev->device & 0x7;
+		break;
+	}
+
+	return no_of_chips;
+}
+
+static int adv_pci_bar_no(const struct pci_dev *pdev)
+{
+	int bar_no = 0;
+
+	switch (pdev->device) {
+	case 0x1680:
+	case 0x2052:
+	case 0x1681:
+		bar_no = 2;
+		break;
+	default:
+		break;
+	}
+
+	return bar_no;
+}
+
+static int adv_pci_bar_offset(const struct pci_dev *pdev)
+{
+	int bar_offset = 0x100;
+
+	switch (pdev->device) {
+	case 0xc201:
+	case 0xc202:
+	case 0xc204:
+	case 0xc301:
+	case 0xc302:
+	case 0xc304:
+	case 0x00c5:
+	case 0x00d7:
+		bar_offset = 0x400;
+		break;
+	case 0x1680:
+	case 0x2052:
+	case 0x1681:
+		bar_offset = 0x0;
+		break;
+	default:
+		break;
+	}
+
+	return bar_offset;
+}
+
+static int adv_pci_bar_len(const struct pci_dev *pdev)
+{
+	int len = 0x100;
+
+	switch (pdev->device) {
+    case 0xc001:
+    case 0xc002:
+    case 0xc004:
+    case 0xc101:
+    case 0xc102:
+    case 0xc104:
+        len = 0x100;
+        break;
+
+	case 0xc201:
+	case 0xc202:
+	case 0xc204:
+	case 0xc301:
+	case 0xc302:
+	case 0xc304:
+	case 0x00c5:
+	case 0x00d7:
+		len = 0x400;
+		break;
+
+	case 0x1680:
+	case 0x1681:
+	case 0x2052:
+    case 0x3680:
+		len = 0x80;
+		break;
+
+	default:
+		break;
+	}
+
+	return len;
+}
+
+static int adv_pci_is_multi_bar(struct pci_dev *pdev)
+{
+	int is_multi_bar = 0;
+
+	switch (pdev->device) {
+	case 0x1680:
+	case 0x2052:
+	case 0x1681:
+		is_multi_bar = 1;
+		break;
+	default:
+		break;
+	}
+
+	return is_multi_bar;
 }
 
 static int adv_pci_reg_shift(struct pci_dev *pdev)
@@ -126,7 +258,16 @@ static int adv_pci_reg_shift(struct pci_dev *pdev)
 	int reg_shift = 0;
 
 	switch (pdev->device) {
-	case ADV_PCI_DEVICE_ID1:
+	case 0xc201:
+	case 0xc202:
+	case 0xc204:
+	case 0xc301:
+	case 0xc302:
+	case 0xc304:
+	case 0x00c5:
+	case 0x00d7:
+		// These devices support memory mapped IO.
+		// (not implemented by the driver)
 		reg_shift = 2;
 		break;
 	default:
@@ -188,16 +329,19 @@ static void adv_pci_del_all_channels(struct pci_dev *pdev)
 	}
 }
 
-static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
+static int adv_pci_add_chan(struct pci_dev *pdev, int channel, int bar_no)
 {
 	struct net_device *dev;
 	struct sja1000_priv *priv;
 	struct adv_pci *board;
 	struct adv_board_data *board_data;
 	int err;
-	int reg_shift;
+	int bar_offset, bar_len, reg_shift;
+    uintptr_t base_addr;
 
 	/* The following function calls assume device is supported */
+	bar_offset = adv_pci_bar_offset(pdev);
+    bar_len = adv_pci_bar_len(pdev);
 	reg_shift = adv_pci_reg_shift(pdev);
 
 	dev = alloc_sja1000dev(sizeof(struct adv_board_data));
@@ -209,7 +353,8 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
 
 	board_data->reg_shift = reg_shift;
 
-	priv->reg_base = pci_iomap(pdev, bar_no, 128);
+    base_addr = pci_resource_start(pdev, bar_no) + bar_offset * channel;
+    priv->reg_base = ioremap(base_addr, bar_len);
 
 	priv->read_reg = adv_pci_read_reg;
 	priv->write_reg = adv_pci_write_reg;
@@ -224,23 +369,28 @@ static int adv_pci_add_chan(struct pci_dev *pdev, int bar_no)
 
 	board = pci_get_drvdata(pdev);
 	board->pci_dev = pdev;
-	board->slave_dev[bar_no] = dev;
-    dev->dev_id = bar_no;
+	board->slave_dev[channel] = dev;
 
-	adv_pci_reset(priv);
+	dev_info(&pdev->dev, "reg_base=%p irq=%d\n",
+            priv->reg_base, dev->irq);
 
-	dev_info(&pdev->dev, "reg_base=%lu irq=%d\n",
-		priv->reg_base, dev->irq);
+	if (adv_pci_reset(priv) == 0) {
+	    SET_NETDEV_DEV(dev, &pdev->dev);
+	    dev->dev_id = channel;
 
-	SET_NETDEV_DEV(dev, &pdev->dev);
+	    /* Register SJA1000 device */
+	    err = register_sja1000dev(dev);
+	    if (err) {
+		    dev_err(&pdev->dev, "Registering device failed (err=%d)\n",
+			    err);
+		    goto failure;
+	    }
+    }
+    else {
+        log_err("adv_pci_reset failed\n");
 
-	/* Register SJA1000 device */
-	err = register_sja1000dev(dev);
-	if (err) {
-		dev_err(&pdev->dev, "Registering device failed (err=%d)\n",
-			err);
-		goto failure;
-	}
+        free_sja1000dev(dev);
+    }
 
 	return 0;
 
@@ -269,7 +419,7 @@ static int adv_pci_init_one(struct pci_dev *pdev,
 	struct adv_pci *board;
 
 	int i, err;
-	int no_channels;
+	int no_channels, bar_no, is_multi_bar;
 
 	err = 0;
 
@@ -295,14 +445,20 @@ static int adv_pci_init_one(struct pci_dev *pdev,
 	}
 
 	/* The following function calls assume device is supported */
+	bar_no = adv_pci_bar_no(pdev);
+	is_multi_bar = adv_pci_is_multi_bar(pdev);
+
 	board->no_channels = no_channels;
 
 	pci_set_drvdata(pdev, board);
 
 	for (i = 0; i < no_channels; i++) {
-		err = adv_pci_add_chan(pdev, i);
+		err = adv_pci_add_chan(pdev, i, bar_no);
 		if (err)
 			goto failure_cleanup;
+
+		if (is_multi_bar)
+			bar_no++;
 	}
 	return 0;
 

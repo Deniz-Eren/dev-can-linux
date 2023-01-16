@@ -4,12 +4,6 @@
  * \brief   This file is originally from the Linux Kernel source-code and has
  *          been very slightly modified to integrate to QNX RTOS.
  *
- * \details Changes have been made to integrate to QNX ROS including
- *          'void __iomem *' has been changed to 'uintptr_t' together with minor
- *          associated changes of 'NULL' to '0', PCI_SLOT re-defined as
- *          _PCI_SLOT so it doesn't clash with QNX types and logging
- *          functionality changes.
- *
  * Copyright (C) 2008-2010 Pavel Cheblakov <P.B.Cheblakov@inp.nsk.su>
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -61,7 +55,7 @@ MODULE_LICENSE("GPL v2");
 struct plx_pci_card {
 	int channels;			/* detected channels count */
 	struct net_device *net_dev[PLX_PCI_MAX_CHAN];
-	uintptr_t conf_addr;
+	void __iomem *conf_addr;
 
 	/* Pointer to device-dependent reset function */
 	void (*reset_func)(struct pci_dev *pdev);
@@ -520,7 +514,7 @@ static void plx9056_pci_reset_common(struct pci_dev *pdev)
 /* Special reset function for Marathon CAN-bus-PCI card */
 static void plx_pci_reset_marathon_pci(struct pci_dev *pdev)
 {
-	uintptr_t reset_addr;
+	void __iomem *reset_addr;
 	int i;
 	static const int reset_bar[2] = {3, 5};
 
@@ -543,8 +537,8 @@ static void plx_pci_reset_marathon_pci(struct pci_dev *pdev)
 /* Special reset function for Marathon CAN-bus-PCIe card */
 static void plx_pci_reset_marathon_pcie(struct pci_dev *pdev)
 {
-	uintptr_t addr;
-	uintptr_t reset_addr;
+	void __iomem *addr;
+	void __iomem *reset_addr;
 	int i;
 
 	plx9056_pci_reset_common(pdev);
@@ -571,7 +565,7 @@ static void plx_pci_reset_marathon_pcie(struct pci_dev *pdev)
 /* Special reset function for ASEM Dual CAN raw card */
 static void plx_pci_reset_asem_dual_can_raw(struct pci_dev *pdev)
 {
-	uintptr_t bar0_addr;
+	void __iomem *bar0_addr;
 	u8 tmpval;
 
 	plx_pci_reset_common(pdev);
@@ -646,7 +640,7 @@ static int plx_pci_add_card(struct pci_dev *pdev,
 	struct plx_pci_card_info *ci;
 	int err, i;
 	u32 val;
-	uintptr_t addr;
+	void __iomem *addr;
 
 	ci = (struct plx_pci_card_info *)ent->driver_data;
 
@@ -733,7 +727,7 @@ static int plx_pci_add_card(struct pci_dev *pdev,
 
 			card->channels++;
 
-			dev_info(&pdev->dev, "Channel #%d at 0x%lu, irq %d "
+			dev_info(&pdev->dev, "Channel #%d at 0x%p, irq %d "
 				 "registered as %s\n", i + 1, priv->reg_base,
 				 dev->irq, dev->name);
 		} else {

@@ -32,24 +32,100 @@
 #ifndef _LINUX_IO_H
 #define _LINUX_IO_H
 
+#include <sys/mman.h>
 #include <hw/inout.h> /* QNX header */
 
 
+static inline uint8_t read8 (void __iomem* addr) {
+    uint8_t ret;
+
+    if ((uintptr_t)addr <= 0xFFFF) {
+        ret = in8((uintptr_t __iomem)addr);
+    }
+    else {
+        __cpu_membarrier();
+        ret = *(uint8_t __iomem*)addr;
+        __cpu_membarrier();
+    }
+
+    return ret;
+}
+
+static inline uint16_t read16 (void __iomem* addr) {
+    uint16_t ret;
+
+    if ((uintptr_t)addr <= 0xFFFF) {
+        ret = in16((uintptr_t __iomem)addr);
+    }
+    else {
+        __cpu_membarrier();
+        ret = __cpu_unaligned_ret16(addr);
+        __cpu_membarrier();
+    }
+
+    return ret;
+}
+
+static inline uint32_t read32 (void __iomem* addr) {
+    uint32_t ret;
+
+    if ((uintptr_t)addr <= 0xFFFF) {
+        ret = in32((uintptr_t __iomem)addr);
+    }
+    else {
+        __cpu_membarrier();
+        ret = __cpu_unaligned_ret32(addr);
+        __cpu_membarrier();
+    }
+
+    return ret;
+}
+
+static inline void write8 (void __iomem* addr, uint8_t val) {
+    if ((uintptr_t)addr <= 0xFFFF) {
+        out8((__iomem uintptr_t)addr, val);
+    }
+    else {
+        __cpu_membarrier();
+        *(uint8_t __iomem*)addr = val;
+    }
+}
+
+static inline void write16 (void __iomem* addr, uint16_t val) {
+    if ((uintptr_t)addr <= 0xFFFF) {
+        out16((__iomem uintptr_t)addr, val);
+    }
+    else {
+        __cpu_membarrier();
+        __cpu_unaligned_put16(addr, val);
+    }
+}
+
+static inline void write32 (void __iomem* addr, uint32_t val) {
+    if ((uintptr_t)addr <= 0xFFFF) {
+        out32((__iomem uintptr_t)addr, val);
+    }
+    else {
+        __cpu_membarrier();
+        __cpu_unaligned_put32(addr, val);
+    }
+}
+
 /* Define mapping to QNX IO */
-#define readb(addr)         in8(addr)
-#define readw(addr)         in16(addr)
-#define readl(addr)         in32(addr)
+#define readb(addr)         read8(addr)
+#define readw(addr)         read16(addr)
+#define readl(addr)         read32(addr)
 
 #define ioread8(addr)       readb(addr)
 #define ioread16(addr)      readw(addr)
 #define ioread32(addr)      readl(addr)
 
-#define writeb(v, addr)     out8((addr), (v))
-#define writew(v, addr)     out16((addr), (v))
-#define writel(v, addr)     out32((addr), (v))
+#define writeb(v, addr)     write8(addr, v)
+#define writew(v, addr)     write16(addr, v)
+#define writel(v, addr)     write32(addr, v)
 
-#define iowrite8(v, addr)   writeb((v), (addr))
-#define iowrite16(v, addr)  writew((v), (addr))
-#define iowrite32(v, addr)  writel((v), (addr))
+#define iowrite8(v, addr)   writeb(v, addr)
+#define iowrite16(v, addr)  writew(v, addr)
+#define iowrite32(v, addr)  writel(v, addr)
 
 #endif /* _LINUX_IO_H */

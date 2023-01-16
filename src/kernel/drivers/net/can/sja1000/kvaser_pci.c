@@ -4,11 +4,6 @@
  * \brief   This file is originally from the Linux Kernel source-code and has
  *          been very slightly modified to integrate to QNX RTOS.
  *
- * \details Changes have been made to integrate to QNX ROS including
- *          'void __iomem *' has been changed to 'uintptr_t' together with minor
- *          associated changes of 'NULL' to '0', and logging functionality
- *          changes.
- *
  * Copyright (C) 2008 Per Dalen <per.dalen@cnw.se>
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -69,8 +64,8 @@ struct kvaser_pci {
 	int channel;
 	struct pci_dev *pci_dev;
 	struct net_device *slave_dev[MAX_NO_OF_CHANNELS-1];
-	uintptr_t conf_addr;
-	uintptr_t res_addr;
+	void __iomem *conf_addr;
+	void __iomem *res_addr;
 	int no_channels;
 	u8 xilinx_ver;
 };
@@ -166,7 +161,7 @@ static void kvaser_pci_enable_irq(struct net_device *dev)
 	iowrite32(tmp_en_io, board->conf_addr + S5920_INTCSR);
 }
 
-static int number_of_sja1000_chip(uintptr_t base_addr)
+static int number_of_sja1000_chip(void __iomem *base_addr)
 {
 	u8 status;
 	int i;
@@ -223,9 +218,9 @@ static void kvaser_pci_del_chan(struct net_device *dev)
 
 static int kvaser_pci_add_chan(struct pci_dev *pdev, int channel,
 			       struct net_device **master_dev,
-				   uintptr_t conf_addr,
-				   uintptr_t res_addr,
-				   uintptr_t base_addr)
+			       void __iomem *conf_addr,
+			       void __iomem *res_addr,
+			       void __iomem *base_addr)
 {
 	struct net_device *dev;
 	struct sja1000_priv *priv;
@@ -279,7 +274,7 @@ static int kvaser_pci_add_chan(struct pci_dev *pdev, int channel,
 	priv->irq_flags = IRQF_SHARED;
 	dev->irq = pdev->irq;
 
-	dev_info(&pdev->dev, "reg_base=%lu conf_addr=%lu irq=%d\n",
+	dev_info(&pdev->dev, "reg_base=%p conf_addr=%p irq=%d\n",
 		 priv->reg_base, board->conf_addr, dev->irq);
 
 	SET_NETDEV_DEV(dev, &pdev->dev);
@@ -311,9 +306,9 @@ static int kvaser_pci_init_one(struct pci_dev *pdev,
 	struct sja1000_priv *priv;
 	struct kvaser_pci *board;
 	int no_channels;
-	uintptr_t base_addr = 0;
-	uintptr_t conf_addr = 0;
-	uintptr_t res_addr = 0;
+	void __iomem *base_addr = NULL;
+	void __iomem *conf_addr = NULL;
+	void __iomem *res_addr = NULL;
 	int i;
 
 	dev_info(&pdev->dev, "initializing device %04x:%04x\n",
@@ -329,20 +324,20 @@ static int kvaser_pci_init_one(struct pci_dev *pdev,
 
 	/* S5920 */
 	conf_addr = pci_iomap(pdev, 0, PCI_CONFIG_PORT_SIZE);
-	if (conf_addr == 0) {
+	if (conf_addr == NULL) {
 		err = -ENODEV;
 		goto failure_release_regions;
 	}
 
 	/* XILINX board wide address */
 	res_addr = pci_iomap(pdev, 2, PCI_PORT_XILINX_SIZE);
-	if (res_addr == 0) {
+	if (res_addr == NULL) {
 		err = -ENOMEM;
 		goto failure_iounmap;
 	}
 
 	base_addr = pci_iomap(pdev, 1, PCI_PORT_SIZE);
-	if (base_addr == 0) {
+	if (base_addr == NULL) {
 		err = -ENOMEM;
 		goto failure_iounmap;
 	}
@@ -374,11 +369,11 @@ failure_cleanup:
 	kvaser_pci_del_chan(master_dev);
 
 failure_iounmap:
-	if (conf_addr != 0)
+	if (conf_addr != NULL)
 		pci_iounmap(pdev, conf_addr);
-	if (res_addr != 0)
+	if (res_addr != NULL)
 		pci_iounmap(pdev, res_addr);
-	if (base_addr != 0)
+	if (base_addr != NULL)
 		pci_iounmap(pdev, base_addr);
 
 failure_release_regions:

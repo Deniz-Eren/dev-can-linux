@@ -4,11 +4,6 @@
  * \brief   This file is originally from the Linux Kernel source-code and has
  *          been very slightly modified to integrate to QNX RTOS.
  *
- * \details Changes have been made to integrate to QNX ROS including
- *          'void __iomem *' has been changed to 'uintptr_t' together with minor
- *          associated changes of 'NULL' to '0', and logging functionality
- *          changes.
- *
  * Copyright (C) 2007, 2011 Wolfgang Grandegger <wg@grandegger.com>
  * Copyright (C) 2012 Stephane Grosjean <s.grosjean@peak-system.com>
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
@@ -60,7 +55,7 @@ MODULE_LICENSE("GPL v2");
 
 struct peak_pciec_card;
 struct peak_pci_chan {
-	uintptr_t cfg_base;		/* Common for all channels */
+	void __iomem *cfg_base;		/* Common for all channels */
 	struct net_device *prev_dev;	/* Chain of network devices */
 	u16 icr_mask;			/* Interrupt mask for fast ack */
 	struct peak_pciec_card *pciec_card;	/* only for PCIeC LEDs */
@@ -579,7 +574,7 @@ static int peak_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	struct sja1000_priv *priv;
 	struct peak_pci_chan *chan;
 	struct net_device *dev, *prev_dev;
-	uintptr_t cfg_base, reg_base;
+	void __iomem *cfg_base, *reg_base;
 	u16 sub_sys_id, icr;
 	int i, err, channels;
 	char fw_str[14] = "";
@@ -713,7 +708,7 @@ static int peak_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		}
 
 		dev_info(&pdev->dev,
-			 "%s at reg_base=0x%lu cfg_base=0x%lu irq=%d\n",
+			 "%s at reg_base=0x%p cfg_base=0x%p irq=%d\n",
 			 dev->name, priv->reg_base, chan->cfg_base, dev->irq);
 	}
 
@@ -767,8 +762,8 @@ static void peak_pci_remove(struct pci_dev *pdev)
 	struct net_device *dev = pci_get_drvdata(pdev); /* Last device */
 	struct sja1000_priv *priv = netdev_priv(dev);
 	struct peak_pci_chan *chan = priv->priv;
-	uintptr_t cfg_base = chan->cfg_base;
-	uintptr_t reg_base = priv->reg_base;
+	void __iomem *cfg_base = chan->cfg_base;
+	void __iomem *reg_base = priv->reg_base;
 
 	/* Disable interrupts */
 	writew(0x0, cfg_base + PITA_ICR + 2);
