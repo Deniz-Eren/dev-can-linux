@@ -192,6 +192,9 @@ void print_help (char* program_name) {
     printf("                 The driver detects and enables all supported PCI CAN-bus\n");
     printf("                 devices on the bus. However, if you want the driver to ignore\n");
     printf("                 a particular device use this option.\n");
+    printf("    \e[1m-b delay\e[m   - Bus-off recovery delay timer length (milliseconds).\n");
+    printf("                 If set to 0ms, then the bus-off recovery is disabled!\n");
+    printf("                 Default: %dms\n", DEFAULT_RESTART_MS);
     printf("    \e[1m-?/h\e[m       - Print help menu and exit.\n");
     printf("\n");
     printf("\e[1mNOTES\e[m\n");

@@ -60,6 +60,9 @@ Options:
                  The driver detects and enables all supported PCI CAN-bus
                  devices on the bus. However, if you want the driver to ignore
                  a particular device use this option.
+    -b delay   - Bus-off recovery delay timer length (milliseconds).
+                 If set to 0ms, then the bus-off recovery is disabled!
+                 Default: 50ms
     -?/h       - Print help menu and exit.
 
     NOTES

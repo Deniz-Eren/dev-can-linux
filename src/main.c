@@ -46,8 +46,13 @@ int main (int argc, char* argv[]) {
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "d:u:viqstlVCwc?h")) != -1) {
+    while ((opt = getopt(argc, argv, "b:d:u:viqstlVCwc?h")) != -1) {
         switch (opt) {
+        case 'b':
+            optb++;
+            optb_restart_ms = atoi(optarg);
+            break;
+
         case 'd':
             optd++;
             sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
@@ -179,6 +184,12 @@ int main (int argc, char* argv[]) {
             printf("invalid option %c\n", opt);
             break;
         }
+    }
+
+    if (optb > 1) {
+        printf("error: only a single entry for option -b is allowed.\n");
+
+        return -1;
     }
 
     if (optd > 1) {

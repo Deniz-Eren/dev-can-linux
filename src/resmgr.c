@@ -93,6 +93,8 @@ int register_netdev (struct net_device* dev) {
     log_trace("register_netdev: %s\n", dev->name);
 
     struct user_dev_setup user = {
+            .set_restart_ms = true,
+            .restart_ms = optb_restart_ms,
             .set_bittiming = true,
             .bittiming = { .bitrate = 250000 }
     };

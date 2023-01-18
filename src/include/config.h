@@ -30,11 +30,17 @@
 
 #include "timer.h"
 
+#define DEFAULT_NUM_RX_CHANNELS 1
+#define DEFAULT_NUM_TX_CHANNELS 1
+#define DEFAULT_RESTART_MS      50 // Default bus-off restart delay
+
 
 /*
  * Program options
  */
 
+extern int optb;
+extern int optb_restart_ms;
 extern int optv;
 extern int optl;
 extern int opti;
@@ -45,9 +51,6 @@ extern int opt_did;
 extern int opts;
 extern int optt;
 extern int optu;
-
-#define DEFAULT_NUM_RX_CHANNELS 1
-#define DEFAULT_NUM_TX_CHANNELS 1
 
 typedef struct channel_config {
     int id;

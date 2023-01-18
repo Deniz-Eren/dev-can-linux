@@ -46,6 +46,8 @@
 /*
  * Program options, initial values
  */
+int optb = 0;
+int optb_restart_ms = DEFAULT_RESTART_MS;
 int optv = 0;
 int optl = 0;
 int opti = 0;
