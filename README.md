@@ -420,7 +420,7 @@ Current version output:
 
 Actual hardware tested currently are:
 
-- Advantech PCI (vendor: 13fe, device: c302)
+- Advantech PCIe (vendor: 13fe, device: c302)
 
 Please report back findings from any hardware you test so we can update this
 list, your help is much appreciated.
