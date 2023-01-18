@@ -420,7 +420,7 @@ Current version output:
 
 Actual hardware tested currently are:
 
-- Advantech PCIe (vendor: 13fe, device: c302)
+- Advantech PCIe (vendor: 13fe, device: c302) running on UNO2484G and UNO1483G
 
 Please report back findings from any hardware you test so we can update this
 list, your help is much appreciated.
