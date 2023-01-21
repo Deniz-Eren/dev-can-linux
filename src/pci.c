@@ -27,6 +27,16 @@
 #include "config.h"
 #include "pci.h"
 
+#include <linux/io.h>
+
+size_t io_port_addr_threshold = 0x0; // used in linux/io.h
+
+// IO and MEM address space tracking
+size_t pci_io_addr_space_begin = 0x0;
+size_t pci_io_addr_space_end = 0x0;
+size_t pci_mem_addr_space_begin = 0x0;
+size_t pci_mem_addr_space_end = 0x0;
+
 driver_selection_t* driver_selection_root = NULL;
 driver_selection_t* probe_driver_selection = NULL;
 int device_id_count = 0;
@@ -250,25 +260,89 @@ int pci_enable_device (struct pci_dev* dev) {
             dev->ba = (pci_ba_t*)malloc(nba*sizeof(pci_ba_t));
             dev->addr = (void __iomem**)malloc(nba*sizeof(void*));
 
-            for (int_t i=0; i<nba; i++)
-            {
+            for (int_t i = 0; i < nba; i++) {
                 dev->ba[i] = ba[i];
                 store_bar(ba[i]);
 
                 char type[16];
 
+                size_t new_begin = dev->ba[i].addr;
+                size_t new_end = dev->ba[i].addr + dev->ba[i].size;
+
                 if (dev->ba[i].type == pci_asType_e_IO) {
                     snprintf(type, 16, "I/O");
+
+                    // Update IO address space tracking
+                    if (pci_io_addr_space_begin == 0x0 ||
+                        pci_io_addr_space_end == 0x0)
+                    {
+                        pci_io_addr_space_begin = new_begin;
+                        pci_io_addr_space_end = new_end;
+                    }
+                    else {
+                        if (pci_io_addr_space_begin > new_begin) {
+                            pci_io_addr_space_begin = new_begin;
+                        }
+
+                        if (pci_io_addr_space_end < new_end) {
+                            pci_io_addr_space_end = new_end;
+                        }
+                    }
                 }
                 else if (dev->ba[i].type == pci_asType_e_MEM) {
                     snprintf(type, 16, "MEM");
+
+                    // Update MEM address space tracking
+                    if (pci_mem_addr_space_begin == 0x0 ||
+                        pci_mem_addr_space_end == 0x0)
+                    {
+                        pci_mem_addr_space_begin = new_begin;
+                        pci_mem_addr_space_end = new_end;
+                    }
+                    else {
+                        if (pci_mem_addr_space_begin > new_begin) {
+                            pci_mem_addr_space_begin = new_begin;
+                        }
+
+                        if (pci_mem_addr_space_end < new_end) {
+                            pci_mem_addr_space_end = new_end;
+                        }
+                    }
                 }
                 else {
-                    snprintf(type, 16, "NONE");
+                    log_err("pci_enable_device error; unknown PCI region "
+                            "type: %d\n", dev->ba[i].type);
+
+                    return -1;
                 }
 
                 log_info("read ba[%d] %s { addr: %x, size: %x }\n",
                         i, type, (u32)dev->ba[i].addr, (u32)dev->ba[i].size);
+
+                // Check IO vs MEM space clash and update io_port_addr_threshold
+                if (pci_io_addr_space_end > pci_mem_addr_space_begin &&
+                    pci_io_addr_space_end != 0x0 &&
+                    pci_mem_addr_space_begin != 0x0)
+                {
+                    log_err("pci_enable_device error; IO/MEM space clash "
+                            "detected; [%p:%p] vs [%p:%p]\n",
+                            (void*)pci_io_addr_space_begin,
+                            (void*)pci_io_addr_space_end,
+                            (void*)pci_mem_addr_space_begin,
+                            (void*)pci_mem_addr_space_end);
+
+                    return -1;
+                }
+
+                // Used in linux/io.h
+                io_port_addr_threshold = pci_io_addr_space_end;
+
+                log_trace("io threshold: %p; I/O[%p:%p], MEM[%p:%p]\n",
+                        (void*)io_port_addr_threshold,
+                        (void*)pci_io_addr_space_begin,
+                        (void*)pci_io_addr_space_end,
+                        (void*)pci_mem_addr_space_begin,
+                        (void*)pci_mem_addr_space_end);
             }
         }
 #undef MAX_NUM_BA
