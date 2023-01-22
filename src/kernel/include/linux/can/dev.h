@@ -93,7 +93,6 @@ struct can_priv {
 	const u16 *termination_const;
 	u16 termination;
 #ifndef __QNX__
-	/* TODO: investigate termination gpio feature */
 	struct gpio_desc *termination_gpio;
 	u16 termination_gpio_ohms[CAN_TERMINATION_GPIO_MAX];
 #endif

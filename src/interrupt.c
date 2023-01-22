@@ -24,9 +24,8 @@
 #include "interrupt.h"
 
 /*
- * TODO: This implementation only works because current scenarios tested only
- * involved a single IRQ assigned to the PCI device; this needs to be made more
- * general.
+ * This implementation only works because current scenarios tested only involved
+ * a single IRQ assigned to the PCI device.
  */
 
 int id = -1;

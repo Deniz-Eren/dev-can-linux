@@ -185,7 +185,6 @@ static int can_changelink(struct net_device *dev,
 
 		memset(&priv->tdc, 0, sizeof(priv->tdc));
 	    if (user->set_tdc) {
-	        // TODO: investigate this TDC and if it's needed
 //			/* TDC parameters are provided: use them */
 //			err = can_tdc_changelink(priv, user->tdc,
 //						 extack);

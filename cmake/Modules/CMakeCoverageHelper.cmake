@@ -117,7 +117,6 @@ function( code_coverage_run exec_target_name )
         elseif( "${CMAKE_C_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" OR
                 "${CMAKE_CXX_COMPILER_ID}" MATCHES "(QNX)?QCC|qcc" )
 
-            # TODO: Implement remote run and copy coverage files back
             add_custom_target( ${exec_target_name}-cov-run ALL
                 COMMAND ${CMAKE_CURRENT_BINARY_DIR}/${exec_target_name}.sh
                         || (exit 0)
