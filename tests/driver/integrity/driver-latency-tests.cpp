@@ -29,8 +29,9 @@ extern "C" {
     #include <dev-can-linux/commands.h>
 }
 
-/* Timing tests are very unreliable during Profiling so we will skip these */
-#if PROFILING_BUILD != 1
+/* Timing tests are very unreliable during Profiling and Coverage so we will
+   skip these */
+#if PROFILING_BUILD != 1 && COVERAGE_BUILD != 1
 
 TEST( Driver, LatencyFunctionality ) {
     int fd_tx = open(get_device0_tx0().c_str(), O_RDWR);

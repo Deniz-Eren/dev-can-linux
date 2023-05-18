@@ -319,10 +319,14 @@ int main (int argc, char* argv[]) {
 #if RELEASE_BUILD == 1
     if (optv > 2) {
         optv = 2;
+
+        printf("warning: release versions allow at max -vv option.\n");
     }
 
     if (optl > 2) {
         optl = 2;
+
+        printf("warning: release versions allow at max -ll option.\n");
     }
 #endif
 
