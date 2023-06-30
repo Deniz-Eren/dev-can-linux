@@ -244,37 +244,36 @@ static inline blocked_client_t* get_blocked_client (
 }
 
 static inline void remove_blocked_client (blocked_client_t** root, int rcvid) {
-    blocked_client_t** location = root;
+    blocked_client_t* location = *root;
 
-    while (*location != NULL) {
-        if ((*location)->rcvid == rcvid) {
-            if ((*location)->prev == NULL) {
-                *root = (*location)->next;
-
+    while (location != NULL) {
+        if (location->rcvid == rcvid) {
+            if (location->prev == NULL) {
+                *root = location->next;
                 if (*root != NULL) {
                     (*root)->prev = NULL;
                 }
             }
             else {
-                (*location)->prev->next = (*location)->next;
+                location->prev->next = location->next;
 
-                if ((*location)->next) {
-                    (*location)->next->prev = (*location)->prev;
+                if (location->next) {
+                    location->next->prev = location->prev;
                 }
             }
 
             blocked_client_t* next = NULL;
 
-            if (*location != NULL) {
-                next = (*location)->next;
+            if (location != NULL) {
+                next = location->next;
             }
 
-            free(*location);
+            free(location);
 
-            *location = next;
+            location = next;
         }
         else {
-            *location = (*location)->next;
+            location = location->next;
         }
     }
 }
