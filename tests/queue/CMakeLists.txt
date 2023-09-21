@@ -41,7 +41,7 @@ else()
 endif()
 
 add_custom_target( ssh-queue-tests ALL
-    COMMAND ${CMAKE_SOURCE_DIR}/cmake/Modules/MakeSSHCommand.sh
+    COMMAND ${CMAKE_SOURCE_DIR}/dev-qnx/cmake/Modules/MakeSSHCommand.sh
         -p ${SSH_PORT}
         -s ${CMAKE_CURRENT_BINARY_DIR}/queue-tests
         -r ${CMAKE_BINARY_DIR}
