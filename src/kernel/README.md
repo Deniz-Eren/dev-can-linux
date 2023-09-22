@@ -35,13 +35,13 @@ ongoing updates to the Linux Kernel we propagate to this project. For this
 reason we have setup everything using Docker-compose containerization and have
 made Jenkins CI pipelines fundamental to our workflows.
 
-See [Jenkins Pipeline](../../ci/jenkins/).
+See [Jenkins Pipeline (dev-qnx/ci/jenkins)](https://github.com/Deniz-Eren/dev-qnx/tree/main/ci/jenkins).
 
 Another consideration is that testing drivers often means we must test using
 hardware. For this reason, we have adopted the use of QEmu virtualisation, which
 has emulated CAN-bus hardware configuration options.
 
-See [QEmu CAN-bus Hardware Emulation](../../tests/emulation/).
+See [QEmu CAN-bus Hardware Emulation (dev-qnx/emulation)](https://github.com/Deniz-Eren/dev-qnx/tree/main/emulation).
 
 An added challenge posed by implementing for QNX means we are developing in
 Linux, then cross-compiling and testing on QNX. For this reason, we have
@@ -51,7 +51,7 @@ hardware emulation and then runs our tests over local SSH and presents the
 results; complete integration, together with extreme ease of setup thanks to the
 entire setup being done in containers.
 
-See [Test Platform](../../tests/image/).
+See [Test Platform (dev-qnx/emulation/image)](https://github.com/Deniz-Eren/dev-qnx/tree/main/emulation/image).
 
 
 ## Structure
