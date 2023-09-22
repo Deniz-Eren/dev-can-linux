@@ -44,15 +44,20 @@ else()
 endif()
 
 add_custom_target( ssh-driver-integrity-tests ALL
-    COMMAND ${CMAKE_SOURCE_DIR}/cmake/Modules/MakeSSHCommand.sh
+    COMMAND ${CMAKE_SOURCE_DIR}/dev-qnx/cmake/Modules/MakeSSHCommand.sh
         -p ${SSH_PORT}
         -s ${CMAKE_CURRENT_BINARY_DIR}/driver-integrity-tests
+        -e "DRIVER_TEST_DEVICE0_RX0=\\\${DRIVER_TEST_DEVICE0_RX0} \
+            DRIVER_TEST_DEVICE0_TX0=\\\${DRIVER_TEST_DEVICE0_TX0} \
+            DRIVER_TEST_DEVICE1_RX0=\\\${DRIVER_TEST_DEVICE1_RX0} \
+            DRIVER_TEST_DEVICE1_TX0=\\\${DRIVER_TEST_DEVICE1_TX0}"
         -r ${CMAKE_BINARY_DIR}
-        -o ssh-driver-integrity-tests.sh
+        -o ${CMAKE_CURRENT_BINARY_DIR}/ssh-driver-integrity-tests.sh
     BYPRODUCTS ssh-driver-integrity-tests.sh
     DEPENDS driver-integrity-tests )
 
-add_test( NAME ssh-driver-integrity-tests COMMAND ssh-driver-integrity-tests.sh )
+add_test( NAME ssh-driver-integrity-tests
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-driver-integrity-tests.sh )
 
 code_coverage_run( ssh-driver-integrity-tests )
 

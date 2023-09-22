@@ -47,7 +47,6 @@ int main (int argc, char* argv[]) {
         case 'u':
             buffer = optu_mailbox_str;
             sscanf(optarg, "%d,%s", &optu_unit, buffer);
-            strncpy(buffer, optu_mailbox_str, 8);
             buffer[2] = 0;
 
             if (strncmp(buffer, "tx", 2) == 0) {

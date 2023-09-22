@@ -43,15 +43,20 @@ else()
 endif()
 
 add_custom_target( ssh-driver-raw-tests ALL
-    COMMAND ${CMAKE_SOURCE_DIR}/cmake/Modules/MakeSSHCommand.sh
+    COMMAND ${CMAKE_SOURCE_DIR}/dev-qnx/cmake/Modules/MakeSSHCommand.sh
         -p ${SSH_PORT}
         -s ${CMAKE_CURRENT_BINARY_DIR}/driver-raw-tests
+        -e "DRIVER_TEST_DEVICE0_RX0=\\\${DRIVER_TEST_DEVICE0_RX0} \
+            DRIVER_TEST_DEVICE0_TX0=\\\${DRIVER_TEST_DEVICE0_TX0} \
+            DRIVER_TEST_DEVICE1_RX0=\\\${DRIVER_TEST_DEVICE1_RX0} \
+            DRIVER_TEST_DEVICE1_TX0=\\\${DRIVER_TEST_DEVICE1_TX0}"
         -r ${CMAKE_BINARY_DIR}
-        -o ssh-driver-raw-tests.sh
+        -o ${CMAKE_CURRENT_BINARY_DIR}/ssh-driver-raw-tests.sh
     BYPRODUCTS ssh-driver-raw-tests.sh
     DEPENDS driver-raw-tests )
 
-add_test( NAME ssh-driver-raw-tests COMMAND ssh-driver-raw-tests.sh )
+add_test( NAME ssh-driver-raw-tests
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-driver-raw-tests.sh )
 
 code_coverage_run( ssh-driver-raw-tests )
 

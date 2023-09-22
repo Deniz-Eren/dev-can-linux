@@ -41,15 +41,20 @@ else()
 endif()
 
 add_custom_target( ssh-queue-tests ALL
-    COMMAND ${CMAKE_SOURCE_DIR}/cmake/Modules/MakeSSHCommand.sh
+    COMMAND ${CMAKE_SOURCE_DIR}/dev-qnx/cmake/Modules/MakeSSHCommand.sh
         -p ${SSH_PORT}
         -s ${CMAKE_CURRENT_BINARY_DIR}/queue-tests
+        -e "DRIVER_TEST_DEVICE0_RX0=\\\${DRIVER_TEST_DEVICE0_RX0} \
+            DRIVER_TEST_DEVICE0_TX0=\\\${DRIVER_TEST_DEVICE0_TX0} \
+            DRIVER_TEST_DEVICE1_RX0=\\\${DRIVER_TEST_DEVICE1_RX0} \
+            DRIVER_TEST_DEVICE1_TX0=\\\${DRIVER_TEST_DEVICE1_TX0}"
         -r ${CMAKE_BINARY_DIR}
-        -o ssh-queue-tests.sh
+        -o ${CMAKE_CURRENT_BINARY_DIR}/ssh-queue-tests.sh
     BYPRODUCTS ssh-queue-tests.sh
     DEPENDS queue-tests )
 
-add_test( NAME ssh-queue-tests COMMAND ssh-queue-tests.sh )
+add_test( NAME ssh-queue-tests
+    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-queue-tests.sh )
 
 code_coverage_run( ssh-queue-tests )
 

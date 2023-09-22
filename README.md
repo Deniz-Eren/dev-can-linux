@@ -244,7 +244,45 @@ To run QEmu VM with CAN-bus hardware emulation for testing see
 
 ## Building
 
-Please refer to the ["Development"](dev/) documentation.
+Refer to the ["Development"](dev-qnx/dev/) documentation for details on how to
+setup the development container.
+
+Within the development container, to build:
+
+    cd dev-can-linux
+    mkdir build ; cd build
+    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
+    cpack
+
+Other build types you can indicate are Debug, Coverage and Profiling.
+
+The following installer files will be created:
+
+    dev-can-linux-1.0.0-qnx710[build type].tar.gz
+    dev-can-linux-1.0.0-qnx710-dev.tar.gz
+
+Where the "[build type]" is empty for Release, "-g" for Debug, "-cov" for
+Coverage and "-pro" for Profiling.
+
+The '-dev' variant contains the application development headers used to develope
+software that talks to dev-can-linux driver. You do not need to install this on
+the target system, but rather your development environment if you are developing
+an application that needs to talk to dev-can-linux channels.
+
+From CMake you can also run the tests. First start the emulation environment and
+copy/run the dev-can-linux release driver, then from the development environment:
+
+    cd dev-can-linux
+    . tests/driver/common/env/dual-channel.env
+    rm -rf build ; mkdir build ; cd build
+    cmake -DCMAKE_BUILD_TYPE=Coverage -DBUILD_TESTING=ON ..
+    ctest
+
+Because we are cross-compiling in CMake, we can only run the tests on a QNX
+target. The CMake project is configured to talk to our QEmu hardware emulation
+over SSH. You must make sure this emulator has been started up before running
+ctest. To start the emulator check documentation
+[Emulation](dev-qnx/emulation/).
 
 
 ## Example Applications

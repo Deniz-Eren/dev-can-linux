@@ -23,6 +23,7 @@ node('jenkins_agent') {
 
     def sshport = "9922";
     def buildpath = "/var/tmp/$NODE_NAME";
+    def projectpath = "/opt/project_repo";
 
     try {
         stage('Checkout and setup dev environment') {
@@ -34,10 +35,10 @@ node('jenkins_agent') {
             checkout([$class: 'GitSCM',
                 branches: [[name: '*/main']],
                 extensions: [[$class: 'RelativeTargetDirectory',
-                    relativeTargetDir: "$buildpath/dev-can-linux/"]],
+                    relativeTargetDir: "$buildpath/dev-can-linux"]],
                 userRemoteConfigs: [[
                     credentialsId: '',
-                    url: '/opt/dev-can-linux'
+                    url: '/opt/project_repo'
                 ]]])
 
             def publisher = LastChanges.getLastChangesPublisher \
@@ -47,44 +48,50 @@ node('jenkins_agent') {
             publisher.publishLastChanges()
 
             sh(script: """
-                /opt/dev-can-linux/ci/jenkins/scripts/setup-dev-environment.sh \
+                $projectpath/dev-qnx/ci/scripts/setup-dev-environment.sh \
                     -i /home/jenkins/Images \
-                    -r /opt/dev-can-linux
+                    -r /opt/project_repo/dev-qnx
+
+                docker cp /opt/project_repo dev_env:/root/
             """)
         }
 
         stage('Testing with coverage') {
             sh(script: """
-                /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
+                $projectpath/dev-qnx/ci/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
                     -p $sshport
 
-                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
                     -v \
                     -b /data/home/root/build_coverage \
+                    -c dev-can-linux \
+                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
+                    -r /root/project_repo \
                     -t Coverage \
                     -p $sshport
 
                 docker exec --user root --workdir /root dev_env bash -c \
                     "source .profile \
-                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
                     && cd /data/home/root/build_coverage \
                     && ctest --output-junit test_results.xml || (exit 0)"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
                     -b /data/home/root/build_coverage \
+                    -k dev-can-linux \
                     -p $sshport
 
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-emulation.sh
+                $projectpath/dev-qnx/ci/scripts/stop-emulation.sh
 
                 docker exec --user root --workdir /root dev_env bash -c \
                     "source .profile \
-                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
                     && cd /data/home/root/build_coverage \
                     && lcov --gcov-tool=\\\$QNX_HOST/usr/bin/ntox86_64-gcov \
                         -t \"test_coverage_results\" -o tests.info \
                         -c -d /data/home/root/build_coverage \
-                        --base-directory=/root/dev-can-linux \
+                        --base-directory=/root/project_repo \
                         --no-external --quiet \
                     && genhtml -o /data/home/root/build_coverage/cov-html \
                         tests.info --quiet"
@@ -116,7 +123,7 @@ node('jenkins_agent') {
             sh(script: """
                 rm -rf $WORKSPACE/valgrind-*.xml
 
-                /opt/dev-can-linux/ci/jenkins/scripts/start-emulation.sh \
+                $projectpath/dev-qnx/ci/scripts/start-emulation.sh \
                     -i /home/jenkins/Images \
                     -p $sshport
 
@@ -133,20 +140,23 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-memcheck.xml"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
                     -v \
                     -b /data/home/root/build_memcheck \
+                    -c dev-can-linux \
+                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
+                    -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
                     -p $sshport
 
                 docker exec --user root --workdir /root dev_env bash -c \
                     "source .profile \
-                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
                     && cd /data/home/root/build_memcheck \
                     && ctest --verbose || (exit 0)"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
                     -b /data/home/root/build_memcheck \
                     -k memcheck-amd64-nto \
                     -p $sshport
@@ -167,20 +177,23 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-helgrind.xml"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
                     -v \
                     -b /data/home/root/build_helgrind \
+                    -c dev-can-linux \
+                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
+                    -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
                     -p $sshport
 
                 docker exec --user root --workdir /root dev_env bash -c \
                     "source .profile \
-                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
                     && cd /data/home/root/build_helgrind \
                     && ctest --verbose || (exit 0)"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
                     -b /data/home/root/build_helgrind \
                     -k helgrind-amd64-nto \
                     -p $sshport
@@ -199,20 +212,23 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-drd.xml"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
                     -v \
                     -b /data/home/root/build_drd \
+                    -c dev-can-linux \
+                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
+                    -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
                     -p $sshport
 
                 docker exec --user root --workdir /root dev_env bash -c \
                     "source .profile \
-                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
                     && cd /data/home/root/build_drd \
                     && ctest --verbose || (exit 0)"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
                     -b /data/home/root/build_drd \
                     -k drd-amd64-nto \
                     -p $sshport
@@ -231,20 +247,23 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-exp-sgcheck.xml"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/start-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
                     -v \
                     -b /data/home/root/build_exp-sgcheck \
+                    -c dev-can-linux \
+                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
+                    -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
                     -p $sshport
 
                 docker exec --user root --workdir /root dev_env bash -c \
                     "source .profile \
-                    && /root/dev-can-linux/dev/setup-profile.sh \
+                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
                     && cd /data/home/root/build_exp-sgcheck \
                     && ctest --verbose || (exit 0)"
 
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-driver.sh \
+                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
                     -b /data/home/root/build_exp-sgcheck \
                     -k exp-sgcheck-amd64-nto \
                     -p $sshport
@@ -253,27 +272,27 @@ node('jenkins_agent') {
                     dev_env:/data/home/root/build_exp-sgcheck/valgrind-exp-sgcheck.xml \
                     $WORKSPACE/
 
-                /opt/dev-can-linux/ci/jenkins/scripts/stop-emulation.sh
+                $projectpath/dev-qnx/ci/scripts/stop-emulation.sh
 
                 # Have a copy of the repository in the workspace so Valgrind
                 # source-code displays works
                 rm -rf $WORKSPACE/dev-can-linux
-                cp -r /opt/dev-can-linux $WORKSPACE/
+                cp -r /opt/project_repo $WORKSPACE/dev-can-linux
             """)
 
             publishValgrind(pattern: 'valgrind-*.xml',
-                sourceSubstitutionPaths: '/root/dev-can-linux:dev-can-linux')
+                sourceSubstitutionPaths: '/root/project_repo:dev-can-linux')
         }
 
         stage('Release') {
             sh(script: """
                 docker exec --user root --workdir /root dev_env \
                     bash -c "source .profile \
-                        && /root/dev-can-linux/dev/setup-profile.sh \
+                        && /root/dev-qnx/dev/scripts/setup-profile.sh \
                         && mkdir -p build_release \
                         && cd build_release \
                         && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
-                                ../dev-can-linux \
+                                -DBUILD_TESTING=OFF ../project_repo \
                         && make -j8 \
                         && cpack \
                         && DIR=\\\"Release/dev-can-linux/\\\$(date \\\"+%Y-%m-%d-%H%M%S%Z\\\")\\\" \
