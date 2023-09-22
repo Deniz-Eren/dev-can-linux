@@ -277,7 +277,7 @@ node('jenkins_agent') {
                 # Have a copy of the repository in the workspace so Valgrind
                 # source-code displays works
                 rm -rf $WORKSPACE/dev-can-linux
-                cp -r /opt/project_repo $WORKSPACE/
+                cp -r /opt/project_repo $WORKSPACE/dev-can-linux
             """)
 
             publishValgrind(pattern: 'valgrind-*.xml',
@@ -292,7 +292,7 @@ node('jenkins_agent') {
                         && mkdir -p build_release \
                         && cd build_release \
                         && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
-                                ../project_repo \
+                                -DBUILD_TESTING=OFF ../project_repo \
                         && make -j8 \
                         && cpack \
                         && DIR=\\\"Release/dev-can-linux/\\\$(date \\\"+%Y-%m-%d-%H%M%S%Z\\\")\\\" \

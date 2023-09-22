@@ -251,7 +251,7 @@ Within the development container, to build:
 
     cd dev-can-linux
     mkdir build ; cd build
-    cmake -DCMAKE_BUILD_TYPE=Release ..
+    cmake -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
     cpack
 
 Other build types you can indicate are Debug, Coverage and Profiling.
@@ -275,7 +275,7 @@ copy/run the dev-can-linux release driver, then from the development environment
     cd dev-can-linux
     . tests/driver/common/env/dual-channel.env
     rm -rf build ; mkdir build ; cd build
-    cmake -DCMAKE_BUILD_TYPE=Coverage ..
+    cmake -DCMAKE_BUILD_TYPE=Coverage -DBUILD_TESTING=ON ..
     ctest
 
 Because we are cross-compiling in CMake, we can only run the tests on a QNX
