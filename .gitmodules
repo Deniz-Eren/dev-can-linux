@@ -1,3 +1,3 @@
-[submodule "dev-qnx"]
-	path = dev-qnx
-	url = https://github.com/Deniz-Eren/dev-qnx
+[submodule "workspace"]
+	path = workspace
+	url = https://github.com/Deniz-Eren/workspace
