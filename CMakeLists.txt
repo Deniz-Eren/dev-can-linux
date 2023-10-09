@@ -27,12 +27,12 @@ cmake_minimum_required( VERSION 3.22 )
 
 # Set the toolchain file to QNX 7.1
 set( CMAKE_TOOLCHAIN_FILE
-    ${CMAKE_SOURCE_DIR}/dev-qnx/cmake/Toolchain/qnx710-x86_64.toolchain.cmake )
+    ${CMAKE_SOURCE_DIR}/workspace/cmake/Toolchain/qnx710-x86_64.toolchain.cmake )
 
 project( dev-can-linux )
 
 # Append module paths to CMAKE_MODULE_PATH
-list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/dev-qnx/cmake/Modules )
+list( APPEND CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/workspace/cmake/Modules )
 
 # Read configuration items from config/ files
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/PROGRAM_VERSION" PROGRAM_VERSION )
@@ -76,10 +76,9 @@ project( dev-can-linux
          VERSION ${PROGRAM_VERSION}
          LANGUAGES C CXX )
 
-option( DISABLE_COVERAGE_HTML_GEN
-        "Disable clang-tidy static analysis checks" OFF )
-
 set( SSH_PORT "6022" CACHE STRING "SSH port number" )
+
+include( CodeCoverageProfiler )
 
 # Compiler settings
 set( CMAKE_CXX_STANDARD 17 )
@@ -151,9 +150,6 @@ install( TARGETS dev-can-linux
     DESTINATION bin/
     COMPONENT bin )
 
-include( CMakeCoverageHelper )
-include( CMakeProfilingHelper )
-include( CMakeBuildTypeHelper )
 include( CTest )
 
 code_coverage_flags()

@@ -41,7 +41,7 @@ else()
 endif()
 
 add_custom_target( ssh-queue-tests ALL
-    COMMAND ${CMAKE_SOURCE_DIR}/dev-qnx/cmake/Modules/MakeSSHCommand.sh
+    COMMAND ${CMAKE_SOURCE_DIR}/workspace/cmake/Modules/MakeSSHCommand.sh
         -p ${SSH_PORT}
         -s ${CMAKE_CURRENT_BINARY_DIR}/queue-tests
         -e "DRIVER_TEST_DEVICE0_RX0=\\\${DRIVER_TEST_DEVICE0_RX0} \

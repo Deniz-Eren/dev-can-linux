@@ -19,7 +19,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-node('jenkins_agent') {
+node('jenkins-agent') {
 
     def sshport = "9922";
     def buildpath = "/var/tmp/$NODE_NAME";
@@ -48,21 +48,26 @@ node('jenkins_agent') {
             publisher.publishLastChanges()
 
             sh(script: """
-                $projectpath/dev-qnx/ci/scripts/setup-dev-environment.sh \
-                    -i /home/jenkins/Images \
-                    -r /opt/project_repo/dev-qnx
+                $projectpath/workspace/ci/scripts/setup-dev-env.sh \
+                    -d $projectpath/workspace/dev/.Dockerfile
 
-                docker cp /opt/project_repo dev_env:/root/
+                mkdir -p /home/jenkins/Images
+
+                $projectpath/workspace/ci/scripts/setup-qnx710-qemu.sh \
+                    -d $projectpath/workspace/emulation/qnx710/Dockerfile \
+                    -i /home/jenkins/Images/disk-raw
+
+                docker cp /opt/project_repo dev-env:/root/
             """)
         }
 
         stage('Testing with coverage') {
             sh(script: """
-                $projectpath/dev-qnx/ci/scripts/start-emulation.sh \
-                    -i /home/jenkins/Images \
+                $projectpath/workspace/ci/scripts/start-emulation.sh \
+                    -i /home/jenkins/Images/disk-raw \
                     -p $sshport
 
-                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_coverage \
                     -c dev-can-linux \
@@ -71,22 +76,22 @@ node('jenkins_agent') {
                     -t Coverage \
                     -p $sshport
 
-                docker exec --user root --workdir /root dev_env bash -c \
+                docker exec --user root --workdir /root dev-env bash -c \
                     "source .profile \
-                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
+                    && /root/workspace/dev/.setup-profile.sh \
                     && cd /data/home/root/build_coverage \
                     && ctest --output-junit test_results.xml || (exit 0)"
 
-                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
                     -b /data/home/root/build_coverage \
                     -k dev-can-linux \
                     -p $sshport
 
-                $projectpath/dev-qnx/ci/scripts/stop-emulation.sh
+                $projectpath/workspace/ci/scripts/stop-emulation.sh
 
-                docker exec --user root --workdir /root dev_env bash -c \
+                docker exec --user root --workdir /root dev-env bash -c \
                     "source .profile \
-                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
+                    && /root/workspace/dev/.setup-profile.sh \
                     && cd /data/home/root/build_coverage \
                     && lcov --gcov-tool=\\\$QNX_HOST/usr/bin/ntox86_64-gcov \
                         -t \"test_coverage_results\" -o tests.info \
@@ -100,11 +105,11 @@ node('jenkins_agent') {
                 rm -rf $WORKSPACE/test_results.xml
 
                 docker cp \
-                    dev_env:/data/home/root/build_coverage/cov-html \
+                    dev-env:/data/home/root/build_coverage/cov-html \
                         $WORKSPACE/test-coverage
 
                 docker cp \
-                    dev_env:/data/home/root/build_coverage/test_results.xml \
+                    dev-env:/data/home/root/build_coverage/test_results.xml \
                         $WORKSPACE/test_results.xml
             """)
 
@@ -123,8 +128,8 @@ node('jenkins_agent') {
             sh(script: """
                 rm -rf $WORKSPACE/valgrind-*.xml
 
-                $projectpath/dev-qnx/ci/scripts/start-emulation.sh \
-                    -i /home/jenkins/Images \
+                $projectpath/workspace/ci/scripts/start-emulation.sh \
+                    -i /home/jenkins/Images/disk-raw \
                     -p $sshport
 
                 #
@@ -140,7 +145,7 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-memcheck.xml"
 
-                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_memcheck \
                     -c dev-can-linux \
@@ -150,19 +155,19 @@ node('jenkins_agent') {
                     -s 1 \
                     -p $sshport
 
-                docker exec --user root --workdir /root dev_env bash -c \
+                docker exec --user root --workdir /root dev-env bash -c \
                     "source .profile \
-                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
+                    && /root/workspace/dev/.setup-profile.sh \
                     && cd /data/home/root/build_memcheck \
                     && ctest --verbose || (exit 0)"
 
-                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
                     -b /data/home/root/build_memcheck \
                     -k memcheck-amd64-nto \
                     -p $sshport
 
                 docker cp \
-                    dev_env:/data/home/root/build_memcheck/valgrind-memcheck.xml \
+                    dev-env:/data/home/root/build_memcheck/valgrind-memcheck.xml \
                     $WORKSPACE/
 
                 #
@@ -177,7 +182,7 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-helgrind.xml"
 
-                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_helgrind \
                     -c dev-can-linux \
@@ -187,19 +192,19 @@ node('jenkins_agent') {
                     -s 1 \
                     -p $sshport
 
-                docker exec --user root --workdir /root dev_env bash -c \
+                docker exec --user root --workdir /root dev-env bash -c \
                     "source .profile \
-                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
+                    && /root/workspace/dev/.setup-profile.sh \
                     && cd /data/home/root/build_helgrind \
                     && ctest --verbose || (exit 0)"
 
-                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
                     -b /data/home/root/build_helgrind \
                     -k helgrind-amd64-nto \
                     -p $sshport
 
                 docker cp \
-                    dev_env:/data/home/root/build_helgrind/valgrind-helgrind.xml \
+                    dev-env:/data/home/root/build_helgrind/valgrind-helgrind.xml \
                     $WORKSPACE/
 
                 #
@@ -212,7 +217,7 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-drd.xml"
 
-                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_drd \
                     -c dev-can-linux \
@@ -222,19 +227,19 @@ node('jenkins_agent') {
                     -s 1 \
                     -p $sshport
 
-                docker exec --user root --workdir /root dev_env bash -c \
+                docker exec --user root --workdir /root dev-env bash -c \
                     "source .profile \
-                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
+                    && /root/workspace/dev/.setup-profile.sh \
                     && cd /data/home/root/build_drd \
                     && ctest --verbose || (exit 0)"
 
-                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
                     -b /data/home/root/build_drd \
                     -k drd-amd64-nto \
                     -p $sshport
 
                 docker cp \
-                    dev_env:/data/home/root/build_drd/valgrind-drd.xml \
+                    dev-env:/data/home/root/build_drd/valgrind-drd.xml \
                     $WORKSPACE/
 
                 #
@@ -247,7 +252,7 @@ node('jenkins_agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-exp-sgcheck.xml"
 
-                $projectpath/dev-qnx/ci/scripts/build-exec-program.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_exp-sgcheck \
                     -c dev-can-linux \
@@ -257,22 +262,22 @@ node('jenkins_agent') {
                     -s 1 \
                     -p $sshport
 
-                docker exec --user root --workdir /root dev_env bash -c \
+                docker exec --user root --workdir /root dev-env bash -c \
                     "source .profile \
-                    && /root/dev-qnx/dev/scripts/setup-profile.sh \
+                    && /root/workspace/dev/.setup-profile.sh \
                     && cd /data/home/root/build_exp-sgcheck \
                     && ctest --verbose || (exit 0)"
 
-                $projectpath/dev-qnx/ci/scripts/stop-program.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
                     -b /data/home/root/build_exp-sgcheck \
                     -k exp-sgcheck-amd64-nto \
                     -p $sshport
 
                 docker cp \
-                    dev_env:/data/home/root/build_exp-sgcheck/valgrind-exp-sgcheck.xml \
+                    dev-env:/data/home/root/build_exp-sgcheck/valgrind-exp-sgcheck.xml \
                     $WORKSPACE/
 
-                $projectpath/dev-qnx/ci/scripts/stop-emulation.sh
+                $projectpath/workspace/ci/scripts/stop-emulation.sh
 
                 # Have a copy of the repository in the workspace so Valgrind
                 # source-code displays works
@@ -286,9 +291,9 @@ node('jenkins_agent') {
 
         stage('Release') {
             sh(script: """
-                docker exec --user root --workdir /root dev_env \
+                docker exec --user root --workdir /root dev-env \
                     bash -c "source .profile \
-                        && /root/dev-qnx/dev/scripts/setup-profile.sh \
+                        && /root/workspace/dev/.setup-profile.sh \
                         && mkdir -p build_release \
                         && cd build_release \
                         && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
@@ -300,7 +305,7 @@ node('jenkins_agent') {
                         && cp dev-can-linux-*.tar.gz \\\"\\\$DIR\\\""
 
                 docker cp \
-                    dev_env:/root/build_release/Release/dev-can-linux \
+                    dev-env:/root/build_release/Release/dev-can-linux \
                     /var/Release/
             """)
         }
@@ -311,8 +316,8 @@ node('jenkins_agent') {
     finally {
         stage('Clean-up') {
             sh(script: """
-                docker stop dev_env qemu_env || (exit 0)
-                docker rm dev_env qemu_env || (exit 0)
+                docker stop dev-env qemu-env || (exit 0)
+                docker rm dev-env qemu-env || (exit 0)
 
                 rm -rf $buildpath
             """)

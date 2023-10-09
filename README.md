@@ -239,13 +239,13 @@ or "/usr/local/" or another location.
 ## Hardware Emulation for Testing
 
 To run QEmu VM with CAN-bus hardware emulation for testing see
-[Emulation (dev-qnx/emulation)](https://github.com/Deniz-Eren/dev-qnx/tree/main/emulation).
+[Emulation (workspace/emulation/qnx710)](https://github.com/Deniz-Eren/workspace/tree/main/emulation/qnx710).
 
 
 ## Building
 
 Refer to the
-[Development (dev-qnx/dev)](https://github.com/Deniz-Eren/dev-qnx/tree/main/dev)
+[Development (workspace/dev)](https://github.com/Deniz-Eren/workspace/tree/main/dev)
 documentation for details on how to setup the development container.
 
 Within the development container, to build:
@@ -283,7 +283,7 @@ Because we are cross-compiling in CMake, we can only run the tests on a QNX
 target. The CMake project is configured to talk to our QEmu hardware emulation
 over SSH. You must make sure this emulator has been started up before running
 ctest. To start the emulator check documentation
-[Emulation (dev-qnx/emulation)](https://github.com/Deniz-Eren/dev-qnx/tree/main/emulation).
+[Emulation (workspace/emulation/qnx710)](https://github.com/Deniz-Eren/workspace/tree/main/emulation/qnx710).
 
 
 ## Example Applications
