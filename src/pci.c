@@ -547,13 +547,27 @@ void pci_release_regions (struct pci_dev* dev) {
 }
 
 int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
-    log_trace("pci_read_config_word\n");
+    pci_bdf_t bdf = pci_bdf(dev->hdl);
 
-    return -1;
+    if (bdf == PCI_BDF_NONE) {
+        return -1;
+    }
+
+    pci_err_t err = pci_device_cfg_rd16(bdf, where, val);
+
+    if (err != PCI_ERR_OK) {
+        return -1;
+    }
+
+    return 0;
 }
 
 int pci_write_config_word (const struct pci_dev* dev, int where, u16 val) {
-    log_trace("pci_write_config_word\n");
+    pci_err_t err = pci_device_cfg_wr16(dev->hdl, where, val, NULL);
 
-    return -1;
+    if (err != PCI_ERR_OK) {
+        return -1;
+    }
+
+    return 0;
 }
