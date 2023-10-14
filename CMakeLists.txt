@@ -26,8 +26,12 @@
 cmake_minimum_required( VERSION 3.22 )
 
 # Set the toolchain file to QNX 7.1
-set( CMAKE_TOOLCHAIN_FILE
-    ${CMAKE_SOURCE_DIR}/workspace/cmake/Toolchain/qnx710-x86_64.toolchain.cmake )
+if( NOT DEFINED CMAKE_TOOLCHAIN_FILE )
+    if( DEFINED ENV{QNX_HOST} )
+        set( CMAKE_TOOLCHAIN_FILE
+            ${CMAKE_SOURCE_DIR}/workspace/cmake/Toolchain/qnx710-x86_64.toolchain.cmake )
+    endif()
+endif()
 
 project( dev-can-linux )
 
@@ -160,7 +164,7 @@ add_subdirectory( tools )
 
 # Package settings
 set( CPACK_GENERATOR "TGZ" )
-set( CPACK_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}${BUILD_TYPE_NAME} )
+set( CPACK_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}-${arch}${BUILD_TYPE_NAME} )
 set( CPACK_INCLUDE_TOPLEVEL_DIRECTORY OFF )
 set( CPACK_PACKAGE_VERSION_MAJOR ${PROJECT_VERSION_MAJOR} )
 set( CPACK_PACKAGE_VERSION_MINOR ${PROJECT_VERSION_MINOR} )
