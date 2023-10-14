@@ -45,6 +45,8 @@
 
 /*
  * Program options, initial values
+ *
+ * See print_help() or dev-can-linux -h for details
  */
 int optb = 0;
 int optb_restart_ms = DEFAULT_RESTART_MS;
@@ -56,6 +58,7 @@ int optd = 0, opt_vid = -1, opt_did = -1;
 int opts = 0;
 int optt = 0;
 int optu = 0;
+int optx = 0;
 
 size_t num_optu_configs = 0;
 channel_config_t* optu_config = NULL;

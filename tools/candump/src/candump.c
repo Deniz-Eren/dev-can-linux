@@ -20,6 +20,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <prints.h>
 #include <dev-can-linux/commands.h>
 
 
@@ -31,6 +32,39 @@ static void sigint_signal_handler (int sig_no) {
     exit(0);
 }
 
+void help (char* program_name) {
+    print_notice();
+
+    printf("\n");
+    printf("\e[1mSYNOPSIS\e[m\n");
+    printf("    \e[1m%s\e[m [options]\n", program_name);
+    printf("\n");
+    printf("\e[1mDESCRIPTION\e[m\n");
+    printf("    \e[1mDEV-CAN-LINUX\e[m is a QNX CAN-bus driver project that aims at porting drivers\n");
+    printf("    from the open-source Linux Kernel project to QNX RTOS.\n");
+    printf("\n");
+    printf("    \e[1mCANDUMP\e[m is an accompanying tool used to read raw CAN messages.\n");
+    printf("\n");
+    printf("\e[1mOPTIONS\e[m\n");
+    printf("    \e[1m-u subopts\e[m - Specify the device RX file descriptors.\n");
+    printf("\n");
+    printf("                 Suboptions (\e[1msubopts\e[m):\n");
+    printf("\n");
+    printf("                 \e[1m#\e[m      - Specify ID number of the device to configure;\n");
+    printf("                          e.g. /dev/can0/ is -u0\n");
+    printf("                 \e[1mrx#\e[m    - ID of RX file descriptors to connect to\n");
+    printf("\n");
+    printf("                 Example:\n");
+    printf("                     candump -u0,rx0\n");
+    printf("\n");
+    printf("    \e[1m-w\e[m         - Print warranty message and exit.\n");
+    printf("    \e[1m-c\e[m         - Print license details and exit.\n");
+    printf("    \e[1m-?/h\e[m       - Print help menu and exit.\n");
+    printf("\n");
+    printf("\e[1mBUGS\e[m\n");
+    printf("    If you find a bug, please report it.\n");
+}
+
 int main (int argc, char* argv[]) {
     int opt;
     char* buffer;
@@ -40,7 +74,7 @@ int main (int argc, char* argv[]) {
     int optu_mailbox_is_tx = 0;
     int optu_mailbox = 0;
 
-    while ((opt = getopt(argc, argv, "u:?h")) != -1) {
+    while ((opt = getopt(argc, argv, "u:wc?h")) != -1) {
         switch (opt) {
         case 'u':
             buffer = optu_mailbox_str;
@@ -60,8 +94,17 @@ int main (int argc, char* argv[]) {
             sscanf(optu_mailbox_str+2, "%d", &optu_mailbox);
             break;
 
+        case 'w':
+            print_warranty();
+            return EXIT_SUCCESS;
+
+        case 'c':
+            print_license();
+            return EXIT_SUCCESS;
+
         case '?':
         case 'h':
+            help(argv[0]);
             return EXIT_SUCCESS;
 
         default:

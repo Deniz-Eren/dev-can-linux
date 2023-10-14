@@ -37,6 +37,8 @@
 
 /*
  * Program options
+ *
+ * See print_help() or dev-can-linux -h for details
  */
 
 extern int optb;
@@ -51,11 +53,13 @@ extern int opt_did;
 extern int opts;
 extern int optt;
 extern int optu;
+extern int optx;
 
 typedef struct channel_config {
     int id;
     int num_rx_channels;
     int num_tx_channels;
+    int is_extended_mid;
 } channel_config_t;
 
 extern size_t num_optu_configs;

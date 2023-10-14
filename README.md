@@ -27,6 +27,10 @@ Options:
                           e.g. /dev/can0/ is id=0
                  rx=#   - Number of RX file descriptors to create
                  tx=#   - Number of TX file descriptors to create
+                 s      - Start the device with standard MIDs
+                 x      - Start the device with extended MIDs
+                          Default: is setup as standard MIDs or determined by
+                          driver level -x option if specified
 
                  Example:
                      dev-can-linux -u id=0,rx=2,tx=0
@@ -63,6 +67,8 @@ Options:
     -b delay   - Bus-off recovery delay timer length (milliseconds).
                  If set to 0ms, then the bus-off recovery is disabled!
                  Default: 50ms
+    -x         - Start the driver with extended MIDs enabled.
+                 Device suboptions take precedence over this option.
     -?/h       - Print help menu and exit.
 
     NOTES
@@ -160,7 +166,7 @@ Here are some other examples where specific fields are selected:
 To get further verification you can query the canctl tool for channel
 information:
 
-    canctl -u0,rx0 -i       
+    canctl -u0,rx0 -i
 
 Sample output:
 
@@ -188,7 +194,7 @@ to a channel:
 
 Then to send to the same channel, use cansend tool:
 
-    cansend -u0,tx0 -w0x1234,1,0xABCD
+    cansend -u0,tx0 -m0x1234,1,0xABCD
 
 Sample output:
 
@@ -196,7 +202,7 @@ Sample output:
 
 To get statistics on sends, receives, errors and more:
 
-    canctl -u0,rx0 -s                       
+    canctl -u0,rx0 -s
 
 Sample output:
 
@@ -316,9 +322,12 @@ that facilitate application interfaces to the driver.
 Diagram below illustrates device folders and RX/TX file descriptors and how to
 configure them.
 
-    dev-can-linux -u id=0,rx=n,tx=m     # Example driver start command
+    dev-can-linux -u id=0,rx=n,tx=m,x   # Example driver start command
     │                                   # Asking for n rx and m tx channels
     │                                   # for port 0.
+    |                                   # `x` specifies extended MIDs to be used
+    |                                   # read/write, this is ignored for devctl
+    |                                   # functionality.
     │                                   # Note n and m can be zero also.
     │
     ├── /dev/can0/  # When you start the driver these device directories
@@ -374,6 +383,9 @@ configure them.
         │           Example driver start command didn't specify anything for
         │           this device, so the default behaviour of creating a single
         │           RX and TX file decriptor will be performed.
+        |           This channel will have the default standard MIDs for read
+        |           and write functionality; not applicable for devctl or direct
+        |           send/receive operations.
         │
         ├── rx0
         │   ├── client connection to read  1

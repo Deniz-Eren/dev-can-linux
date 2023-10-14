@@ -20,10 +20,17 @@
 #
 
 add_executable( canread
+    ${CMAKE_SOURCE_DIR}/src/prints.c
     ${CMAKE_CURRENT_SOURCE_DIR}/src/canread.c )
 
 target_include_directories( canread PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/include/uapi>
+    $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/src/kernel/arch/x86/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/> )
 
 if( CMAKE_BUILD_TYPE MATCHES Profiling )

@@ -132,6 +132,8 @@ typedef struct can_resmgr {
 
     device_session_t* device_session;
     struct driver_selection* driver_selection;
+    int is_extended_mid; // Only applicable for read and write functions not
+                         // used for direct devctl send/receive functionality.
 
     char name[MAX_NAME_SIZE];
     channel_type_t channel_type;

@@ -1,5 +1,5 @@
 /*
- * \file    prints.h
+ * \file    driver-prints.h
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,16 +18,12 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SRC_PRINTS_H_
-#define SRC_PRINTS_H_
+#ifndef SRC_DRIVER_PRINTS_H_
+#define SRC_DRIVER_PRINTS_H_
 
+#include "prints.h"
 
 /* Info prints */
-extern void print_version (void);
-extern void print_configs (void);
-extern void print_notice (void);
-extern void print_help (char* program_name);
-extern void print_warranty (void);
-extern void print_license (void);
+extern void print_support (int detailed);
 
-#endif /* SRC_PRINTS_H_ */
+#endif /* SRC_DRIVER_PRINTS_H_ */

@@ -19,8 +19,62 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
+#include <prints.h>
 #include <dev-can-linux/commands.h>
 
+
+void help (char* program_name) {
+    print_notice();
+
+    printf("\n");
+    printf("\e[1mSYNOPSIS\e[m\n");
+    printf("    \e[1m%s\e[m [options]\n", program_name);
+    printf("\n");
+    printf("\e[1mDESCRIPTION\e[m\n");
+    printf("    \e[1mDEV-CAN-LINUX\e[m is a QNX CAN-bus driver project that aims at porting drivers\n");
+    printf("    from the open-source Linux Kernel project to QNX RTOS.\n");
+    printf("\n");
+    printf("    \e[1mCANSEND\e[m is an accompanying tool used to send raw CAN messages.\n");
+    printf("\n");
+    printf("\e[1mOPTIONS\e[m\n");
+    printf("    \e[1m-u subopts\e[m - Specify the device TX file descriptors.\n");
+    printf("\n");
+    printf("                 Suboptions (\e[1msubopts\e[m):\n");
+    printf("\n");
+    printf("                 \e[1m#\e[m      - Specify ID number of the device to configure;\n");
+    printf("                          e.g. /dev/can0/ is -u0\n");
+    printf("                 \e[1mtx#\e[m    - ID of TX file descriptors to connect to\n");
+    printf("\n");
+    printf("                 Example:\n");
+    printf("                     cansend -u0,tx0 ...\n");
+    printf("\n");
+    printf("    \e[1m-m subopts\e[m - Specify message details.\n");
+    printf("\n");
+    printf("                 Suboptions (\e[1msubopts\e[m):\n");
+    printf("\n");
+    printf("                 \e[1m#\e[m      - MID of message in hexadecimal\n");
+    printf("                 \e[1m#\e[m      - Standard (0) or Extended (1) MID\n");
+    printf("                 \e[1m#\e[m      - Message data in hexadecimal\n");
+    printf("\n");
+    printf("                 Example:\n");
+    printf("                     cansend -m0x1234,1,0xABCD ...\n");
+    printf("\n");
+    printf("    \e[1m-w\e[m         - Print warranty message and exit.\n");
+    printf("    \e[1m-c\e[m         - Print license details and exit.\n");
+    printf("    \e[1m-?/h\e[m       - Print help menu and exit.\n");
+    printf("\n");
+    printf("\e[1mEXAMPLES\e[m\n");
+    printf("    Send a standard MID message:\n");
+    printf("\n");
+    printf("        \e[1mcansend -u0,tx0 -m0x1234,0,0xABCD\e[m\n");
+    printf("\n");
+    printf("    Send a extended MID message:\n");
+    printf("\n");
+    printf("        \e[1mcansend -u0,tx0 -m0x1234,1,0xABCD\e[m\n");
+    printf("\n");
+    printf("\e[1mBUGS\e[m\n");
+    printf("    If you find a bug, please report it.\n");
+}
 
 int main (int argc, char* argv[]) {
     int opt;
@@ -35,7 +89,7 @@ int main (int argc, char* argv[]) {
     int optw_mid_type = 0;
     char optw_data_str[32];
 
-    while ((opt = getopt(argc, argv, "u:w:?h")) != -1) {
+    while ((opt = getopt(argc, argv, "u:m:wc?h")) != -1) {
         switch (opt) {
         case 'u':
             buffer = optu_mailbox_str;
@@ -55,14 +109,23 @@ int main (int argc, char* argv[]) {
             sscanf(optu_mailbox_str+2, "%d", &optu_mailbox);
             break;
 
-        case 'w':
+        case 'm':
             buffer = optw_data_str;
             sscanf(optarg, "0x%x,%d,0x%s", &optw_mid, &optw_mid_type, buffer);
 
             break;
 
+        case 'w':
+            print_warranty();
+            return EXIT_SUCCESS;
+
+        case 'c':
+            print_license();
+            return EXIT_SUCCESS;
+
         case '?':
         case 'h':
+            help(argv[0]);
             return EXIT_SUCCESS;
 
         default:

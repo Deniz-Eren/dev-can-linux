@@ -24,7 +24,7 @@
 #include <config.h>
 #include <pci.h>
 #include <interrupt.h>
-#include <prints.h>
+#include <driver-prints.h>
 #include <session.h>
 
 
@@ -36,6 +36,12 @@ int main (int argc, char* argv[]) {
     int opt;
     char *options, *value;
 
+    /*
+     * Program options
+     *
+     * See print_help() or dev-can-linux -h for details
+     */
+
     char *sub_opts[] = {
 #define CHANNEL_ID      0
         "id",
@@ -43,10 +49,14 @@ int main (int argc, char* argv[]) {
         "rx",
 #define WRITE_CHANNELS  2
         "tx",
+#define IS_STANDARD_MID 3
+        "s",
+#define IS_EXTENDED_MID 4
+        "x",
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "b:d:u:viqstlVCwc?h")) != -1) {
+    while ((opt = getopt(argc, argv, "b:d:u:viqstlVCwcx?h")) != -1) {
         switch (opt) {
         case 'b':
             optb++;
@@ -69,7 +79,8 @@ int main (int argc, char* argv[]) {
             channel_config_t default_channel_config = {
                 .id = -1,
                 .num_rx_channels = DEFAULT_NUM_RX_CHANNELS,
-                .num_tx_channels = DEFAULT_NUM_TX_CHANNELS
+                .num_tx_channels = DEFAULT_NUM_TX_CHANNELS,
+                .is_extended_mid = -1
             };
 
             channel_config_t new_channel_config = default_channel_config;
@@ -87,6 +98,30 @@ int main (int argc, char* argv[]) {
 
                 case WRITE_CHANNELS:    /* process tx option */
                     new_channel_config.num_tx_channels = atoi(value);
+                    break;
+
+                case IS_STANDARD_MID:   /* process standard MID option */
+                    // Only applicable for read and write functions not used for
+                    // direct devctl send/receive functionality.
+                    if (new_channel_config.is_extended_mid != -1) {
+                        printf("error with MID configuration parameters\n");
+
+                        return EXIT_FAILURE;
+                    }
+
+                    new_channel_config.is_extended_mid = 0;
+                    break;
+
+                case IS_EXTENDED_MID:   /* process extended MID option */
+                    // Only applicable for read and write functions not used for
+                    // direct devctl send/receive functionality.
+                    if (new_channel_config.is_extended_mid != -1) {
+                        printf("error with MID configuration parameters\n");
+
+                        return EXIT_FAILURE;
+                    }
+
+                    new_channel_config.is_extended_mid = 1;
                     break;
 
                 default :
@@ -175,6 +210,10 @@ int main (int argc, char* argv[]) {
             print_license();
             return EXIT_SUCCESS;
 
+        case 'x':
+            optx = 1;
+            break;
+
         case '?':
         case 'h':
             print_help(argv[0]);
@@ -209,7 +248,7 @@ int main (int argc, char* argv[]) {
 #endif
 
     if (opti) {
-        print_support(opti > 1);
+        print_support(opti);
 
         return EXIT_SUCCESS;
     }
