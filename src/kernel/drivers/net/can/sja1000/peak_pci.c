@@ -578,6 +578,9 @@ static int peak_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	u16 sub_sys_id, icr;
 	int i, err, channels;
 	char fw_str[14] = "";
+#ifdef __QNX__
+    pci_err_t r;
+#endif
 
 	err = pci_enable_device(pdev);
 	if (err)
@@ -588,7 +591,7 @@ static int peak_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		goto failure_disable_pci;
 
 #ifdef __QNX__
-    // One QNX platform, the pci_device_read_*() functions provide read access to
+    // On QNX platform, the pci_device_read_*() functions provide read access to
     // the common PCI configuration space registers identified by their names.
     // Reading these configuration space registers directly using IO functions
     // seems to cause issues.
@@ -602,9 +605,15 @@ static int peak_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	dev_dbg(&pdev->dev, "probing device %04x:%04x:%04x\n",
 		pdev->vendor, pdev->device, sub_sys_id);
 
+#ifdef __QNX__
+    r = pci_device_write_cmd(pdev->hdl, 0x44, 0);
+    if (r != PCI_ERR_OK)
+        goto failure_release_regions;
+#else
 	err = pci_write_config_word(pdev, 0x44, 0);
 	if (err)
 		goto failure_release_regions;
+#endif
 
 	if (sub_sys_id >= 12)
 		channels = 4;
