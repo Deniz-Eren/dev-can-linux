@@ -248,7 +248,7 @@ Refer to the
 [Development (workspace/dev)](https://github.com/Deniz-Eren/workspace/tree/main/dev)
 documentation for details on how to setup the development container.
 
-Within the development container, to build:
+Within the development container, to build (default is for x86_64 platform):
 
     cd dev-can-linux
     mkdir build ; cd build
@@ -257,12 +257,21 @@ Within the development container, to build:
 
 Other build types you can indicate are Debug, Coverage and Profiling.
 
+To build for aarch64le architecture:
+
+    cd dev-can-linux
+    mkdir build ; cd build
+    cmake -DCMAKE_TOOLCHAIN_FILE=../workspace/cmake/Toolchain/qnx710-aarch64le.toolchain.cmake \
+          -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
+    cpack
+
 The following installer files will be created:
 
-    dev-can-linux-1.0.0-qnx710[build type].tar.gz
+    dev-can-linux-1.0.0-qnx710-[architecture][build type].tar.gz
     dev-can-linux-1.0.0-qnx710-dev.tar.gz
 
-Where the "[build type]" is empty for Release, "-g" for Debug, "-cov" for
+Where the "[architecture]" is the target architecture, for example x86_64 or
+aarch64le, "[build type]" is empty for Release, "-g" for Debug, "-cov" for
 Coverage and "-pro" for Profiling.
 
 The '-dev' variant contains the application development headers used to develope
