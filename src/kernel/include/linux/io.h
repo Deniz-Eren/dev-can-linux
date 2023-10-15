@@ -41,7 +41,7 @@ extern size_t io_port_addr_threshold;
 static inline uint8_t read8 (void __iomem* addr) {
     uint8_t ret;
 
-#if defined(__X86_64__)
+#if defined(__X86__) || defined(__X86_64__)
     if ((uintptr_t)addr < io_port_addr_threshold) {
         ret = in8((uintptr_t __iomem)addr);
     }
@@ -60,7 +60,7 @@ static inline uint8_t read8 (void __iomem* addr) {
 static inline uint16_t read16 (void __iomem* addr) {
     uint16_t ret;
 
-#if defined(__X86_64__)
+#if defined(__X86__) || defined(__X86_64__)
     if ((uintptr_t)(addr + 1) < io_port_addr_threshold) {
         ret = in16((uintptr_t __iomem)addr);
     }
@@ -79,7 +79,7 @@ static inline uint16_t read16 (void __iomem* addr) {
 static inline uint32_t read32 (void __iomem* addr) {
     uint32_t ret;
 
-#if defined(__X86_64__)
+#if defined(__X86__) || defined(__X86_64__)
     if ((uintptr_t)(addr + 3) < io_port_addr_threshold) {
         ret = in32((uintptr_t __iomem)addr);
     }
@@ -96,7 +96,7 @@ static inline uint32_t read32 (void __iomem* addr) {
 }
 
 static inline void write8 (void __iomem* addr, uint8_t val) {
-#if defined(__X86_64__)
+#if defined(__X86__) || defined(__X86_64__)
     if ((uintptr_t)addr < io_port_addr_threshold) {
         out8((__iomem uintptr_t)addr, val);
     }
@@ -110,7 +110,7 @@ static inline void write8 (void __iomem* addr, uint8_t val) {
 }
 
 static inline void write16 (void __iomem* addr, uint16_t val) {
-#if defined(__X86_64__)
+#if defined(__X86__) || defined(__X86_64__)
     if ((uintptr_t)(addr + 1) < io_port_addr_threshold) {
         out16((__iomem uintptr_t)addr, val);
     }
@@ -124,7 +124,7 @@ static inline void write16 (void __iomem* addr, uint16_t val) {
 }
 
 static inline void write32 (void __iomem* addr, uint32_t val) {
-#if defined(__X86_64__)
+#if defined(__X86__) || defined(__X86_64__)
     if ((uintptr_t)(addr + 3) < io_port_addr_threshold) {
         out32((__iomem uintptr_t)addr, val);
     }
