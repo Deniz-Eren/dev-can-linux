@@ -99,6 +99,15 @@ struct net_device_stats {
 
 struct net_device;
 
+enum netdev_state_t {
+	__LINK_STATE_START,
+	__LINK_STATE_PRESENT,
+	__LINK_STATE_NOCARRIER,
+	__LINK_STATE_LINKWATCH_PENDING,
+	__LINK_STATE_DORMANT,
+	__LINK_STATE_TESTING,
+};
+
 /*
  * This structure defines the management hooks for network devices.
  * The following hooks can be defined; unless noted otherwise, they are
@@ -149,6 +158,8 @@ struct net_device_ops {
  *
  *	@irq:		Device IRQ number
  *
+ *	@state:		Generic network queuing layer state, see netdev_state_t
+ *
  *	@stats:		Statistics struct, which was left as a legacy, use
  *			rtnl_link_stats64 instead
  *
@@ -172,6 +183,7 @@ struct net_device_ops {
 struct net_device {
     char      	name[IFNAMSIZ];
     unsigned int         irq;
+	unsigned long		state;
     struct net_device_stats stats;
     unsigned int        flags;
     unsigned int        mtu;

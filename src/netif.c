@@ -242,18 +242,23 @@ void netif_start_queue(struct net_device *dev)
 }
 
 bool netif_carrier_ok(const struct net_device *dev) {
+    log_trace("netif_carrier_on\n");
+
+    if ((dev->state >> __LINK_STATE_NOCARRIER) & 1) {
+        return false;
+    }
+
     return true;
 }
 
-void netif_carrier_on(struct net_device *dev)
-{
-    log_trace("netif_carrier_on\n");
-    // Not called from SJA1000 driver
+void netif_carrier_on(struct net_device *dev) {
+    dev->state &= ~(1 << __LINK_STATE_NOCARRIER);
 }
 
-void netif_carrier_off(struct net_device *dev)
-{
+void netif_carrier_off(struct net_device *dev) {
     log_trace("netif_carrier_off\n");
+
+    dev->state |= (1 << __LINK_STATE_NOCARRIER);
 }
 
 int netif_queue_stopped(const struct net_device *dev)
