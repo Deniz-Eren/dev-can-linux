@@ -63,8 +63,20 @@ void* netif_tx (void* arg) {
         cf->can_id = canmsg->mid;
         cf->can_dlc = canmsg->len;
 
-        if (canmsg->ext.is_extended_mid) {
+        if (canmsg->ext.is_extended_mid) { // Extended MID
             cf->can_id |= CAN_EFF_FLAG;
+        }
+        else { // Standard MID
+            /**
+             * Message IDs or MIDs are slightly different on QNX compared to
+             * Linux. The form of the ID depends on whether or not the driver
+             * is using extended MIDs:
+             *
+             *      - In standard 11-bit MIDs, bits 18–28 define the MID.
+             *      - In extended 29-bit MIDs, bits 0–28 define the MID.
+             */
+
+            cf->can_id >>= 18;
         }
 
         int i;
@@ -148,11 +160,22 @@ int netif_rx (struct sk_buff* skb) {
     /* set MID; omit EFF, RTR, ERR flags */
     canmsg.mid = (msg->can_id & CAN_ERR_MASK);
 
-    if (msg->can_id & CAN_EFF_FLAG) {
+    if (msg->can_id & CAN_EFF_FLAG) { // Extended MID
         canmsg.ext.is_extended_mid = 1; // EFF
     }
-    else {
+    else { // Standard MID
         canmsg.ext.is_extended_mid = 0; // SFF
+
+        /**
+         * Message IDs or MIDs are slightly different on QNX compared to
+         * Linux. The form of the ID depends on whether or not the driver
+         * is using extended MIDs:
+         *
+         *      - In standard 11-bit MIDs, bits 18–28 define the MID.
+         *      - In extended 29-bit MIDs, bits 0–28 define the MID.
+         */
+
+        canmsg.mid <<= 18;
     }
 
     // set TIMESTAMP

@@ -54,6 +54,24 @@
 #define EXT_CAN_CMD_CODE                    0x54
 #define EXT_CAN_DEVCTL_SET_LATENCY_LIMIT_MS __DIOT(_DCMD_MISC, EXT_CAN_CMD_CODE + 0,  uint32_t)
 
+/**
+ * Special Note
+ *
+ * When using functions:
+ *      write_frame_raw()
+ *      read_frame_raw_block()
+ *      read_frame_raw_noblock()
+ *      set_mid()
+ *      get_mid()
+ *      set_mfilter()
+ *      get_mfilter()
+ *
+ * Message IDs or MIDs are slightly different on QNX compared to Linux. The form
+ * of the ID depends on whether or not the driver is using extended MIDs:
+ *
+ *      - In standard 11-bit MIDs, bits 18–28 define the MID.
+ *      - In extended 29-bit MIDs, bits 0–28 define the MID.
+ */
 
 static inline int write_frame_raw (int filedes, struct can_msg* canmsg) {
     if (canmsg == NULL) {

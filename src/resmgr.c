@@ -156,10 +156,21 @@ int register_netdev (struct net_device* dev) {
         DEFAULT_NUM_TX_CHANNELS
     };
 
+    int is_extended_mid = 0; // Default is standard MIDs
+
+    if (optx) {
+        is_extended_mid = 1; // Change to extended if driver option is given
+    }
+
     if (id < num_optu_configs) {
         if (id == optu_config[id].id) {
             num_channels[0] = optu_config[id].num_rx_channels;
             num_channels[1] = optu_config[id].num_tx_channels;
+
+            if (optu_config[id].is_extended_mid != -1) {
+                // Override driver option if individual device option is giben
+                is_extended_mid = optu_config[id].is_extended_mid;
+            }
         }
     }
 
@@ -172,6 +183,10 @@ int register_netdev (struct net_device* dev) {
 
             resmgr->device_session = device_session;
             resmgr->driver_selection = probe_driver_selection;
+
+            // Property is_extended_mid is only applicable for read and write
+            // functions not used for direct devctl send/receive functionality.
+            resmgr->is_extended_mid = is_extended_mid;
 
 #if CONFIG_QNX_RESMGR_THREAD_POOL == 1
             /* initialize dispatch interface */
@@ -870,7 +885,7 @@ int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
 
     struct can_msg canmsg = {
         .mid = _ocb->resmgr->mid,
-        .ext = { .is_extended_mid = 1 } // TODO: does this need to be an option?
+        .ext = { .is_extended_mid = _ocb->resmgr->is_extended_mid }
     };
 
     /* First check if our message buffer was large enough to receive the whole
