@@ -409,6 +409,15 @@ All RX file descriptor clients have the possibility of receiving the TX echo
 back messages (unless they have their filters configured to mask them).
 
 
+## Note about MIDs
+
+Message IDs or MIDs are slightly different on QNX compared to Linux. The form of
+the ID depends on whether or not the driver is using extended MIDs:
+
+- In standard 11-bit MIDs, bits 18–28 define the MID.
+- In extended 29-bit MIDs, bits 0–28 define the MID.
+
+
 ## Check Supported Hardware
 
 Run with '-i' option to check what hardware is supported:

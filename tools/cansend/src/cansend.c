@@ -85,9 +85,9 @@ int main (int argc, char* argv[]) {
     int optu_mailbox_is_tx = 0;
     int optu_mailbox = 0;
 
-    int optw_mid = 0;
-    int optw_mid_type = 0;
-    char optw_data_str[32];
+    int optm_mid = 0;
+    int optm_mid_type = 0;
+    char optm_data_str[32];
 
     while ((opt = getopt(argc, argv, "u:m:wc?h")) != -1) {
         switch (opt) {
@@ -110,8 +110,8 @@ int main (int argc, char* argv[]) {
             break;
 
         case 'm':
-            buffer = optw_data_str;
-            sscanf(optarg, "0x%x,%d,0x%s", &optw_mid, &optw_mid_type, buffer);
+            buffer = optm_data_str;
+            sscanf(optarg, "0x%x,%d,0x%s", &optm_mid, &optm_mid_type, buffer);
 
             break;
 
@@ -137,14 +137,14 @@ int main (int argc, char* argv[]) {
     int     fd;
     struct  can_msg canmsg;
 
-    int n = strnlen(optw_data_str, 32);
+    int n = strnlen(optm_data_str, 32);
     n = n/2 + n%2;
 
     int i;
     for (i = 0; i < n; ++i) {
         unsigned int k;
 
-        sscanf(optw_data_str + 2*i, "%2x", &k);
+        sscanf(optm_data_str + 2*i, "%2x", &k);
 
         canmsg.dat[i] = k;
     }
@@ -153,10 +153,23 @@ int main (int argc, char* argv[]) {
         canmsg.dat[i] = 0;
     }
 
-    canmsg.mid = optw_mid;
+    canmsg.mid = optm_mid;
     canmsg.ext.timestamp = 0;
-    canmsg.ext.is_extended_mid = optw_mid_type;
+    canmsg.ext.is_extended_mid = optm_mid_type;
     canmsg.len = n;
+
+    /**
+     * Message IDs or MIDs are slightly different on QNX compared to Linux. The
+     * form of the ID depends on whether or not the driver is using extended
+     * MIDs:
+     *
+     *      - In standard 11-bit MIDs, bits 18–28 define the MID.
+     *      - In extended 29-bit MIDs, bits 0–28 define the MID.
+     */
+
+    if (!canmsg.ext.is_extended_mid) {
+        canmsg.mid <<= 18;
+    }
 
     char OPEN_FILE[16];
 

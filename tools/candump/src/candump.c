@@ -137,7 +137,15 @@ int main (int argc, char* argv[]) {
                     OPEN_FILE,
                     canmsg.ext.timestamp,
                     canmsg.ext.is_extended_mid ? "EFF" : "SFF",
-                    canmsg.mid,
+                    /**
+                     * Message IDs or MIDs are slightly different on QNX compared
+                     * to Linux. The form of the ID depends on whether or not the
+                     * driver is using extended MIDs:
+                     *
+                     *      - In standard 11-bit MIDs, bits 18–28 define the MID.
+                     *      - In extended 29-bit MIDs, bits 0–28 define the MID.
+                     */
+                    canmsg.ext.is_extended_mid ? canmsg.mid : canmsg.mid >> 18,
                     canmsg.len,
                     canmsg.dat[0],
                     canmsg.dat[1],
