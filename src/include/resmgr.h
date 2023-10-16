@@ -59,6 +59,10 @@ struct can_ocb;
 struct user_dev_setup {
     struct can_bittiming bittiming;
     struct can_bittiming data_bittiming;
+    struct can_btr_t {  /* Special feature to force btr0 and btr1 to specific */
+        u8 btr0;        /* values needed for some applications. */
+        u8 btr1;
+    } can_btr;
     struct can_ctrlmode ctrlmode;
     int restart_ms;
     struct can_tdc tdc;
@@ -66,6 +70,7 @@ struct user_dev_setup {
 
     bool set_bittiming;
     bool set_data_bittiming;
+    bool set_btr;       /* Special feature */
     bool set_ctrlmode;
     bool set_restart_ms;
     bool set_restart;

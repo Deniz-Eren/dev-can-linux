@@ -111,6 +111,9 @@ struct can_priv {
 
 	int (*do_set_bittiming)(struct net_device *dev);
 	int (*do_set_data_bittiming)(struct net_device *dev);
+    /* Special feature to force btr0 and btr1 to specific values needed for some
+       applications. */
+    int (*do_set_btr)(struct net_device *dev, u8 btr0, u8 btr1);
 	int (*do_set_mode)(struct net_device *dev, enum can_mode mode);
 	int (*do_set_termination)(struct net_device *dev, u16 term);
 	int (*do_get_state)(const struct net_device *dev,

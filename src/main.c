@@ -53,6 +53,20 @@ int main (int argc, char* argv[]) {
         "s",
 #define IS_EXTENDED_MID 4
         "x",
+#define FREQ            5
+        "freq",
+#define BPRM            6
+        "bprm",
+#define TS1             7
+        "ts1",
+#define TS2             8
+        "ts2",
+#define SJW             9
+        "sjw",
+#define BTR0            10
+        "btr0",
+#define BTR1            11
+        "btr1",
         NULL
     };
 
@@ -80,7 +94,14 @@ int main (int argc, char* argv[]) {
                 .id = -1,
                 .num_rx_channels = DEFAULT_NUM_RX_CHANNELS,
                 .num_tx_channels = DEFAULT_NUM_TX_CHANNELS,
-                .is_extended_mid = -1
+                .is_extended_mid = -1,
+                .bitrate = 0,           /* Bit-rate in bits/second */
+                .bprm = 0,              /* Bit-rate prescaler */
+                .phase_seg1 = 0,        /* Phase buffer segment 1 in TQs */
+                .phase_seg2 = 0,        /* Phase buffer segment 2 in TQs */
+                .sjw = 0,               /* Synchronisation jump width in TQs */
+                .btr0 = 0,              /* SJA1000 BTR0 register */
+                .btr1 = 0               /* SJA1000 BTR1 register */
             };
 
             channel_config_t new_channel_config = default_channel_config;
@@ -124,6 +145,54 @@ int main (int argc, char* argv[]) {
                     new_channel_config.is_extended_mid = 1;
                     break;
 
+                case FREQ:              /* process freq[kKmM] option */
+                {
+                    int freq;
+                    char units[16];
+
+                    sscanf(value, "%d%s", &freq, units);
+
+                    if (units[0] == 'k' || units[0] == 'K') {
+                        new_channel_config.bitrate = freq * 1000;
+                    }
+                    else if (units[0] == 'm' || units[0] == 'M') {
+                        new_channel_config.bitrate = freq * 1000000;
+                    }
+                    else {
+                        new_channel_config.bitrate = freq;
+                    }
+                    break;
+                }
+                case BPRM:              /* process bprm option */
+                    new_channel_config.bprm = atoi(value);
+                    break;
+
+                case TS1:               /* process ts1 option */
+                    new_channel_config.phase_seg1 = atoi(value);
+                    break;
+
+                case TS2:               /* process ts2 option */
+                    new_channel_config.phase_seg2 = atoi(value);
+                    break;
+
+                case SJW:               /* process sjw option */
+                    new_channel_config.sjw = atoi(value);
+                    break;
+
+                case BTR0:              /* process btr0 option */
+                {
+                    int btr0;
+                    sscanf(value, "%x", &btr0);
+                    new_channel_config.btr0 = btr0;
+                    break;
+                }
+                case BTR1:              /* process btr1 option */
+                {
+                    int btr1;
+                    sscanf(value, "%x", &btr1);
+                    new_channel_config.btr1 = btr1;
+                    break;
+                }
                 default :
                     /* process unknown token */
                     printf("unknown\n");

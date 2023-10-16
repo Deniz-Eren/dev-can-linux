@@ -212,6 +212,50 @@ static int can_changelink(struct net_device *dev,
 		}
 	}
 
+    if (user->set_btr) {
+        /* Special feature to force btr0 and btr1 to specific values needed for
+         * some applications.
+         */
+		if (priv->do_set_btr) {
+            u64 v64;
+            u8 btr0 = user->can_btr.btr0;
+            u8 btr1 = user->can_btr.btr1;
+            u32 bitrate = user->bittiming.bitrate;
+
+			/* Set the bit-timing registers */
+			err = priv->do_set_btr(dev, btr0, btr1);
+			if (err)
+				return err;
+
+            /* When special function is used to set btr0 and btr1 manually all
+               bittiming data is extracted from these register values */
+            priv->bittiming.bitrate = bitrate;
+            priv->bittiming.brp = (btr0 & 0x3f) + 1;
+            priv->bittiming.sjw = ((btr0 >> 6) & 0x3) + 1;
+            priv->bittiming.phase_seg2 = ((btr1 >> 4) & 0x7) + 1;
+            priv->bittiming.phase_seg1 = 0; // TODO: Not calculating phase_seg1
+            // TODO: Once phase_seg1 is calculated prop_seg must be set to (btr1 & 0xf) + 1 - priv->bittiming.phase_seg1;
+            priv->bittiming.prop_seg = 0;
+
+            v64 = (u64)priv->bittiming.brp * 1000 * 1000 * 1000;
+            do_div(v64, priv->clock.freq);
+
+            priv->bittiming.tq = (u32)v64;
+
+            /* Use CiA recommended sample points */
+            if (bitrate > 800 * 1000 /* BPS */)
+                priv->bittiming.sample_point = 750;
+            else if (bitrate > 500 * 1000 /* BPS */)
+                priv->bittiming.sample_point = 800;
+            else
+                priv->bittiming.sample_point = 875;
+
+            if (btr1 & 0x80) {
+                priv->ctrlmode |= CAN_CTRLMODE_3_SAMPLES;
+            }
+		}
+    }
+
 	if (user->set_termination) {
 		const u16 termval = user->termination;
 		const unsigned int num_term = priv->termination_const_cnt;

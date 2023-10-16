@@ -11,6 +11,8 @@
  *          specific functionality and retaining only CAN-bus critical features.
  *          PCI memory address types 'void __iomem *' have been changed to QNX
  *          equivalent type 'uintptr_t'.
+ *          Added one custom function sja1000_set_btr() used to force btr0 and
+ *          btr1 values.
  *
  * sja1000.c -  Philips SJA1000 network device driver
  *
@@ -271,6 +273,22 @@ static int sja1000_set_bittiming(struct net_device *dev)
 		(((bt->phase_seg2 - 1) & 0x7) << 4);
 	if (priv->can.ctrlmode & CAN_CTRLMODE_3_SAMPLES)
 		btr1 |= 0x80;
+
+	netdev_info(dev, "setting BTR0=0x%02x BTR1=0x%02x\n", btr0, btr1);
+
+	priv->write_reg(priv, SJA1000_BTR0, btr0);
+	priv->write_reg(priv, SJA1000_BTR1, btr1);
+
+	return 0;
+}
+
+/*
+ * Special feature to force btr0 and btr1 to specific values needed for
+ * some applications.
+ */
+static int sja1000_set_btr(struct net_device *dev, u8 btr0, u8 btr1)
+{
+	struct sja1000_priv *priv = netdev_priv(dev);
 
 	netdev_info(dev, "setting BTR0=0x%02x BTR1=0x%02x\n", btr0, btr1);
 
@@ -640,6 +658,9 @@ struct net_device *alloc_sja1000dev(int sizeof_priv)
 	priv->dev = dev;
 	priv->can.bittiming_const = &sja1000_bittiming_const;
 	priv->can.do_set_bittiming = sja1000_set_bittiming;
+    priv->can.do_set_btr = sja1000_set_btr; /* Special feature to force btr0 and
+                                             * btr1 to specific values needed
+                                             * for some applications. */
 	priv->can.do_set_mode = sja1000_set_mode;
 	priv->can.do_get_berr_counter = sja1000_get_berr_counter;
 	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK |
