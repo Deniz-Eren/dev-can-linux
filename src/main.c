@@ -70,7 +70,7 @@ int main (int argc, char* argv[]) {
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "b:d:u:viqstlVCwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "b:d:U:u:viqstlVCwcx?h")) != -1) {
         switch (opt) {
         case 'b':
             optb++;
@@ -81,6 +81,16 @@ int main (int argc, char* argv[]) {
             optd++;
             sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
             log_info("manually disabling device: %x:%x\n", opt_vid, opt_did);
+            break;
+
+        case 'U':
+            next_device_id = atoi(optarg);
+
+            if (next_device_id < 0) {
+                printf("invalid -U value: %d\n", next_device_id);
+
+                return EXIT_FAILURE;
+            }
             break;
 
         case 'u':

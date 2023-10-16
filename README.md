@@ -19,12 +19,17 @@ Options:
     -C         - Print build configurations and exit.
     -i         - List supported hardware and exit.
     -ii        - List supported hardware details and exit.
+    -U base_id - First id to use for devices detected
+                 e.g. /dev/can9/ is id=9
+                 Default: 0
     -u subopts - Configure the device RX/TX file descriptors.
 
                  Suboptions (subopts):
 
                  id=#       - Specify ID number of the device to configure;
                               e.g. /dev/can0/ is id=0
+                              This id is consistent with the base_id you have
+                              specified with the -U option.
                  rx=#       - Number of RX file descriptors to create
                  tx=#       - Number of TX file descriptors to create
                  s          - Start the device with standard MIDs

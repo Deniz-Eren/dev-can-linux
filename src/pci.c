@@ -39,7 +39,7 @@ size_t pci_mem_addr_space_end = 0x0;
 
 driver_selection_t* driver_selection_root = NULL;
 driver_selection_t* probe_driver_selection = NULL;
-int device_id_count = 0;
+int next_device_id = 0;
 
 /* Helper structures */
 bar_t* bar_list_root = NULL;

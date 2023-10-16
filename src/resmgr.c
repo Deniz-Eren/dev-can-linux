@@ -134,7 +134,7 @@ int register_netdev (struct net_device* dev) {
         return -1;
     }
 
-    int id = device_id_count++;
+    int id = next_device_id++;
 
     snprintf( dev->name, IFNAMSIZ, "%s-can%d",
             probe_driver_selection->driver->name, dev->dev_id );

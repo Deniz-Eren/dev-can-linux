@@ -80,12 +80,17 @@ void print_help (char* program_name) {
     printf("    \e[1m-C\e[m         - Print build configurations and exit.\n");
     printf("    \e[1m-i\e[m         - List supported hardware and exit.\n");
     printf("    \e[1m-ii\e[m        - List supported hardware details and exit.\n");
+    printf("    \e[1m-U base_id\e[m - First id to use for devices detected\n");
+    printf("                 e.g. /dev/can9/ is id=9\n");
+    printf("                 Default: 0\n");
     printf("    \e[1m-u subopts\e[m - Configure the device RX/TX file descriptors.\n");
     printf("\n");
     printf("                 Suboptions (\e[1msubopts\e[m):\n");
     printf("\n");
     printf("                 \e[1mid=#\e[m   - Specify ID number of the device to configure;\n");
     printf("                          e.g. /dev/can0/ is id=0\n");
+    printf("                          This id is consistent with the base_id you have\n");
+    printf("                          specified with the -U option.\n");
     printf("                 \e[1mrx=#\e[m   - Number of RX file descriptors to create\n");
     printf("                 \e[1mtx=#\e[m   - Number of TX file descriptors to create\n");
     printf("\n");

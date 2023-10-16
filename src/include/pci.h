@@ -45,7 +45,7 @@ extern void print_driver_selection_results();
 
 extern driver_selection_t* driver_selection_root;
 extern driver_selection_t* probe_driver_selection;
-extern int device_id_count;
+extern int next_device_id;
 
 
 static inline void store_driver_selection (
