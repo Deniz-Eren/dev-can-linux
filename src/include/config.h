@@ -60,6 +60,13 @@ typedef struct channel_config {
     int num_rx_channels;
     int num_tx_channels;
     int is_extended_mid;
+    int bitrate;            /* Bit-rate in bits/second */
+    int bprm;               /* Bit-rate prescaler */
+    int phase_seg1;         /* Phase buffer segment 1 in TQs */
+    int phase_seg2;         /* Phase buffer segment 2 in TQs */
+    int sjw;                /* Synchronisation jump width in TQs */
+    int btr0;               /* SJA1000 BTR0 register */
+    int btr1;               /* SJA1000 BTR1 register */
 } channel_config_t;
 
 extern size_t num_optu_configs;

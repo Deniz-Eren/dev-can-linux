@@ -59,6 +59,55 @@ typedef struct {
 int msg_again_callback(
         message_context_t* ctp, int type, unsigned flags, void* handle);
 
+void create_user_dev_setup ( struct can_devctl_timing* timing, u32 freq,
+        struct user_dev_setup* user )
+{
+    int TQ = timing->bit_rate_prescaler * BILLION / freq;
+    int one_bit = BILLION / timing->ref_clock_freq / TQ;
+    int prop_seg = one_bit
+                - timing->sync_jump_width
+                - timing->time_segment_1
+                - timing->time_segment_2;
+
+    struct user_dev_setup user1 = {
+            .set_bittiming = true,
+            .bittiming = {
+                .bitrate = 0, // set to zero to invoke it's calculation
+                .sample_point = (timing->sync_jump_width
+                                + prop_seg
+                                + timing->time_segment_1)*10/one_bit,
+                .tq = TQ,
+                .prop_seg = prop_seg,
+                .sjw = timing->sync_jump_width,
+                .phase_seg1 = timing->time_segment_1,
+                .phase_seg2 = timing->time_segment_2,
+                .brp = timing->bit_rate_prescaler
+            }
+    };
+
+    struct user_dev_setup user2 = {
+            .set_bittiming = true,
+            .bittiming = {
+                .bitrate = timing->ref_clock_freq,
+                .sample_point = 0,
+                .tq = 0,
+                .prop_seg = 0,
+                .sjw = 0,
+                .phase_seg1 = 0,
+                .phase_seg2 = 0,
+                .brp = 0
+            }
+    };
+
+    if (timing->bit_rate_prescaler == 0) {
+        memcpy(user, &user2, sizeof(struct user_dev_setup));
+    }
+    else {
+        memcpy(user, &user1, sizeof(struct user_dev_setup));
+    }
+}
+
+
 /*
  * Our connect and I/O functions - we supply two tables
  * which will be filled with pointers to callback functions
@@ -98,6 +147,31 @@ int register_netdev (struct net_device* dev) {
             .set_bittiming = true,
             .bittiming = { .bitrate = 250000 }
     };
+
+    if (id < num_optu_configs) {
+        if (id == optu_config[id].id && optu_config[id].bitrate != 0) {
+            if (optu_config[id].btr0 != 0 || optu_config[id].btr1 != 0) {
+                user.set_bittiming = false;
+                user.set_btr = true;
+                user.bittiming.bitrate = optu_config[id].bitrate;
+                user.can_btr.btr0 = optu_config[id].btr0;
+                user.can_btr.btr1 = optu_config[id].btr1;
+            }
+            else if (optu_config[id].bitrate != 0) {
+                struct can_priv* priv = netdev_priv(dev);
+                struct can_devctl_timing timing;
+
+                user.bittiming.bitrate = optu_config[id].bitrate;
+                timing.ref_clock_freq = optu_config[id].bitrate;
+                timing.sync_jump_width = optu_config[id].sjw;
+                timing.time_segment_1 = optu_config[id].phase_seg1;
+                timing.time_segment_2 = optu_config[id].phase_seg2;
+                timing.bit_rate_prescaler = optu_config[id].bprm;
+
+                create_user_dev_setup(&timing, priv->clock.freq, &user);
+            }
+        }
+    }
 
     if (opts) { /* silent mode; disable all CAN-bus TX capability */
         user.set_ctrlmode = true;
@@ -1403,54 +1477,14 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
             timing.ref_clock_freq = priv->bittiming.bitrate;
         }
 
-        int TQ = timing.bit_rate_prescaler * BILLION / priv->clock.freq;
-        int one_bit = BILLION / timing.ref_clock_freq / TQ;
-        int prop_seg = one_bit
-                    - timing.sync_jump_width
-                    - timing.time_segment_1
-                    - timing.time_segment_2;
-
-        struct user_dev_setup user1 = {
-                .set_bittiming = true,
-                .bittiming = {
-                    .bitrate = 0, // set to zero to invoke it's calculation
-                    .sample_point = (timing.sync_jump_width
-                                    + prop_seg
-                                    + timing.time_segment_1)*10/one_bit,
-                    .tq = TQ,
-                    .prop_seg = prop_seg,
-                    .sjw = timing.sync_jump_width,
-                    .phase_seg1 = timing.time_segment_1,
-                    .phase_seg2 = timing.time_segment_2,
-                    .brp = timing.bit_rate_prescaler
-                }
-        };
-
-        struct user_dev_setup user2 = {
-                .set_bittiming = true,
-                .bittiming = {
-                    .bitrate = timing.ref_clock_freq,
-                    .sample_point = 0,
-                    .tq = 0,
-                    .prop_seg = 0,
-                    .sjw = 0,
-                    .phase_seg1 = 0,
-                    .phase_seg2 = 0,
-                    .brp = 0
-                }
-        };
-
-        struct user_dev_setup* user = &user1;
-
-        if (timing.bit_rate_prescaler == 0) {
-            user = &user2;
-        }
+        struct user_dev_setup user;
+        create_user_dev_setup(&timing, priv->clock.freq, &user);
 
         int err;
 
         device->flags &= ~IFF_UP;
 
-        if ((err = device->resmgr_ops->changelink(device, user)) != 0) {
+        if ((err = device->resmgr_ops->changelink(device, &user)) != 0) {
             log_err("CAN_DEVCTL_SET_TIMING: changelink failed: (%d) %s\n",
                     -err, strerror(-err));
 

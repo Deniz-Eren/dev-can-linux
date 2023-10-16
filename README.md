@@ -23,17 +23,54 @@ Options:
 
                  Suboptions (subopts):
 
-                 id=#   - Specify ID number of the device to configure;
-                          e.g. /dev/can0/ is id=0
-                 rx=#   - Number of RX file descriptors to create
-                 tx=#   - Number of TX file descriptors to create
-                 s      - Start the device with standard MIDs
-                 x      - Start the device with extended MIDs
-                          Default: is setup as standard MIDs or determined by
-                          driver level -x option if specified
+                 id=#       - Specify ID number of the device to configure;
+                              e.g. /dev/can0/ is id=0
+                 rx=#       - Number of RX file descriptors to create
+                 tx=#       - Number of TX file descriptors to create
+                 s          - Start the device with standard MIDs
+                 x          - Start the device with extended MIDs
+                              Default: is setup as standard MIDs or determined by
+                              driver level -x option if specified
 
-                 Example:
+                 Baud Rate Suboptions (subopts):
+
+                 Normally you would use canctl command to set baud rate, however
+                 you do have the option of setting it here at driver startup.
+                 See section [Setting Bitrate](#setting-bitrate) for more
+                 details.
+
+                 freq[kKmM]=# - The clock rate in Hz, optionally followed by a
+                                multiplier of k or K for 1000, and m or M for
+                                1000000
+
+                 The driver will attempt to automatically compute the following
+                 fields, however you can explicitly set them also:
+
+                 bprm=#     - The baud rate prescaler
+                 ts1=#      - The number of time quantas for time segment 1
+                 ts2=#      - The number of time quantas for time segment 2
+                 sjw=#      - The number of time quantas for the syncronization
+                              jump width
+
+                 For special applications that need to manually set the BTR0 and
+                 BTR1 registers of the SJA1000 chipset use the following
+                 suboptions. Note other suboptions (bprm, ts1, ts2 and sjw) will
+                 be ignored and derived from the specified register values.
+                 Suboption freq must be specified and will be taken and trusted
+                 verbatim.
+
+                 btr0=#     - SJA1000 Bus Timing Register 0
+                 btr1=#     - SJA1000 Bus Timing Register 1
+
+                 Examples:
+                     # Specify 2 RX and 0 TX file descriptors in /dev/can0/*:
                      dev-can-linux -u id=0,rx=2,tx=0
+
+                     # Setting baud-rate at driver start time:
+                     dev-can-linux -u id=0,freq=250k,bprm=2,ts1=7,ts2=2,sjw=1
+
+                     # (Special cases only) Forced btr* baud-rate setting method:
+                     dev-can-linux -u id=0,freq=125k,btr0=0x07,btr1=0x14
 
     -w         - Print warranty message and exit.
     -c         - Print license details and exit.
@@ -134,8 +171,10 @@ PCI devices we will have /dev/can0/rx0, /dev/can0/tx0, /dev/can1/rx0 and
 
 ### Setting Bitrate
 
-All configurations done using canctl refer to the file descriptors of the
-channels. For example, to set the bitrate:
+Normally the configurations are done using canctl command, however they can also
+be done at driver startup time, see [Usage](#usage) section.
+
+For example, to set the bitrate:
 
     dev-can-linux                       # 1) start the driver
     waitfor /dev/can0/rx0               # 2) wait for driver to start
@@ -183,6 +222,12 @@ Sample output:
     Loopback:           INTERNAL
     Autobus:            OFF
     Silent mode:        OFF
+
+For special applications that need to manually set the BTR0 and BTR1 registers
+of the SJA1000 chipset use the baud-rate suboptions at driver startup; see
+[Usage](#usage) section `-u` option for detailed description. Note the other
+suboptions (bprm, ts1, ts2 and sjw) will be ignored when setting btr0 and btr1.
+Suboption freq must be specified and will be taken and trusted verbatim.
 
 
 ## Sending and Receiving Test Messages

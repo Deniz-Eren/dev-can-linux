@@ -70,7 +70,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_coverage \
-                    -c dev-can-linux \
+                    -c "dev-can-linux -x" \
                     -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Coverage \
@@ -148,7 +148,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_memcheck \
-                    -c dev-can-linux \
+                    -c "dev-can-linux -x" \
                     -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Profiling \
@@ -185,7 +185,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_helgrind \
-                    -c dev-can-linux \
+                    -c "dev-can-linux -x" \
                     -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Profiling \
@@ -220,7 +220,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_drd \
-                    -c dev-can-linux \
+                    -c "dev-can-linux -x" \
                     -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Profiling \
@@ -255,7 +255,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_exp-sgcheck \
-                    -c dev-can-linux \
+                    -c "dev-can-linux -x" \
                     -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Profiling \
