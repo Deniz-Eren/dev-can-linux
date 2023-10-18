@@ -546,6 +546,23 @@ void pci_release_regions (struct pci_dev* dev) {
     // We will perform this in pci_disable_device()
 }
 
+/**
+ * Important Note!
+ *
+ * Start offset of the device dependent portion of the 256/4096 byte PCI/PCIe
+ * configuration space from 0x40 to 0xFF/0xFFF.
+ *
+ * In Linux function pci_read_config_word() and pci_write_config_word() address
+ * "where" starts at 0x40.
+ *
+ * In QNX functions pci_device_cfg_rd*() and pci_device_cfg_wr*() have absolute
+ * address offset and it starts at 0x0. These functions will return an error if
+ * the offset is below 0x40.
+ *
+ * Thus to translate from Linux to QNX we must add 0x40 offset to address.
+ */
+#define PCI_CFG_SPACE_OFFSET 0x40
+
 int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
     pci_bdf_t bdf = pci_bdf(dev->hdl);
 
@@ -553,33 +570,9 @@ int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
         return -1;
     }
 
-    /**
-     * Important Note!
-     *
-     * It has been found that an offset of 0x40 is required for the use of the
-     * pci_device_cfg_fd* functions. The documentation of these functions sounds
-     * like the offset is handled within the functions themselves however, either
-     * by error or intension the offset is not applied within the functions. The
-     * comments from QNX are from file qnx710/target/qnx7/usr/include/pci/pci.h
-     * as follows:
-     *
-     * The following functions provide read access to the device dependent
-     * portion of the 256/4096 byte PCI/PCIe configuration space from 0x40 to
-     * 0xFF/0xFFF.
-     * The offset parameter must be aligned.
-     * These functions should only be used if the corresponding information
-     * cannot be obtained with a pre-existing library or capability module API.
-     * Also check the capability module API's defined in <pci/cap_*.h> files
-     *
-     * pci_err_t pci_device_cfg_rd8(pci_bdf_t bdf, uint_t offset, uint8_t *val);
-     * pci_err_t pci_device_cfg_rd16(pci_bdf_t bdf, uint_t offset, uint16_t *val);
-     * pci_err_t pci_device_cfg_rd32(pci_bdf_t bdf, uint_t offset, uint32_t *val);
-     * pci_err_t pci_device_cfg_rd64(pci_bdf_t bdf, uint_t offset, uint64_t *val);
-     */
-
-    pci_err_t err =
-        pci_device_cfg_rd16( bdf, where + 0x40 /* See Important Note above */,
-                             val );
+    pci_err_t err = pci_device_cfg_rd16( bdf,
+            where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
+            val );
 
     if (err != PCI_ERR_OK) {
         return -1;
@@ -589,33 +582,9 @@ int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
 }
 
 int pci_write_config_word (const struct pci_dev* dev, int where, u16 val) {
-    /**
-     * Important Note!
-     *
-     * It has been found that an offset of 0x40 is required for the use of the
-     * pci_device_cfg_wr* functions. The documentation of these functions sounds
-     * like the offset is handled within the functions themselves however, either
-     * by error or intension the offset is not applied within the functions. The
-     * comments from QNX are from file qnx710/target/qnx7/usr/include/pci/pci.h
-     * as follows:
-     *
-     * The following functions provide write access to the device dependent
-     * portion of the 256/4096 byte PCI/PCIe configuration space from 0x40 to
-     * 0xFF/0xFFF.
-     * The offset parameter must be aligned.
-     * Pass NULL for the <val_p> parameter if you don't want the register value
-     * after write returned
-     *
-     * pci_err_t pci_device_cfg_wr8(pci_devhdl_t hdl, uint_t offset, uint8_t val, uint8_t *val_p);
-     * pci_err_t pci_device_cfg_wr16(pci_devhdl_t hdl, uint_t offset, uint16_t val, uint16_t *val_p);
-     * pci_err_t pci_device_cfg_wr32(pci_devhdl_t hdl, uint_t offset, uint32_t val, uint32_t *val_p);
-     * pci_err_t pci_device_cfg_wr64(pci_devhdl_t hdl, uint_t offset, uint64_t val, uint64_t *val_p);
-     */
-
-    pci_err_t err =
-        pci_device_cfg_wr16( dev->hdl,
-                             where + 0x40 /* See Important Note above */,
-                             val, NULL );
+    pci_err_t err = pci_device_cfg_wr16( dev->hdl,
+            where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
+            val, NULL );
 
     if (err != PCI_ERR_OK) {
         return -1;
