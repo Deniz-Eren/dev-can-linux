@@ -297,6 +297,8 @@ int pci_enable_device (struct pci_dev* dev) {
          * Process Capabilities of device
          */
 
+        dev->pcie_cap_0x05 = NULL;
+
         uint_t capid_idx = 0;
         pci_capid_t capid;
 
@@ -308,9 +310,8 @@ int pci_enable_device (struct pci_dev* dev) {
             log_info("read capability[%d]: %x\n", capid_idx, capid);
 
             if (capid == 0x5) { // Capability ID 0x5 (MSI)
-                pci_cap_t cap;
-
-                r = pci_device_read_cap(dev->bdf, &cap, capid_idx);
+                r = pci_device_read_cap(
+                        dev->bdf, &dev->pcie_cap_0x05, capid_idx );
 
                 if (r != PCI_ERR_OK) {
                     print_pci_device_read_cap_errors(r);
@@ -318,7 +319,7 @@ int pci_enable_device (struct pci_dev* dev) {
                     break;
                 }
 
-                uint_t nvecs = cap_msi_get_nirq(cap);
+                uint_t nvecs = cap_msi_get_nirq(dev->pcie_cap_0x05);
 
                 if (nvecs < 1) {
                     log_err("error cap_msi_get_nirq returned %d\n", nvecs);
@@ -326,8 +327,10 @@ int pci_enable_device (struct pci_dev* dev) {
                     break;
                 }
 
+                log_info("nirq: %d\n", nvecs);
+
                 r = pci_device_cfg_cap_enable( dev->hdl,
-                        pci_reqType_e_MANDATORY, cap );
+                        pci_reqType_e_MANDATORY, dev->pcie_cap_0x05 );
 
                 if (r != PCI_ERR_OK) {
                     print_pci_device_cfg_cap_enable_disable_errors(r);
@@ -407,32 +410,25 @@ void pci_disable_device (struct pci_dev* dev) {
     {
         log_info("read capability[%d]: %x\n", capid_idx, capid);
 
-        if (capid == 0x5) { // Capability ID 0x5 (MSI)
+        if (capid == 0x5 && dev->pcie_cap_0x05 != NULL) {
+            // Capability ID 0x5 (MSI)
             log_info("disabling capability 0x5 (MSI)\n");
 
-            pci_cap_t cap;
-
-            r = pci_device_read_cap(dev->bdf, &cap, capid_idx);
-
-            if (r != PCI_ERR_OK) {
-                print_pci_device_read_cap_errors(r);
-
-                break;
-            }
-
-            if (!pci_device_cfg_cap_isenabled(dev->hdl, cap)) {
+            if (!pci_device_cfg_cap_isenabled(dev->hdl, dev->pcie_cap_0x05)) {
                 log_err("error capability not enabled\n");
 
                 break;
             }
 
             r = pci_device_cfg_cap_disable( dev->hdl,
-                    pci_reqType_e_MANDATORY, cap );
+                    pci_reqType_e_UNSPECIFIED, dev->pcie_cap_0x05 );
 
             if (r != PCI_ERR_OK) {
                 print_pci_device_cfg_cap_enable_disable_errors(r);
             }
 
+            free(dev->pcie_cap_0x05);
+            dev->pcie_cap_0x05 = NULL;
             break;
         }
 

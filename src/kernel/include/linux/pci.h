@@ -73,10 +73,11 @@ extern void pci_iounmap(struct pci_dev *dev, void __iomem* addr);
  * The pci_dev structure is used to describe PCI devices.
  */
 struct pci_dev {
-    pci_bdf_t bdf; /* QNX type */
-	pci_devhdl_t hdl; /* QNX type */
-	pci_ba_t* ba; /* QNX type */
-	int_t nba;
+    pci_bdf_t bdf;              /* QNX type */
+    pci_devhdl_t hdl;           /* QNX type */
+    pci_ba_t* ba;               /* QNX type */
+    int_t nba;                  /* QNX type */
+    pci_cap_t pcie_cap_0x05;    /* QNX type */
     void __iomem** addr;
 
 	unsigned int	devfn;		/* encoded device & function index */
