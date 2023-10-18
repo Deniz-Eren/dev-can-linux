@@ -114,7 +114,21 @@ int process_driver_selection() {
             }
 
             if (detected_driver_temp) {
-                if (!optd || opt_vid != vid || opt_did != did) {
+                bool device_disabled = false;
+
+                int i;
+                for (i = 0; i < num_disable_device_configs; ++i) {
+                    if (disable_device_config[i].vid == vid &&
+                        disable_device_config[i].did == did &&
+                        disable_device_config[i].cap == -1)
+                    {
+                        device_disabled = true;
+
+                        break;
+                    }
+                }
+
+                if (!optd || !device_disabled) {
                     store_driver_selection(vid, did, detected_driver_temp);
                 }
             }
@@ -302,10 +316,28 @@ int pci_enable_device (struct pci_dev* dev) {
         uint_t capid_idx = 0;
         pci_capid_t capid;
 
+        bool disabled_capability_0x05 = false;
+        int i;
+        for (i = 0; i < num_disable_device_configs; ++i) {
+            if (disable_device_config[i].vid == dev->vendor &&
+                disable_device_config[i].did == dev->device &&
+                disable_device_config[i].cap == 0x05)
+            {
+                disabled_capability_0x05 = true;
+
+                log_info( "capability 0x%02x disabled for %x:%x\n",
+                        disable_device_config[i].cap,
+                        disable_device_config[i].vid,
+                        disable_device_config[i].did );
+                break;
+            }
+        }
+
         /* instead of looping could use pci_device_find_capid() to select
          * which capabilities to use */
-        while ((r = pci_device_read_capid(
-                dev->bdf, &capid, capid_idx) ) == PCI_ERR_OK)
+        while (!disabled_capability_0x05 &&
+                (r = pci_device_read_capid(
+                        dev->bdf, &capid, capid_idx) ) == PCI_ERR_OK)
         {
             log_info("read capability[%d]: %x\n", capid_idx, capid);
 
