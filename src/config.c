@@ -54,7 +54,8 @@ int optv = 0;
 int optl = 0;
 int opti = 0;
 int optq = 0;
-int optd = 0, opt_vid = -1, opt_did = -1;
+int optd = 0;
+int opte = 0;
 int opts = 0;
 int optt = 0;
 int optu = 0;
@@ -62,3 +63,6 @@ int optx = 0;
 
 size_t num_optu_configs = 0;
 channel_config_t* optu_config = NULL;
+
+size_t num_disable_device_configs;
+disable_device_config_t* disable_device_config;

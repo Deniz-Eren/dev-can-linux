@@ -33,7 +33,7 @@ static void sigint_signal_handler (int sig_no) {
 }
 
 int main (int argc, char* argv[]) {
-    int opt;
+    int opt, vid, did, cap;
     char *options, *value;
 
     /*
@@ -70,7 +70,7 @@ int main (int argc, char* argv[]) {
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "b:d:U:u:viqstlVCwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "b:d:e:U:u:viqstlVCwcx?h")) != -1) {
         switch (opt) {
         case 'b':
             optb++;
@@ -78,11 +78,66 @@ int main (int argc, char* argv[]) {
             break;
 
         case 'd':
-            optd++;
-            sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
-            log_info("manually disabling device: %x:%x\n", opt_vid, opt_did);
-            break;
+        {
+            disable_device_config_t* new_disable_device_config;
 
+            new_disable_device_config =
+                malloc( (num_disable_device_configs + 1) *
+                        sizeof(disable_device_config_t) );
+
+            int i;
+            for (i = 0; i < num_disable_device_configs; ++i) {
+                new_disable_device_config[i] = disable_device_config[i];
+            }
+
+            if (num_disable_device_configs) {
+                free(disable_device_config);
+            }
+
+            optd++;
+            sscanf(optarg, "%x:%x", &vid, &did);
+
+            new_disable_device_config[i].vid = vid;
+            new_disable_device_config[i].did = did;
+            new_disable_device_config[i].cap = -1;
+
+            num_disable_device_configs++;
+            disable_device_config = new_disable_device_config;
+
+            log_info("manually disabling device %x:%x\n", vid, did);
+            break;
+        }
+        case 'e':
+        {
+            disable_device_config_t* new_disable_device_config;
+
+            new_disable_device_config =
+                malloc( (num_disable_device_configs + 1) *
+                        sizeof(disable_device_config_t) );
+
+            int i;
+            for (i = 0; i < num_disable_device_configs; ++i) {
+                new_disable_device_config[i] = disable_device_config[i];
+            }
+
+            if (num_disable_device_configs) {
+                free(disable_device_config);
+            }
+
+            opte++;
+            sscanf(optarg, "%x:%x,%x", &vid, &did, &cap);
+
+            new_disable_device_config[i].vid = vid;
+            new_disable_device_config[i].did = did;
+            new_disable_device_config[i].cap = cap;
+
+            num_disable_device_configs++;
+            disable_device_config = new_disable_device_config;
+
+            log_info( "manually disabling PCIe capability 0x%02x for device %x:%x\n",
+                    cap, vid, did );
+            break;
+        }
         case 'U':
             next_device_id = atoi(optarg);
 
@@ -306,12 +361,6 @@ int main (int argc, char* argv[]) {
 
     if (optb > 1) {
         printf("error: only a single entry for option -b is allowed.\n");
-
-        return -1;
-    }
-
-    if (optd > 1) {
-        printf("error: only a single device can be disabled.\n");
 
         return -1;
     }

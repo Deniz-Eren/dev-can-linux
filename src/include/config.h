@@ -48,14 +48,13 @@ extern int optl;
 extern int opti;
 extern int optq;
 extern int optd;
-extern int opt_vid;
-extern int opt_did;
+extern int opte;
 extern int opts;
 extern int optt;
 extern int optu;
 extern int optx;
 
-typedef struct channel_config {
+typedef struct {
     int id;
     int num_rx_channels;
     int num_tx_channels;
@@ -71,6 +70,15 @@ typedef struct channel_config {
 
 extern size_t num_optu_configs;
 extern channel_config_t* optu_config;
+
+typedef struct {
+    int vid;
+    int did;
+    int cap; // cap=-1 to disable entire device
+} disable_device_config_t;
+
+extern size_t num_disable_device_configs;
+extern disable_device_config_t* disable_device_config;
 
 
 /*
