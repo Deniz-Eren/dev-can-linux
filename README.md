@@ -542,6 +542,69 @@ Current version output:
         { vendor: 10b5, device: 9030, subvendor: 3000, subdevice: 1001, class: 0, class_mask: 0 }
         { vendor: 10b5, device: 9030, subvendor: 3000, subdevice: 1002, class: 0, class_mask: 0 }
 
+
+## PCIe 0x05 (MSI) Capability Devices
+
+For PCIe devices that support capability 0x05 (MSI) both `pci-server` driver and
+`dev-can-linux` driver needs to have the environment variable
+`PCI_CAP_MODULE_DIR` defined.
+
+To check if your device supports this capability, just run the driver with high
+verbose configurations `dev-can-linux -vvvvv` and you should see the following
+during the detection process:
+
+    read capability[1]: 0x05
+
+For the `dev-can-linux` driver you can simply define this variable in your
+console, however for `pci-server` driver it is usually defined in the image.
+Furthermore, your environment must contain the PCIe module shared libraries
+`pci_cap-0x05.so\*` installed.
+
+As an example take a look at our QNX 7.1 emulation image setup scripts within the
+[workspace](https://github.com/Deniz-Eren/workspace) submodule.
+
+The scripts you should check are, firstly
+[workspace/emulation/qnx710/image/parts/ifs.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx710/image/parts/ifs.build)
+defines file `/proc/boot/pci_server.cfg` embedded in the image contains the
+environment variable `PCI_CAP_MODULE_DIR`, specifying where the capability
+modules are located for `pci-server` driver to find them:
+
+    [buscfg]
+    DO_BUS_CONFIG=no
+
+    [envars]
+    PCI_CAP_MODULE_DIR=/proc/boot/lib/dll/pci/
+    PCI_DEBUG_MODULE=pci_debug2.so
+    PCI_HW_MODULE=pci_hw-Intel_x86.so
+
+You can also see in the `ifs.build` file the PCIe 0x05 (MSI) capability module
+dynamic libraries installed in the `lib/dll/pci/` path which mounts to
+`/proc/boot/lib/dll/pci/`
+
+    lib/dll/pci/pci_cap-0x05.so=lib/dll/pci/pci_cap-0x05.so
+    lib/dll/pci/pci_cap-0x05.so.2.3=lib/dll/pci/pci_cap-0x05.so.2.3
+    lib/dll/pci/pci_cap-0x05.so.2.3.sym=lib/dll/pci/pci_cap-0x05.so.2.3.sym
+
+Next in file
+[workspace/emulation/qnx710/image/parts/system.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx710/image/parts/system.build)
+we define the same environment variable for dev-can-linux to find the PCI
+modules:
+
+    export PCI_CAP_MODULE_DIR=/proc/boot/lib/dll/pci/
+
+This shows the file `etc/profile` defining this environment variable so that the
+user console has it defined for dev-can-linux to find the PCI modules.
+
+For advanced user, if you wish to disable the 0x05 (MSI) capability from a
+specific device, pass the following program options to the `dev-can-linux`
+driver:
+
+    -e vid:did,0x05
+
+Note it is NOT recommended to disable this capability, however this ability is
+provided for advanced users to adopt at their discretion.
+
+
 ## Hardware Test Status
 
 Actual hardware tested currently are:
