@@ -339,7 +339,7 @@ int pci_enable_device (struct pci_dev* dev) {
                 (r = pci_device_read_capid(
                         dev->bdf, &capid, capid_idx) ) == PCI_ERR_OK)
         {
-            log_info("read capability[%d]: %x\n", capid_idx, capid);
+            log_info("read capability[%d]: 0x%02x\n", capid_idx, capid);
 
             if (capid == 0x5) { // Capability ID 0x5 (MSI)
                 r = pci_device_read_cap(
@@ -402,6 +402,12 @@ int pci_enable_device (struct pci_dev* dev) {
 
                 return -1;
             }
+        }
+
+        if (dev->irq == 0) {
+            log_err("failed to read any IRQs\n");
+
+            return -1;
         }
 
         /* get next device instance */
