@@ -77,7 +77,7 @@ struct pci_dev {
     pci_devhdl_t hdl;           /* QNX type */
     pci_ba_t* ba;               /* QNX type */
     int_t nba;                  /* QNX type */
-    pci_cap_t pcie_cap_0x05;    /* QNX type */
+    pci_cap_t msi_cap;          /* QNX type */
     void __iomem** addr;
 
 	unsigned int	devfn;		/* encoded device & function index */
