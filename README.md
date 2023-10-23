@@ -543,22 +543,23 @@ Current version output:
         { vendor: 10b5, device: 9030, subvendor: 3000, subdevice: 1002, class: 0, class_mask: 0 }
 
 
-## PCIe 0x05 (MSI) Capability Devices
+## PCIe MSI and MSI-X Capability Devices
 
-For PCIe devices that support capability 0x05 (MSI) both `pci-server` driver and
-`dev-can-linux` driver needs to have the environment variable
-`PCI_CAP_MODULE_DIR` defined.
+For PCIe devices that support capability 0x05 (MSI) and/or 0x11 (MSI-X), both
+`pci-server` driver and `dev-can-linux` driver needs to have the environment
+variable `PCI_CAP_MODULE_DIR` defined.
 
 To check if your device supports this capability, just run the driver with high
 verbose configurations `dev-can-linux -vvvvv` and you should see the following
 during the detection process:
 
-    read capability[1]: 0x05
+    read capability[#]: 0x05
+    read capability[#]: 0x11
 
 For the `dev-can-linux` driver you can simply define this variable in your
 console, however for `pci-server` driver it is usually defined in the image.
 Furthermore, your environment must contain the PCIe module shared libraries
-`pci_cap-0x05.so\*` installed.
+`pci_cap-0x05.so*` and/or `pci_cap-0x11.so*` installed.
 
 As an example take a look at our QNX 7.1 emulation image setup scripts within the
 [workspace](https://github.com/Deniz-Eren/workspace) submodule.
@@ -577,31 +578,50 @@ modules are located for `pci-server` driver to find them:
     PCI_DEBUG_MODULE=pci_debug2.so
     PCI_HW_MODULE=pci_hw-Intel_x86.so
 
-You can also see in the `ifs.build` file the PCIe 0x05 (MSI) capability module
-dynamic libraries installed in the `lib/dll/pci/` path which mounts to
-`/proc/boot/lib/dll/pci/`
+You can also see in the `ifs.build` file the PCIe 0x05 (MSI) and/or 0x11 (MSI-X)
+capability module dynamic libraries are installed in the `lib/dll/pci/` path
+which mounts to `/proc/boot/lib/dll/pci/`
 
     lib/dll/pci/pci_cap-0x05.so=lib/dll/pci/pci_cap-0x05.so
     lib/dll/pci/pci_cap-0x05.so.2.3=lib/dll/pci/pci_cap-0x05.so.2.3
     lib/dll/pci/pci_cap-0x05.so.2.3.sym=lib/dll/pci/pci_cap-0x05.so.2.3.sym
+    lib/dll/pci/pci_cap-0x11.so=lib/dll/pci/pci_cap-0x11.so
+    lib/dll/pci/pci_cap-0x11.so.2.2=lib/dll/pci/pci_cap-0x11.so.2.2
+    lib/dll/pci/pci_cap-0x11.so.2.2.sym=lib/dll/pci/pci_cap-0x11.so.2.2.sym
 
 Next in file
 [workspace/emulation/qnx710/image/parts/system.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx710/image/parts/system.build)
 we define the same environment variable for dev-can-linux to find the PCI
 modules:
 
+    etc/profile = {
+    export TERM=qansi
+    export PATH=/opt/bin:/proc/boot:/system/xbin
+    export LD_LIBRARY_PATH=/opt/lib:/proc/boot:/system/lib:/system/lib/dll
     export PCI_CAP_MODULE_DIR=/proc/boot/lib/dll/pci/
+    export SYSNAME=QNXTEST
+    export TZ=AEST-10
+    export PS1=\[$SYSNAME]\#
+    }
 
-This shows the file `etc/profile` defining this environment variable so that the
-user console has it defined for dev-can-linux to find the PCI modules.
+This shows the file `etc/profile` defining the needed environment variables so
+that the user console have them defined for dev-can-linux to find the PCI
+modules.
 
-For advanced user, if you wish to disable the 0x05 (MSI) capability from a
-specific device, pass the following program options to the `dev-can-linux`
-driver:
+For advanced user, if you wish to disable the 0x11 (MSI-X) capability to force
+the driver to use 0x05 (MSI) capability instead (if it's available) or if you
+wish to disable both, simply specific device and capability number with `-e`
+option program options to the `dev-can-linux` driver.
 
-    -e vid:did,0x05
+To force MSI to be used, disable MSI-X:
 
-Note it is NOT recommended to disable this capability, however this ability is
+    dev-can-linux -e vid:did,0x11
+
+To force a regular IRQ to be used disable both MSI and MSI-X:
+
+    dev-can-linux -e vid:did,0x11 -e vid:did,0x05
+
+Note it is NOT recommended to disable capabilities, however this ability is
 provided for advanced users to adopt at their discretion.
 
 
