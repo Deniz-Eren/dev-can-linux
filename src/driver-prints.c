@@ -29,7 +29,7 @@ void print_driver_selection_results() {
     driver_selection_t** location = &driver_selection_root;
 
     while (*location != NULL) {
-        log_info("Auto detected device (%x:%x) successfully: (driver \"%s\")\n",
+        log_info("Auto detected device (%04x:%04x) successfully: (driver \"%s\")\n",
                 (*location)->pdev.vendor,
                 (*location)->pdev.device,
                 (*location)->driver->name);
@@ -402,8 +402,9 @@ void print_pci_errors (pci_err_t r) {
         log_err("pci error; PCI_ERR_SERVER_NOT_AVAILABLE\n");
         break;
     default:
-        log_err( "Unknown pci error: %d [%d,%d)\n",
-                (int)r, (int)pci_err_t_first, (int)pci_err_t_last );
+        log_err( "Unknown pci error: %d [%d,%d) errno: %s\n",
+                (int)r, (int)pci_err_t_first, (int)pci_err_t_last,
+                strerror(r) );
 
         break;
     }
