@@ -241,6 +241,10 @@ void msix_init (struct pci_dev* dev) {
 void msix_uninit (struct pci_dev* dev) {
     pci_err_t r;
 
+    if (dev->msi_cap == NULL) {
+        return;
+    }
+
     log_info("disabling capability\n");
 
     if (!pci_device_cfg_cap_isenabled(dev->hdl, dev->msi_cap)) {
@@ -265,10 +269,13 @@ int pci_enable_device (struct pci_dev* dev) {
             dev->vendor, dev->device);
 
     uint_t idx = 0;
+    pci_bdf_t bdf;
 
-    while ((dev->bdf = pci_device_find(
+    while ((bdf = pci_device_find(
             idx, dev->vendor, dev->device, PCI_CCODE_ANY) ) != PCI_BDF_NONE)
     {
+        dev->bdf = bdf;
+
         if (idx > 0) {
             log_err("only single device per vendor and device id combination "
                     "supported\n");
