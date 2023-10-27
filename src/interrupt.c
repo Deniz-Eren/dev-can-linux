@@ -104,7 +104,7 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
     CONFIG_QNX_INTERRUPT_ATTACH == 1
     if (chid == -1) {
-        unsigned flags = 0;
+        unsigned flags = _NTO_CHF_PRIVATE;
 
         chid = ChannelCreate(flags);
         int coid = ConnectAttach(ND_LOCAL_NODE, 0, chid, _NTO_SIDE_CHANNEL, 0);
