@@ -201,6 +201,12 @@ pci_err_t pci_enable_device (struct pci_dev* dev) {
                 cs, PCI_SLOT(cs), PCI_FUNC(bdf), dev->devfn);
 
         /*
+         * Load capabilities
+         */
+
+        msix_init(dev);
+
+        /*
          * Process bar info
          */
 
@@ -305,8 +311,6 @@ pci_err_t pci_enable_device (struct pci_dev* dev) {
             }
         }
 #undef MAX_NUM_BA
-
-        msix_init(dev);
 
         /*
          * Process IRQ info
