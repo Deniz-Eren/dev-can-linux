@@ -207,6 +207,10 @@ void run_wait() {
 
         int_t k = pulse.code;
 
+        if (k < 0) {
+            continue;
+        }
+
 # if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
         InterruptUnmask(irq_attach[k].irq, irq_attach[k].id);
 # endif
@@ -215,7 +219,8 @@ void run_wait() {
         log_dbg("IRQ: %d\n", irq_attach[k].irq);
 #endif
 
-        if (pci_device_cfg_cap_isenabled(
+        if (irq_attach[k].msi_cap
+            && pci_device_cfg_cap_isenabled(
                     irq_attach[k].hdl, irq_attach[k].msi_cap ))
         {
             if (irq_attach[k].is_msix) {
