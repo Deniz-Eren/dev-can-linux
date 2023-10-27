@@ -27,7 +27,6 @@
 #include "config.h"
 #include "pci.h"
 #include "pci-capability.h"
-#include "driver-prints.h"
 
 #include <linux/io.h>
 
@@ -141,7 +140,7 @@ int process_driver_selection() {
     return 0;
 }
 
-int pci_enable_device (struct pci_dev* dev) {
+pci_err_t pci_enable_device (struct pci_dev* dev) {
     log_trace("pci_enable_device: %04x:%04x\n",
             dev->vendor, dev->device);
 
@@ -155,7 +154,7 @@ int pci_enable_device (struct pci_dev* dev) {
             log_err("only single device per vendor and device id combination "
                     "supported\n");
 
-            return -1;
+            return PCI_ERR_ENOTSUP; // Not supported
         }
 
         pci_err_t r;
@@ -163,9 +162,9 @@ int pci_enable_device (struct pci_dev* dev) {
         dev->hdl = pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
 
         if (dev->hdl == NULL) {
-            print_pci_device_attach_errors(r);
+            log_err("pci_device_attach error: %s\n", pci_strerror(r));
 
-            return -1;
+            return r;
         }
 
         /*
@@ -177,18 +176,18 @@ int pci_enable_device (struct pci_dev* dev) {
         pci_cs_t cs; /* chassis and slot */
 
         if ((r = pci_device_read_ssvid(bdf, &ssvid)) != PCI_ERR_OK) {
-            log_err("error reading ssvid\n");
+            log_err("pci_device_read_ssvid error: %s\n", pci_strerror(r));
 
-            return -1;
+            return r;
         }
 
         log_info("read ssvid: %04x\n", ssvid);
         dev->subsystem_vendor = ssvid;
 
         if ((r = pci_device_read_ssid(bdf, &ssid)) != PCI_ERR_OK) {
-            log_err("error reading ssid\n");
+            log_err("pci_device_read_ssid error: %s\n", pci_strerror(r));
 
-            return -1;
+            return r;
         }
 
         log_info("read ssid: %04x\n", ssid);
@@ -273,7 +272,7 @@ int pci_enable_device (struct pci_dev* dev) {
                     log_err("pci_enable_device error; unknown PCI region "
                             "type: %d\n", dev->ba[i].type);
 
-                    return -1;
+                    return PCI_ERR_ENOTSUP; // Not supported
                 }
 
                 log_info("read ba[%d] %s { addr: %x, size: %x }\n",
@@ -291,7 +290,7 @@ int pci_enable_device (struct pci_dev* dev) {
                             (void*)pci_mem_addr_space_begin,
                             (void*)pci_mem_addr_space_end);
 
-                    return -1;
+                    return PCI_ERR_ENOTSUP; // Not supported
                 }
 
                 // Used in linux/io.h
@@ -333,14 +332,14 @@ int pci_enable_device (struct pci_dev* dev) {
         if (dev->irq == 0) {
             log_err("failed to read any IRQs\n");
 
-            return -1;
+            return PCI_ERR_ENOTSUP; // Not supported
         }
 
         /* get next device instance */
         ++idx;
     }
 
-    return 0;
+    return PCI_ERR_OK;
 }
 
 void pci_disable_device (struct pci_dev* dev) {

@@ -26,10 +26,5 @@
 /* Info prints */
 extern void print_support (int detailed);
 
-/* Error print helpers */
-void print_pci_device_attach_errors (pci_err_t r);
-void print_pci_device_read_cap_errors (pci_err_t r);
-void print_pci_device_cfg_cap_enable_disable_errors (pci_err_t r);
-void print_pci_errors (pci_err_t r);
 
 #endif /* SRC_DRIVER_PRINTS_H_ */

@@ -30,7 +30,6 @@
 #include "config.h"
 #include "pci.h"
 #include "pci-capability.h"
-#include "driver-prints.h"
 
 #include <linux/io.h>
 
@@ -49,7 +48,7 @@ static inline pci_err_t pcie_init (struct pci_dev* dev) {
     r = pci_device_read_cap(pci_bdf(dev->hdl), &dev->pcie_cap, cap_index);
 
     if (r != PCI_ERR_OK) {
-        print_pci_device_read_cap_errors(r);
+        log_err("pci_device_read_cap error; %s\n", pci_strerror(r));
 
         return r;
     }
@@ -60,7 +59,7 @@ static inline pci_err_t pcie_init (struct pci_dev* dev) {
             pci_reqType_e_MANDATORY, dev->pcie_cap );
 
     if (r != PCI_ERR_OK && r != PCI_ERR_EALREADY) {
-        print_pci_device_cfg_cap_enable_disable_errors(r);
+        log_err("pci_device_cfg_cap_enable error; %s\n", pci_strerror(r));
 
         return r;
     }
@@ -72,10 +71,14 @@ static inline pci_err_t pcie_init (struct pci_dev* dev) {
         log_info("capability 0x%02x (PCIe) enabled\n", capid);
     }
 
+    int_t pcie_version = cap_pcie_version(dev->pcie_cap);
+
+    log_info("PCIe version: %d\n", pcie_version);
+
     return PCI_ERR_OK;
 }
 
-void msix_init (struct pci_dev* dev) {
+pci_err_t msix_init (struct pci_dev* dev) {
     pci_err_t r;
     int i;
 
@@ -143,7 +146,7 @@ void msix_init (struct pci_dev* dev) {
     }
 
     if (cap_index == -1) {
-        return;
+        return PCI_ERR_ENOTSUP; // Not supported
     }
 
     if (is_pcie_cap) { /* Read PCIe extended capability */
@@ -151,18 +154,18 @@ void msix_init (struct pci_dev* dev) {
                 dev->pcie_cap, &dev->msi_cap, cap_index );
 
         if (r != PCI_ERR_OK) {
-            print_pci_device_read_cap_errors(r);
+            log_err("cap_pcie_read_xtnd_cap error; %s\n", pci_strerror(r));
 
-            return;
+            return r;
         }
     }
     else { /* Read regular capability */
         r = pci_device_read_cap(pci_bdf(dev->hdl), &dev->msi_cap, cap_index);
 
         if (r != PCI_ERR_OK) {
-            print_pci_device_read_cap_errors(r);
+            log_err("pci_device_read_cap error; %s\n", pci_strerror(r));
 
-            return;
+            return r;
         }
     }
 
@@ -180,7 +183,7 @@ void msix_init (struct pci_dev* dev) {
     if (nvecs < 1) {
         log_err("error cap_msi_get_nirq returned %d\n", nvecs);
 
-        return;
+        return PCI_ERR_ENOTSUP; // Not supported
     }
 
     log_info("nirq: %d\n", nvecs);
@@ -190,9 +193,9 @@ void msix_init (struct pci_dev* dev) {
             r = cap_msix_set_irq_entry(dev->hdl, dev->msi_cap, i, i);
 
             if (r != PCI_ERR_OK) {
-                print_pci_errors(r);
+                log_err("cap_msix_set_irq_entry error; %s\n", pci_strerror(r));
 
-                return;
+                return r;
             }
         }
     }
@@ -200,9 +203,9 @@ void msix_init (struct pci_dev* dev) {
         r = cap_msi_set_nirq(dev->hdl, dev->msi_cap, nvecs);
 
         if (r != PCI_ERR_OK) {
-            print_pci_errors(r);
+            log_err("cap_msi_set_nirq error; %s\n", pci_strerror(r));
 
-            return;
+            return r;
         }
     }
 
@@ -210,9 +213,9 @@ void msix_init (struct pci_dev* dev) {
             pci_reqType_e_MANDATORY, dev->msi_cap );
 
     if (r != PCI_ERR_OK) {
-        print_pci_device_cfg_cap_enable_disable_errors(r);
+        log_err("pci_device_cfg_cap_enable error; %s\n", pci_strerror(r));
 
-        return;
+        return r;
     }
 
     if (capid == CAPID_MSIX) {
@@ -235,6 +238,8 @@ void msix_init (struct pci_dev* dev) {
         log_info("capability 0x%02x (MSI) enabled\n", capid);
         dev->is_msix = false;
     }
+
+    return PCI_ERR_OK;
 }
 
 static inline void pcie_uninit (struct pci_dev* dev) {
@@ -256,7 +261,7 @@ static inline void pcie_uninit (struct pci_dev* dev) {
             pci_reqType_e_UNSPECIFIED, dev->pcie_cap );
 
     if (r != PCI_ERR_OK && r != PCI_ERR_ENOTSUP) {
-        print_pci_device_cfg_cap_enable_disable_errors(r);
+        log_err("pci_device_cfg_cap_disable error; %s\n", pci_strerror(r));
     }
 
     if (r == PCI_ERR_ENOTSUP) {
@@ -291,7 +296,7 @@ void msix_uninit (struct pci_dev* dev) {
             pci_reqType_e_UNSPECIFIED, dev->msi_cap );
 
     if (r != PCI_ERR_OK) {
-        print_pci_device_cfg_cap_enable_disable_errors(r);
+        log_err("pci_device_cfg_cap_disable error; %s\n", pci_strerror(r));
     }
 
     free(dev->msi_cap);

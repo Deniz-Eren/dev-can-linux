@@ -25,7 +25,7 @@
 #include <linux/pci.h>
 
 
-void msix_init (struct pci_dev* dev);
-void msix_uninit (struct pci_dev* dev);
+extern pci_err_t msix_init (struct pci_dev* dev);
+extern void msix_uninit (struct pci_dev* dev);
 
 #endif /* SRC_PCI_CAPABILITY_H_ */

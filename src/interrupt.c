@@ -25,7 +25,6 @@
 #include <pci/cap_msix.h>
 
 #include "interrupt.h"
-#include "driver-prints.h"
 
 //#define MSI_DEBUG
 
@@ -229,7 +228,8 @@ void run_wait() {
                     case PCI_ERR_OK:
                         break;
                     default:
-                        print_pci_errors(err);
+                        log_err("cap_msix_unmask_irq_entry error: %s\n",
+                                pci_strerror(err));
                         break;
                 };
             }
@@ -253,7 +253,8 @@ void run_wait() {
                     case PCI_ERR_OK:
                         break;
                     default:
-                        print_pci_errors(err);
+                        log_err("cap_msi_unmask_irq_entry error: %s\n",
+                                pci_strerror(err));
                         break;
                 };
             }

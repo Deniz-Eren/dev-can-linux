@@ -140,7 +140,7 @@ struct pci_driver {
 extern int pci_read_config_word(const struct pci_dev *dev, int where, u16 *val);
 extern int pci_write_config_word(const struct pci_dev *dev, int where, u16 val);
 
-extern int pci_enable_device(struct pci_dev *dev);
+extern pci_err_t pci_enable_device (struct pci_dev* dev);
 extern void pci_disable_device(struct pci_dev *dev);
 
 #define PCI_IRQ_LEGACY		(1 << 0) /* Allow legacy interrupts */
