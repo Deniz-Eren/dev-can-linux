@@ -200,7 +200,16 @@ void run_wait() {
             return;
         }
 
+        if (rcvid == -1 ) {
+            // handle error (errno)
+            continue;
+        }
+
         int_t k = pulse.code;
+
+# if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
+        InterruptUnmask(irq_attach[k].irq, irq_attach[k].id);
+# endif
 
 #ifdef MSI_DEBUG
         log_dbg("IRQ: %d\n", irq_attach[k].irq);
@@ -263,15 +272,6 @@ void run_wait() {
 #ifdef MSI_DEBUG
             log_dbg("IRQ: non-MSI\n");
 #endif
-        }
-
-# if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-        InterruptUnmask(irq_attach[k].irq, irq_attach[k].id);
-# endif
-
-        if (rcvid == -1 ) {
-            // handle error (errno)
-            continue;
         }
 
         // handle pulse
