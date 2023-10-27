@@ -151,8 +151,6 @@ int pci_enable_device (struct pci_dev* dev) {
     while ((bdf = pci_device_find(
             idx, dev->vendor, dev->device, PCI_CCODE_ANY) ) != PCI_BDF_NONE)
     {
-        dev->bdf = bdf;
-
         if (idx > 0) {
             log_err("only single device per vendor and device id combination "
                     "supported\n");
@@ -162,8 +160,7 @@ int pci_enable_device (struct pci_dev* dev) {
 
         pci_err_t r;
 
-        dev->hdl =
-            pci_device_attach(dev->bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
+        dev->hdl = pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
 
         if (dev->hdl == NULL) {
             print_pci_device_attach_errors(r);
@@ -179,7 +176,7 @@ int pci_enable_device (struct pci_dev* dev) {
         pci_ssid_t ssid;
         pci_cs_t cs; /* chassis and slot */
 
-        if ((r = pci_device_read_ssvid(dev->bdf, &ssvid)) != PCI_ERR_OK) {
+        if ((r = pci_device_read_ssvid(bdf, &ssvid)) != PCI_ERR_OK) {
             log_err("error reading ssvid\n");
 
             return -1;
@@ -188,7 +185,7 @@ int pci_enable_device (struct pci_dev* dev) {
         log_info("read ssvid: %04x\n", ssvid);
         dev->subsystem_vendor = ssvid;
 
-        if ((r = pci_device_read_ssid(dev->bdf, &ssid)) != PCI_ERR_OK) {
+        if ((r = pci_device_read_ssid(bdf, &ssid)) != PCI_ERR_OK) {
             log_err("error reading ssid\n");
 
             return -1;
@@ -197,12 +194,12 @@ int pci_enable_device (struct pci_dev* dev) {
         log_info("read ssid: %04x\n", ssid);
         dev->subsystem_device = ssid;
 
-        cs = pci_device_chassis_slot(dev->bdf);
+        cs = pci_device_chassis_slot(bdf);
 
-        dev->devfn = PCI_DEVFN(PCI_SLOT(cs), PCI_FUNC(dev->bdf));
+        dev->devfn = PCI_DEVFN(PCI_SLOT(cs), PCI_FUNC(bdf));
 
         log_info("read cs: %x, slot: %x, func: %x, devfn: %x\n",
-                cs, PCI_SLOT(cs), PCI_FUNC(dev->bdf), dev->devfn);
+                cs, PCI_SLOT(cs), PCI_FUNC(bdf), dev->devfn);
 
         /*
          * Process bar info
@@ -349,7 +346,7 @@ int pci_enable_device (struct pci_dev* dev) {
 void pci_disable_device (struct pci_dev* dev) {
     log_trace("pci_disable_device\n");
 
-    if (dev->bdf == PCI_BDF_NONE) {
+    if (pci_bdf(dev->hdl) == PCI_BDF_NONE) {
         log_err("pci device not enabled\n");
 
         return;

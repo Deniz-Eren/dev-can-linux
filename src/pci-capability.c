@@ -40,14 +40,13 @@ static inline pci_err_t pcie_init (struct pci_dev* dev) {
     uint_t capid = CAPID_PCIe;
     int_t cap_index = -1;
 
-    cap_index = pci_device_find_capid(dev->bdf, capid);
+    cap_index = pci_device_find_capid(pci_bdf(dev->hdl), capid);
 
     if (cap_index == -1) {
         return PCI_ERR_ENOTSUP; // Not supported
     }
 
-    r = pci_device_read_cap(
-            dev->bdf, &dev->pcie_cap, cap_index );
+    r = pci_device_read_cap(pci_bdf(dev->hdl), &dev->pcie_cap, cap_index);
 
     if (r != PCI_ERR_OK) {
         print_pci_device_read_cap_errors(r);
@@ -131,12 +130,12 @@ void msix_init (struct pci_dev* dev) {
         /* Search for regular capability */
         if (!disabled_msix) {
             capid = CAPID_MSIX;
-            cap_index = pci_device_find_capid(dev->bdf, capid);
+            cap_index = pci_device_find_capid(pci_bdf(dev->hdl), capid);
         }
 
         if (!disabled_msi && cap_index == -1) {
             capid = CAPID_MSI;
-            cap_index = pci_device_find_capid(dev->bdf, capid);
+            cap_index = pci_device_find_capid(pci_bdf(dev->hdl), capid);
         }
     }
     else {
@@ -158,8 +157,7 @@ void msix_init (struct pci_dev* dev) {
         }
     }
     else { /* Read regular capability */
-        r = pci_device_read_cap(
-                dev->bdf, &dev->msi_cap, cap_index );
+        r = pci_device_read_cap(pci_bdf(dev->hdl), &dev->msi_cap, cap_index);
 
         if (r != PCI_ERR_OK) {
             print_pci_device_read_cap_errors(r);
