@@ -68,17 +68,17 @@ extern client_session_t* create_client_session (
 extern void destroy_client_session (client_session_t* S);
 
 static inline device_session_t* get_last_device_session() {
-    device_session_t** last = &root_device_session;
+    device_session_t* last = root_device_session;
 
-    if (*last == NULL) {
+    if (last == NULL) {
         return NULL;
     }
 
-    while ((*last)->next != NULL) {
-        last = &(*last)->next;
+    while (last->next != NULL) {
+        last = last->next;
     }
 
-    return *last;
+    return last;
 }
 
 static inline client_session_t* get_last_client_session (device_session_t* ds) {
@@ -86,28 +86,28 @@ static inline client_session_t* get_last_client_session (device_session_t* ds) {
         return NULL;
     }
 
-    client_session_t** last = &ds->root_client_session;
+    client_session_t* last = ds->root_client_session;
 
-    if (*last == NULL) {
+    if (last == NULL) {
         return NULL;
     }
 
-    while ((*last)->next != NULL) {
-        last = &(*last)->next;
+    while (last->next != NULL) {
+        last = last->next;
     }
 
-    return *last;
+    return last;
 }
 
 static inline device_session_t* get_device_session (struct net_device* dev) {
-    device_session_t** location = &root_device_session;
+    device_session_t* location = root_device_session;
 
-    while (*location != NULL) {
-        if ((*location)->device == dev) {
-            return *location;
+    while (location != NULL) {
+        if (location->device == dev) {
+            return location;
         }
 
-        location = &(*location)->next;
+        location = location->next;
     }
 
     return NULL;

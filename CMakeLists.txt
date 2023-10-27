@@ -119,6 +119,7 @@ list( APPEND C_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/src/logs.c
     ${CMAKE_SOURCE_DIR}/src/netif.c
     ${CMAKE_SOURCE_DIR}/src/pci.c
+    ${CMAKE_SOURCE_DIR}/src/pci-capability.c
     ${CMAKE_SOURCE_DIR}/src/prints.c
     ${CMAKE_SOURCE_DIR}/src/driver-prints.c
     ${CMAKE_SOURCE_DIR}/src/queue.c

@@ -23,11 +23,10 @@
 
 #include <sys/neutrino.h>
 #include <sys/mman.h>
-#include <pci/cap_msi.h>
-#include <pci/cap_msix.h>
 
 #include "config.h"
 #include "pci.h"
+#include "pci-capability.h"
 #include "driver-prints.h"
 
 #include <linux/io.h>
@@ -140,128 +139,6 @@ int process_driver_selection() {
     }
 
     return 0;
-}
-
-void msix_init (struct pci_dev* dev) {
-    pci_err_t r;
-    int i;
-
-    bool disabled_msi = false;
-    bool disabled_msix = false;
-
-    dev->msi_cap = NULL;
-
-    for (i = 0; i < num_disable_device_configs; ++i) {
-        if (disable_device_config[i].vid == dev->vendor &&
-            disable_device_config[i].did == dev->device)
-        {
-            if (disable_device_config[i].cap == 0x05) {
-                if (disabled_msi)
-                    continue;
-
-                disabled_msi = true;
-            }
-            else if (disable_device_config[i].cap == 0x11) {
-                if (disabled_msix)
-                    continue;
-
-                disabled_msix = true;
-            }
-            else continue;
-
-            log_info( "capability 0x%02x disabled for %x:%x\n",
-                    disable_device_config[i].cap,
-                    disable_device_config[i].vid,
-                    disable_device_config[i].did );
-        }
-    }
-
-    int_t capid_idx = -1;
-    uint_t capid = 0;
-
-    if (!disabled_msix) {
-        capid = CAPID_MSIX;
-        capid_idx = pci_device_find_capid(dev->bdf, capid);
-    }
-
-    if (!disabled_msi && capid_idx == -1) {
-        capid = CAPID_MSI;
-        capid_idx = pci_device_find_capid(dev->bdf, capid);
-    }
-
-    if (capid_idx == -1) {
-        return;
-    }
-
-    log_info("read capability[%d]: 0x%02x\n", capid_idx, capid);
-
-    r = pci_device_read_cap(
-            dev->bdf, &dev->msi_cap, capid_idx );
-
-    if (r != PCI_ERR_OK) {
-        print_pci_device_read_cap_errors(r);
-
-        return;
-    }
-
-    uint_t nvecs = 0;
-
-    if (capid == CAPID_MSIX) {
-        nvecs = cap_msix_get_nirq(dev->msi_cap);
-    }
-    else {
-        nvecs = cap_msi_get_nirq(dev->msi_cap);
-    }
-
-    if (nvecs < 1) {
-        log_err("error cap_msi_get_nirq returned %d\n", nvecs);
-
-        return;
-    }
-
-    log_info("nirq: %d\n", nvecs);
-
-    r = pci_device_cfg_cap_enable( dev->hdl,
-            pci_reqType_e_MANDATORY, dev->msi_cap );
-
-    if (r != PCI_ERR_OK) {
-        print_pci_device_cfg_cap_enable_disable_errors(r);
-
-        return;
-    }
-
-    if (capid == CAPID_MSIX) {
-        log_info("capability 0x11 (MSI-X) enabled\n");
-    }
-    else {
-        log_info("capability 0x05 (MSI) enabled\n");
-    }
-}
-
-void msix_uninit (struct pci_dev* dev) {
-    pci_err_t r;
-
-    if (dev->msi_cap == NULL) {
-        return;
-    }
-
-    log_info("disabling capability\n");
-
-    if (!pci_device_cfg_cap_isenabled(dev->hdl, dev->msi_cap)) {
-        log_err("error capability not enabled\n");
-
-        return;
-    }
-
-    r = pci_device_cfg_cap_disable( dev->hdl,
-            pci_reqType_e_UNSPECIFIED, dev->msi_cap );
-
-    if (r != PCI_ERR_OK) {
-        print_pci_device_cfg_cap_enable_disable_errors(r);
-    }
-
-    free(dev->msi_cap);
-    dev->msi_cap = NULL;
 }
 
 int pci_enable_device (struct pci_dev* dev) {
@@ -453,11 +330,7 @@ int pci_enable_device (struct pci_dev* dev) {
                 log_info("read irq[%d]: %d\n", i, irq[i]);
             }
 
-            if (nirq > 1) {
-                log_err("read multiple (%d) IRQs\n", nirq);
-
-                return -1;
-            }
+            irq_group_add(irq, nirq, dev->hdl, dev->msi_cap, dev->is_msix);
         }
 
         if (dev->irq == 0) {

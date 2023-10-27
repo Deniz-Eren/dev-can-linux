@@ -177,40 +177,40 @@ static inline void store_resmgr (can_resmgr_t** root, can_resmgr_t* r) {
         return;
     }
 
-    can_resmgr_t** last = root;
+    can_resmgr_t* last = *root;
 
-    while ((*last)->next != NULL) {
-        last = &(*last)->next;
+    while (last->next != NULL) {
+        last = last->next;
     }
 
-    (*last)->next = r;
-    r->prev = (*last);
+    last->next = r;
+    r->prev = last;
     r->next = NULL;
 }
 
 static inline can_resmgr_t* get_resmgr (can_resmgr_t** root, int id) {
-    can_resmgr_t** location = root;
+    can_resmgr_t* location = *root;
 
-    while (*location != NULL) {
-        if ((*location)->id == id) {
-            return *location;
+    while (location != NULL) {
+        if (location->id == id) {
+            return location;
         }
 
-        location = &(*location)->next;
+        location = location->next;
     }
 
     return NULL;
 }
 
 static inline void free_all_resmgrs (can_resmgr_t** root) {
-    can_resmgr_t** location = root;
+    can_resmgr_t* location = *root;
 
-    while (*location != NULL) {
-        can_resmgr_t** next = &(*location)->next;
+    while (location != NULL) {
+        can_resmgr_t* next = location->next;
 
-        free(*location);
+        free(location);
 
-        *location = *next;
+        location = next;
     }
 }
 
@@ -223,28 +223,28 @@ static inline void store_blocked_client (
         return;
     }
 
-    blocked_client_t** last = root;
+    blocked_client_t* last = *root;
 
-    while ((*last)->next != NULL) {
-        last = &(*last)->next;
+    while (last->next != NULL) {
+        last = last->next;
     }
 
-    (*last)->next = r;
-    r->prev = (*last);
+    last->next = r;
+    r->prev = last;
     r->next = NULL;
 }
 
 static inline blocked_client_t* get_blocked_client (
         blocked_client_t** root, int rcvid)
 {
-    blocked_client_t** location = root;
+    blocked_client_t* location = *root;
 
-    while (*location != NULL) {
-        if ((*location)->rcvid == rcvid) {
-            return *location;
+    while (location != NULL) {
+        if (location->rcvid == rcvid) {
+            return location;
         }
 
-        location = &(*location)->next;
+        location = location->next;
     }
 
     return NULL;
@@ -286,14 +286,14 @@ static inline void remove_blocked_client (blocked_client_t** root, int rcvid) {
 }
 
 static inline void free_all_blocked_clients (blocked_client_t** root) {
-    blocked_client_t** location = root;
+    blocked_client_t* location = *root;
 
-    while (*location != NULL) {
-        blocked_client_t** next = &(*location)->next;
+    while (location != NULL) {
+        blocked_client_t* next = location->next;
 
-        free(*location);
+        free(location);
 
-        *location = *next;
+        location = next;
     }
 }
 

@@ -20,6 +20,7 @@
 
 #include <stdio.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include <config.h>
 #include <pci.h>
@@ -418,6 +419,8 @@ int main (int argc, char* argv[]) {
      * thus we can never reach here.
      */
     remove_all_driver_selections();
+
+    irq_group_cleanup();
 
     free(optu_config);
 
