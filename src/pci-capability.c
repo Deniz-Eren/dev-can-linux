@@ -196,6 +196,27 @@ void msix_init (struct pci_dev* dev) {
 
     log_info("nirq: %d\n", nvecs);
 
+    if (capid == CAPID_MSIX) {
+        for (int i = 0; i < nvecs; ++i) {
+            r = cap_msix_set_irq_entry(dev->hdl, dev->msi_cap, i, i);
+
+            if (r != PCI_ERR_OK) {
+                print_pci_errors(r);
+
+                return;
+            }
+        }
+    }
+    else {
+        r = cap_msi_set_nirq(dev->hdl, dev->msi_cap, nvecs);
+
+        if (r != PCI_ERR_OK) {
+            print_pci_errors(r);
+
+            return;
+        }
+    }
+
     r = pci_device_cfg_cap_enable( dev->hdl,
             pci_reqType_e_MANDATORY, dev->msi_cap );
 
