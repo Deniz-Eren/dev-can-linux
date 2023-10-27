@@ -202,14 +202,14 @@ int netif_rx (struct sk_buff* skb) {
 
     device_session_t* ds = skb->dev->device_session;
 
-    client_session_t** it = &ds->root_client_session;
-    while (it != NULL && *it != NULL) {
-        if ((canmsg.mid & *(*it)->mfilter) == canmsg.mid) {
-            if (enqueue(&(*it)->rx_queue, &canmsg) != EOK) {
+    client_session_t* it = ds->root_client_session;
+    while (it != NULL) {
+        if ((canmsg.mid & *it->mfilter) == canmsg.mid) {
+            if (enqueue(&it->rx_queue, &canmsg) != EOK) {
             }
         }
 
-        it = &(*it)->next;
+        it = it->next;
     }
 
     pthread_mutex_unlock(&device_session_create_mutex);

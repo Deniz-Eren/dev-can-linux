@@ -425,16 +425,16 @@ void unregister_netdev(struct net_device *dev) {
         }
     }
 
-    can_resmgr_t** location = &root_resmgr;
+    can_resmgr_t* location = root_resmgr;
 
-    while (*location != NULL) {
-        can_resmgr_t* resmgr = *location;
+    while (location != NULL) {
+        can_resmgr_t* resmgr = location;
 
         char name[MAX_NAME_SIZE];
         strncpy(name, resmgr->name, MAX_NAME_SIZE);
 
         if (resmgr->device_session->device != dev) {
-            location = &(*location)->next;
+            location = location->next;
 
             continue;
         }
