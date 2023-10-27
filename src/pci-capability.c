@@ -68,15 +68,6 @@ static inline pci_err_t pcie_init (struct pci_dev* dev) {
 
     if (r == PCI_ERR_EALREADY) {
         log_info("capability 0x%02x (PCIe) already enabled\n", capid);
-
-        r = pci_device_read_cap(
-                dev->bdf, &dev->pcie_cap, cap_index );
-
-        if (r != PCI_ERR_OK) {
-            print_pci_device_read_cap_errors(r);
-
-            return r;
-        }
     }
     else {
         log_info("capability 0x%02x (PCIe) enabled\n", capid);
@@ -266,8 +257,12 @@ static inline void pcie_uninit (struct pci_dev* dev) {
     r = pci_device_cfg_cap_disable( dev->hdl,
             pci_reqType_e_UNSPECIFIED, dev->pcie_cap );
 
-    if (r != PCI_ERR_OK) {
+    if (r != PCI_ERR_OK && r != PCI_ERR_ENOTSUP) {
         print_pci_device_cfg_cap_enable_disable_errors(r);
+    }
+
+    if (r == PCI_ERR_ENOTSUP) {
+        log_info("disabling PCIe capability not allowed\n");
     }
 
     free(dev->pcie_cap);
