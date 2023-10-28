@@ -154,15 +154,21 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
             if (group->is_msix) { // MSI-X Support
                 irq_attach[k].mask = mask_irq_msix;
                 irq_attach[k].unmask = unmask_irq_msix;
+
+                log_trace("attached MSI-X IRQ %d\n", group->irq[i]);
             }
             else { // MSI Support
                 irq_attach[k].mask = mask_irq_msi;
                 irq_attach[k].unmask = unmask_irq_msi;
+
+                log_trace("attached MSI IRQ %d\n", group->irq[i]);
             }
         }
         else { // Regular IRQ
             irq_attach[k].mask = mask_irq_regular;
             irq_attach[k].unmask = unmask_irq_regular;
+
+            log_trace("attached regular IRQ %d\n", group->irq[i]);
         }
 #endif
 

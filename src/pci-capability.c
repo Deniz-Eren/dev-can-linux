@@ -119,12 +119,12 @@ pci_err_t msix_init (struct pci_dev* dev) {
     bool is_pcie_cap = false;
 
     /* Search for PCIe extended capability */
-    if (!disabled_msix) {
+    if (!disabled_msix && dev->pcie_cap != NULL) {
         capid = CAPID_MSIX;
         cap_index = cap_pcie_find_xtnd_capid(dev->pcie_cap, capid);
     }
 
-    if (!disabled_msi && cap_index == -1) {
+    if (!disabled_msi && cap_index == -1 && dev->pcie_cap != NULL) {
         capid = CAPID_MSI;
         cap_index = cap_pcie_find_xtnd_capid(dev->pcie_cap, capid);
     }
