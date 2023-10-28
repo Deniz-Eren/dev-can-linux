@@ -203,14 +203,12 @@ static inline can_resmgr_t* get_resmgr (can_resmgr_t** root, int id) {
 }
 
 static inline void free_all_resmgrs (can_resmgr_t** root) {
-    can_resmgr_t* location = *root;
+    while (*root != NULL) {
+        can_resmgr_t* next = (*root)->next;
 
-    while (location != NULL) {
-        can_resmgr_t* next = location->next;
+        free(*root);
 
-        free(location);
-
-        location = next;
+        *root = next;
     }
 }
 
@@ -286,14 +284,12 @@ static inline void remove_blocked_client (blocked_client_t** root, int rcvid) {
 }
 
 static inline void free_all_blocked_clients (blocked_client_t** root) {
-    blocked_client_t* location = *root;
+    while (*root != NULL) {
+        blocked_client_t* next = (*root)->next;
 
-    while (location != NULL) {
-        blocked_client_t* next = location->next;
+        free(*root);
 
-        free(location);
-
-        location = next;
+        *root = next;
     }
 }
 

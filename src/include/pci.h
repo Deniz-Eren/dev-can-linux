@@ -97,17 +97,15 @@ static inline int probe_all_driver_selections() {
 }
 
 static inline void remove_all_driver_selections() {
-    driver_selection_t* location = driver_selection_root;
+    while (driver_selection_root != NULL) {
+        driver_selection_t* next = driver_selection_root->next;
 
-    while (location != NULL) {
-        driver_selection_t* next = location->next;
+        log_info("Shutting down %s\n", driver_selection_root->driver->name);
 
-        log_info("Shutting down %s\n", location->driver->name);
+        driver_selection_root->driver->remove(&driver_selection_root->pdev);
+        free(driver_selection_root);
 
-        location->driver->remove(&location->pdev);
-        free(location);
-
-        location = next;
+        driver_selection_root = next;
     }
 }
 
