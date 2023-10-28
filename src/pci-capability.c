@@ -218,6 +218,26 @@ pci_err_t msix_init (struct pci_dev* dev) {
         return r;
     }
 
+    if (capid == CAPID_MSI) {
+        cap_msi_mask_t mask;
+
+        r = cap_msi_get_irq_mask(dev->hdl, dev->msi_cap, &mask);
+
+        if (r == PCI_ERR_ENOTSUP) {
+            log_err("capability 0x%02x (MSI) Per Vector Masking (PVM) not "
+                    "supported\n", capid);
+
+            msix_uninit(dev);
+            return r;
+        }
+        else if (r != PCI_ERR_OK) {
+            log_err("cap_msi_get_irq_mask error; %s\n", pci_strerror(r));
+
+            msix_uninit(dev);
+            return r;
+        }
+    }
+
     if (capid == CAPID_MSIX) {
         log_info("capability 0x%02x (MSI-X) enabled\n", capid);
         dev->is_msix = true;
