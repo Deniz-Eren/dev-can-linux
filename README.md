@@ -624,6 +624,11 @@ To force a regular IRQ to be used disable both MSI and MSI-X:
 Note it is NOT recommended to disable capabilities, however this ability is
 provided for advanced users to adopt at their discretion.
 
+One final note on legacy MSI, PCI 3.0 onwards allow each interrupt to be masked
+individually. If this feature is not available on the device, that is, if Per
+Vector Masking (PVM) isn't supported, then currently the driver will revert to
+regular IRQ operation.
+
 
 ## Hardware Test Status
 
