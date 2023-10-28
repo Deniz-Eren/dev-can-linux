@@ -166,6 +166,9 @@ typedef struct {
     pci_cap_t           msi_cap;
     uint_t              irq_entry;
     bool                is_msix;
+
+    void                (*unmask)(uint_t);
+    void                (*mask)(uint_t);
 } irq_attach_t;
 
 extern irq_group_t*     irq_group;

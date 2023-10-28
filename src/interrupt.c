@@ -21,12 +21,9 @@
 #include <unistd.h>
 #include <atomic.h>
 #include <sys/netmgr.h>
-#include <pci/cap_msi.h>
-#include <pci/cap_msix.h>
 
 #include "interrupt.h"
 
-//#define MSI_DEBUG
 
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
     CONFIG_QNX_INTERRUPT_ATTACH == 1
@@ -144,6 +141,30 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
         irq_attach[k].hdl = group->hdl;
         irq_attach[k].msi_cap = group->msi_cap;
         irq_attach[k].is_msix = group->is_msix;
+        irq_attach[k].mask = NULL;
+        irq_attach[k].unmask = NULL;
+
+#ifdef MSI_DEBUG
+        irq_attach[k].mask = mask_irq_debug;
+        irq_attach[k].unmask = unmask_irq_debug;
+#else
+        if (group->msi_cap
+            && pci_device_cfg_cap_isenabled(group->hdl, group->msi_cap))
+        {
+            if (group->is_msix) { // MSI-X Support
+                irq_attach[k].mask = mask_irq_msix;
+                irq_attach[k].unmask = unmask_irq_msix;
+            }
+            else { // MSI Support
+                irq_attach[k].mask = mask_irq_msi;
+                irq_attach[k].unmask = unmask_irq_msi;
+            }
+        }
+        else { // Regular IRQ
+            irq_attach[k].mask = mask_irq_regular;
+            irq_attach[k].unmask = unmask_irq_regular;
+        }
+#endif
 
         int id;
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
@@ -211,76 +232,18 @@ void run_wait() {
             continue;
         }
 
-# if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-        InterruptUnmask(irq_attach[k].irq, irq_attach[k].id);
-# endif
+        irq_attach_t* attach = &irq_attach[k];
 
-#ifdef MSI_DEBUG
-        log_dbg("IRQ: %d\n", irq_attach[k].irq);
-#endif
-
-        if (irq_attach[k].msi_cap
-            && pci_device_cfg_cap_isenabled(
-                    irq_attach[k].hdl, irq_attach[k].msi_cap ))
-        {
-            if (irq_attach[k].is_msix) {
-                pci_err_t err =
-                    cap_msix_unmask_irq_entry(
-                            irq_attach[k].hdl,
-                            irq_attach[k].msi_cap,
-                            irq_attach[k].irq_entry );
-#ifdef MSI_DEBUG
-                log_dbg("IRQ: MSI-X enabled\n");
-#endif
-
-                switch (err) {
-#ifdef MSI_DEBUG
-                    case PCI_ERR_EALREADY:
-                        log_info("IRQ: PCI_ERR_EALREADY\n");
-                        break;
-#endif
-                    case PCI_ERR_OK:
-                        break;
-                    default:
-                        log_err("cap_msix_unmask_irq_entry error: %s\n",
-                                pci_strerror(err));
-                        break;
-                };
-            }
-            else {
-                pci_err_t err =
-                    cap_msi_unmask_irq_entry(
-                            irq_attach[k].hdl,
-                            irq_attach[k].msi_cap,
-                            irq_attach[k].irq_entry );
-#ifdef MSI_DEBUG
-                log_dbg("IRQ: MSI enabled\n");
-#endif
-
-                switch (err) {
-                    case PCI_ERR_ENOTSUP:
-#ifdef MSI_DEBUG
-                        log_info("IRQ: Per Vector Masking (PVM) not "
-                                 "supported\n");
-                        break;
-#endif
-                    case PCI_ERR_OK:
-                        break;
-                    default:
-                        log_err("cap_msi_unmask_irq_entry error: %s\n",
-                                pci_strerror(err));
-                        break;
-                };
-            }
-        }
-        else {
-#ifdef MSI_DEBUG
-            log_dbg("IRQ: non-MSI\n");
-#endif
+        if (attach->mask == NULL || attach->unmask == NULL) {
+            continue;
         }
 
-        // handle pulse
+        attach->mask(k);
+
+        // Handle IRQ
         irq_attach[k].handler(irq_attach[k].irq, irq_attach[k].dev);
+
+        attach->unmask(k);
     }
 #else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 &&
          CONFIG_QNX_INTERRUPT_ATTACH != 1 */
