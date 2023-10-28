@@ -138,6 +138,18 @@ void irq_group_add (pci_irq_t* irq, size_t nirq,
         new_irq_group[irq_group_size].irq[i] = irq[i];
     }
 
+    /* Redirect irq_to_group_map pointers */
+    for (i = 0; i < irq_to_group_map_size; ++i) {
+        if (irq_to_group_map[i]) {
+            for (uint_t j = 0; j < irq_group_size; ++j) {
+                if (irq_to_group_map[i] == &irq_group[j]) {
+                    irq_to_group_map[i] = &new_irq_group[j];
+                    break;
+                }
+            }
+        }
+    }
+
     if (irq_group) {
         free(irq_group);
     }
