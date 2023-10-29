@@ -294,19 +294,27 @@ node('jenkins-agent') {
                 docker exec --user root --workdir /root dev-env \
                     bash -c "source .profile \
                         && /root/workspace/dev/.setup-profile.sh \
-                        && mkdir -p build_release \
-                        && cd build_release \
+                        && DIR=\\\"Release/dev-can-linux/\\\$(date \\\"+%Y-%m-%d-%H%M%S%Z\\\")\\\" \
+                        && mkdir -p \\\"\\\$DIR\\\" \
+                        && mkdir -p build_release_x86_64 \
+                        && cd build_release_x86_64 \
                         && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
                                 -DBUILD_TESTING=OFF ../project_repo \
                         && make -j8 \
                         && cpack \
-                        && DIR=\\\"Release/dev-can-linux/\\\$(date \\\"+%Y-%m-%d-%H%M%S%Z\\\")\\\" \
-                        && mkdir -p \\\"\\\$DIR\\\" \
-                        && cp dev-can-linux-*.tar.gz \\\"\\\$DIR\\\""
+                        && cp dev-can-linux-*.tar.gz \\\"../\\\$DIR\\\" \
+                        && cd .. \
+                        && mkdir -p build_release_aarch64le \
+                        && cd build_release_aarch64le \
+                        && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
+                                -DCMAKE_TOOLCHAIN_FILE=../project_repo/workspace/cmake/Toolchain/qnx710-aarch64le.toolchain.cmake \
+                                -DBUILD_TESTING=OFF ../project_repo \
+                        && make -j8 \
+                        && cpack \
+                        && cp dev-can-linux-*.tar.gz \\\"../\\\$DIR\\\""
 
                 docker cp \
-                    dev-env:/root/build_release/Release/dev-can-linux \
-                    /var/Release/
+                    dev-env:/root/Release/dev-can-linux /var/Release/
             """)
         }
     }
