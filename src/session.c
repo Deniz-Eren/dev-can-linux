@@ -68,7 +68,11 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
         return NULL;
     }
 
-    if ((result = pthread_cond_init(&new_device->cond, NULL)) != EOK) {
+    pthread_condattr_t condattr;
+    pthread_condattr_init( &condattr);
+    pthread_condattr_setclock( &condattr, CLOCK_MONOTONIC);
+
+    if ((result = pthread_cond_init(&new_device->cond, &condattr)) != EOK) {
         pthread_mutex_destroy(&new_device->mutex);
 
         log_err("create_device_session pthread_cond_init failed: %d\n",
