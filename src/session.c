@@ -29,6 +29,16 @@ device_session_t* root_device_session = NULL;
 pthread_mutex_t device_session_create_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 
+void increment_dropped_packet (void* arg) {
+    if (arg == NULL) {
+        return;
+    }
+
+    unsigned long* count = (unsigned long*)arg;
+
+    ++(*count);
+}
+
 device_session_t*
 create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
     pthread_mutex_lock(&device_session_create_mutex);
@@ -51,8 +61,17 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
     new_device->root_client_session = NULL;
     new_device->queue_stopped = 0;
 
-    if (create_queue(&new_device->tx_queue, tx_attr) != EOK) {
+    int err;
+    if ((err = create_queue(&new_device->tx_queue, tx_attr)) != EOK) {
+        log_err("create_device_session fail: create_queue err: %d\n", err);
+
+        destroy_device_session(new_device);
+        pthread_mutex_unlock(&device_session_create_mutex);
+        return NULL;
     }
+
+    new_device->tx_queue.dropped_packet_arg = &dev->stats.tx_dropped;
+    new_device->tx_queue.dropped_packet = increment_dropped_packet;
 
     pthread_attr_init(&new_device->tx_thread_attr);
     pthread_attr_setdetachstate(
@@ -64,6 +83,7 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
         log_err("create_device_session pthread_mutex_init failed: %d\n",
                 result);
 
+        destroy_device_session(new_device);
         pthread_mutex_unlock(&device_session_create_mutex);
         return NULL;
     }
@@ -78,6 +98,7 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
         log_err("create_device_session pthread_cond_init failed: %d\n",
                 result);
 
+        destroy_device_session(new_device);
         pthread_mutex_unlock(&device_session_create_mutex);
         return NULL;
     }
@@ -180,6 +201,9 @@ create_client_session (struct net_device* dev, const queue_attr_t* rx_attr,
         pthread_mutex_unlock(&device_session_create_mutex);
         return NULL;
     }
+
+    new_client->rx_queue.dropped_packet_arg = &dev->stats.rx_dropped;
+    new_client->rx_queue.dropped_packet = increment_dropped_packet;
 
     pthread_mutex_unlock(&device_session_create_mutex);
     return new_client;
