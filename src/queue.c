@@ -24,6 +24,8 @@
 
 #include <stdlib.h>
 
+#include <linux/units.h>
+
 #include "queue.h"
 #include "timer.h"
 
@@ -42,7 +44,11 @@ int create_queue (queue_t* Q, const queue_attr_t* attr) {
         return result;
     }
 
-    if ((result = pthread_cond_init(&Q->cond, NULL)) != EOK) {
+    pthread_condattr_t condattr;
+    pthread_condattr_init( &condattr);
+    pthread_condattr_setclock( &condattr, CLOCK_MONOTONIC);
+
+    if ((result = pthread_cond_init(&Q->cond, &condattr)) != EOK) {
         pthread_mutex_destroy(&Q->mutex);
 
         return result;
@@ -167,7 +173,13 @@ struct can_msg* dequeue (queue_t* Q, uint32_t latency_limit_ms) {
 
         Q->dequeue_waiting = 1;
         while (Q->dequeue_waiting && Q->session_up == 1 && Q->begin == Q->end) {
-            pthread_cond_wait(&Q->cond, &Q->mutex);
+            struct timespec to;
+            clock_gettime(CLOCK_MONOTONIC, &to);
+            uint64_t nsec = timespec2nsec(&to);
+            nsec += optb_restart_ms * NANO / MILLI;
+            nsec2timespec(&to, nsec);
+
+            pthread_cond_timedwait(&Q->cond, &Q->mutex, &to);
         }
         Q->dequeue_waiting = 0;
 
