@@ -167,6 +167,8 @@ void print_help (char* program_name) {
     printf("                 a particular device use this option.\n");
     printf("    \e[1m-b delay\e[m   - Bus-off recovery delay timer length (milliseconds).\n");
     printf("                 If set to 0ms, then the bus-off recovery is disabled!\n");
+    printf("                 The netif transmission queue fault recovery is also set to this\n");
+    printf("                 delay value.\n");
     printf("                 Default: %dms\n", DEFAULT_RESTART_MS);
     printf("    \e[1m-?/h\e[m       - Print help menu and exit.\n");
     printf("\n");
