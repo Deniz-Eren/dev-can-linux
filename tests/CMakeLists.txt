@@ -22,6 +22,13 @@ if( NOT BUILD_TESTING )
     return()
 endif()
 
+option( TESTING_REAL_HARDWARE
+    "Build tighter timer checks in tests when testing real hardware" OFF )
+
+if (TESTING_REAL_HARDWARE)
+    add_compile_definitions( TESTING_REAL_HARDWARE=1 )
+endif()
+
 if( NOT DEFINED ENV{DRIVER_TEST_DEVICE0_RX0} OR
     NOT DEFINED ENV{DRIVER_TEST_DEVICE0_TX0} OR
     NOT DEFINED ENV{DRIVER_TEST_DEVICE1_RX0} OR

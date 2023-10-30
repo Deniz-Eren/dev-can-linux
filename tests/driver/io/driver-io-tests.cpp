@@ -154,9 +154,11 @@ TEST( IO, SingleSendReceive ) {
 
     uint32_t initial_tx_frames0 = stats0.transmitted_frames;
     uint32_t initial_rx_frames0 = stats0.received_frames;
+    uint32_t initial_missing_ack0 = stats0.missing_ack;
 
     uint32_t initial_tx_frames1 = 0;
     uint32_t initial_rx_frames1 = 0;
+    uint32_t initial_missing_ack1 = 0;
 
     if (fd1 != -1) {
         get_stats_ret = get_stats(fd1, &stats1);
@@ -165,6 +167,7 @@ TEST( IO, SingleSendReceive ) {
 
         initial_tx_frames1 = stats1.transmitted_frames;
         initial_rx_frames1 = stats1.received_frames;
+        initial_missing_ack1 = stats1.missing_ack;
     }
 
     int set_mid_ret = set_mid(fd0, wrong_mid);
@@ -229,7 +232,8 @@ TEST( IO, SingleSendReceive ) {
 
     EXPECT_EQ(stats0.transmitted_frames - initial_tx_frames0, 4);
     EXPECT_EQ(stats0.received_frames - initial_rx_frames0, 0);
-    EXPECT_EQ(stats0.missing_ack, 0);
+    EXPECT_EQ(stats0.missing_ack - initial_missing_ack0, 0);
+
     EXPECT_EQ(stats0.total_frame_errors, 0);
     EXPECT_EQ(stats0.stuff_errors, 0);
     EXPECT_EQ(stats0.form_errors, 0);
@@ -254,7 +258,7 @@ TEST( IO, SingleSendReceive ) {
     if (fd1 != -1) {
         EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, 4);
         EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
-        EXPECT_EQ(stats1.missing_ack, 0);
+        EXPECT_EQ(stats1.missing_ack - initial_missing_ack1, 0);
         EXPECT_EQ(stats1.total_frame_errors, 0);
         EXPECT_EQ(stats1.stuff_errors, 0);
         EXPECT_EQ(stats1.form_errors, 0);
@@ -311,6 +315,7 @@ TEST( IO, SingleSendMultiReceive ) {
 
     uint32_t initial_tx_frames = stats.transmitted_frames;
     uint32_t initial_rx_frames = stats.received_frames;
+    uint32_t initial_missing_ack = stats.missing_ack;
 
     int set_mid_ret = set_mid(fd, wrong_mid);
 
@@ -348,7 +353,7 @@ TEST( IO, SingleSendMultiReceive ) {
 
     EXPECT_EQ(stats.transmitted_frames - initial_tx_frames, 4);
     EXPECT_EQ(stats.received_frames - initial_rx_frames, 0);
-    EXPECT_EQ(stats.missing_ack, 0);
+    EXPECT_EQ(stats.missing_ack - initial_missing_ack, 0);
     EXPECT_EQ(stats.total_frame_errors, 0);
     EXPECT_EQ(stats.stuff_errors, 0);
     EXPECT_EQ(stats.form_errors, 0);

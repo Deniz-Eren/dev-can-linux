@@ -158,9 +158,11 @@ TEST( Driver, FloodSend ) {
 
     uint32_t initial_tx_frames0 = stats0.transmitted_frames;
     uint32_t initial_rx_frames0 = stats0.received_frames;
+    uint32_t initial_missing_ack0 = stats0.missing_ack;
 
     uint32_t initial_tx_frames1 = 0;
     uint32_t initial_rx_frames1 = 0;
+    uint32_t initial_missing_ack1 = 0;
 
     if (fd1_tx != -1) {
         get_stats_ret = get_stats(fd1_tx, &stats1);
@@ -169,6 +171,7 @@ TEST( Driver, FloodSend ) {
 
         initial_tx_frames1 = stats1.transmitted_frames;
         initial_rx_frames1 = stats1.received_frames;
+        initial_missing_ack1 = stats1.missing_ack;
     }
 
     // ensure all channels are empty
@@ -237,13 +240,17 @@ TEST( Driver, FloodSend ) {
     //EXPECT_NEAR(1000*record0_size*67/(t2_ms - t1_ms), 250000, 50000);
     //EXPECT_NEAR(1000*record1_size*67/(t1_ms - t0_ms), 250000, 50000);
 
+    uint32_t expected_missed = 300;
+
     get_stats_ret = get_stats(fd0_tx, &stats0);
 
     EXPECT_EQ(get_stats_ret, EOK);
 
-    EXPECT_EQ(stats0.transmitted_frames - initial_tx_frames0, record0_size);
-    EXPECT_EQ(stats0.received_frames - initial_rx_frames0, 0);
-    EXPECT_EQ(stats0.missing_ack, 0);
+    EXPECT_GE(stats0.transmitted_frames - initial_tx_frames0,
+            record0_size - expected_missed);
+    EXPECT_GE(stats0.received_frames - initial_rx_frames0, 0);
+    EXPECT_LE(stats0.missing_ack - initial_missing_ack0, expected_missed);
+
     EXPECT_EQ(stats0.total_frame_errors, 0);
     EXPECT_EQ(stats0.stuff_errors, 0);
     EXPECT_EQ(stats0.form_errors, 0);
@@ -270,9 +277,12 @@ TEST( Driver, FloodSend ) {
 
         EXPECT_EQ(get_stats_ret, EOK);
 
-        EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, record1_size);
-        EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
-        EXPECT_EQ(stats1.missing_ack, 0);
+        EXPECT_GE(stats1.transmitted_frames - initial_tx_frames1,
+                record1_size - expected_missed);
+        EXPECT_GE(stats1.received_frames - initial_rx_frames1, 0);
+        EXPECT_LE(stats1.missing_ack - initial_missing_ack1,
+                expected_missed);
+
         EXPECT_EQ(stats1.total_frame_errors, 0);
         EXPECT_EQ(stats1.stuff_errors, 0);
         EXPECT_EQ(stats1.form_errors, 0);

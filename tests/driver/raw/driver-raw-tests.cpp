@@ -122,9 +122,11 @@ TEST( Raw, SingleSendReceive ) {
 
     uint32_t initial_tx_frames0 = stats0.transmitted_frames;
     uint32_t initial_rx_frames0 = stats0.received_frames;
+    uint32_t initial_missing_ack0 = stats0.missing_ack;
 
     uint32_t initial_tx_frames1 = 0;
     uint32_t initial_rx_frames1 = 0;
+    uint32_t initial_missing_ack1 = 0;
 
     if (fd1 != -1) {
         get_stats_ret = get_stats(fd1, &stats1);
@@ -133,6 +135,7 @@ TEST( Raw, SingleSendReceive ) {
 
         initial_tx_frames1 = stats1.transmitted_frames;
         initial_rx_frames1 = stats1.received_frames;
+        initial_missing_ack1 = stats1.missing_ack;
     }
 
     int write_ret = write_frame_raw(fd0, &canmsg);
@@ -194,7 +197,7 @@ TEST( Raw, SingleSendReceive ) {
 
     EXPECT_EQ(stats0.transmitted_frames - initial_tx_frames0, 1);
     EXPECT_EQ(stats0.received_frames - initial_rx_frames0, 0);
-    EXPECT_EQ(stats0.missing_ack, 0);
+    EXPECT_EQ(stats0.missing_ack - initial_missing_ack0, 0);
     EXPECT_EQ(stats0.total_frame_errors, 0);
     EXPECT_EQ(stats0.stuff_errors, 0);
     EXPECT_EQ(stats0.form_errors, 0);
@@ -219,7 +222,7 @@ TEST( Raw, SingleSendReceive ) {
     if (fd1 != -1) {
         EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, 1);
         EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
-        EXPECT_EQ(stats1.missing_ack, 0);
+        EXPECT_EQ(stats1.missing_ack - initial_missing_ack1, 0);
         EXPECT_EQ(stats1.total_frame_errors, 0);
         EXPECT_EQ(stats1.stuff_errors, 0);
         EXPECT_EQ(stats1.form_errors, 0);

@@ -111,8 +111,13 @@ TEST( Timer, ScheduleMoreWork ) {
     // callback must not trigger earlier than expected
     EXPECT_GT(trig_diff_ms, 2.0);
 
+#ifdef TESTING_REAL_HARDWARE
     // give 1.5 millisecond buffer from expected time
     EXPECT_LT(trig_diff_ms, 3.5);
+#else
+    // in VM timing isn't accurate, so we need to account for it
+    EXPECT_LT(trig_diff_ms, 20.0);
+#endif
 
     // callback must be called only once
     EXPECT_EQ(test_data2.sum, 376);
@@ -145,8 +150,13 @@ TEST( Timer, ScheduleSameWorkAgain ) {
     // callback must not trigger earlier than expected
     EXPECT_GT(trig_diff_ms, 12.0);
 
+#ifdef TESTING_REAL_HARDWARE
     // give 1.5 millisecond buffer from expected time
     EXPECT_LT(trig_diff_ms, 13.5);
+#else
+    // in VM timing isn't accurate, so we need to account for it
+    EXPECT_LT(trig_diff_ms, 30.0);
+#endif
 
     // callback must be called only once
     EXPECT_EQ(test_data1.sum, 376);
@@ -168,7 +178,6 @@ TEST( Timer, CancelWork ) {
     schedule_delayed_work(&test_work3, 9.0 / TIMER_INTERVAL_MS);
     double start_time_ms = get_clock_time_us() / 1000.0;
 
-    usleep(3000);
     cancel_delayed_work_sync(&test_work3);
 
     usleep(30000);
@@ -201,10 +210,9 @@ TEST( Timer, CancelRescheduledWork ) {
     schedule_delayed_work(&test_work1, 7.0 / TIMER_INTERVAL_MS);
     double start_time_ms = get_clock_time_us() / 1000.0;
 
-    usleep(2000);
     cancel_delayed_work_sync(&test_work1);
 
-    usleep(25000);
+    usleep(30000);
     double end_time_ms = get_clock_time_us() / 1000.0;
 
     double test_diff_ms = end_time_ms - start_time_ms;
@@ -247,8 +255,13 @@ TEST( Timer, SetupAgainAndScheduleSameWork ) {
     // callback must not trigger earlier than expected
     EXPECT_GT(trig_diff_ms, 12.0);
 
+#ifdef TESTING_REAL_HARDWARE
     // give 1.5 millisecond buffer from expected time
     EXPECT_LT(trig_diff_ms, 13.5);
+#else
+    // in VM timing isn't accurate, so we need to account for it
+    EXPECT_LT(trig_diff_ms, 30.0);
+#endif
 
     // callback must be called only once
     EXPECT_EQ(test_data1.sum, 376);
