@@ -240,6 +240,19 @@ void run_wait() {
 
         irq_attach_t* attach = &irq_attach[k];
 
+#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
+        /*
+         * Case when InterruptAttachEvent() is used:
+         *
+         * To prevent infinite interrupt recursion, the kernel automatically does
+         * an InterruptMask() for intr when delivering the event. After the
+         * interrupt-handling thread has dealt with the event, it must call
+         * InterruptUnmask() to reenable the interrupt.
+         */
+
+        InterruptUnmask(attach->irq, attach->id);
+#endif
+
         if (attach->mask == NULL || attach->unmask == NULL) {
             continue;
         }

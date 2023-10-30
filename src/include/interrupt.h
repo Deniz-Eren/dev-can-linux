@@ -144,10 +144,6 @@ static inline void unmask_irq_debug (uint_t attach_index) {
             };
         }
     }
-
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-    InterruptUnmask(attach->irq, attach->id);
-#endif
 }
 
 #endif /* MSI_DEBUG */
@@ -211,19 +207,6 @@ static inline void unmask_irq_msix (uint_t attach_index) {
     if (err != PCI_ERR_EALREADY && err != PCI_ERR_OK) {
         log_err("cap_msix_unmask_irq_entry error: %s\n", pci_strerror(err));
     }
-
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-    /*
-     * Case when InterruptAttachEvent() is used:
-     *
-     * To prevent infinite interrupt recursion, the kernel automatically does an
-     * InterruptMask() for intr when delivering the event. After the interrupt-
-     * handling thread has dealt with the event, it must call InterruptUnmask()
-     * to reenable the interrupt.
-     */
-
-    InterruptUnmask(attach->irq, attach->id);
-#endif
 }
 
 static inline void mask_irq_msi (uint_t attach_index) {
@@ -286,47 +269,12 @@ static inline void unmask_irq_msi (uint_t attach_index) {
     if (err != PCI_ERR_OK) {
         log_err("cap_msi_unmask_irq_entry error: %s\n", pci_strerror(err));
     }
-
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-    /*
-     * Case when InterruptAttachEvent() is used:
-     *
-     * To prevent infinite interrupt recursion, the kernel automatically does an
-     * InterruptMask() for intr when delivering the event. After the interrupt-
-     * handling thread has dealt with the event, it must call InterruptUnmask()
-     * to reenable the interrupt.
-     */
-
-    InterruptUnmask(attach->irq, attach->id);
-#endif
 }
 
 static inline void mask_irq_regular (uint_t attach_index) {
-    /*
-     * Case when InterruptAttachEvent() or InterruptAttach() are used:
-     *
-     * To prevent infinite interrupt recursion, the kernel automatically does an
-     * InterruptMask() for intr when delivering the event. After the interrupt-
-     * handling thread has dealt with the event, it must call InterruptUnmask()
-     * to reenable the interrupt.
-     */
 }
 
 static inline void unmask_irq_regular (uint_t attach_index) {
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-    irq_attach_t* attach = &irq_attach[attach_index];
-
-    /*
-     * Case when InterruptAttachEvent() is used:
-     *
-     * To prevent infinite interrupt recursion, the kernel automatically does an
-     * InterruptMask() for intr when delivering the event. After the interrupt-
-     * handling thread has dealt with the event, it must call InterruptUnmask()
-     * to reenable the interrupt.
-     */
-
-    InterruptUnmask(attach->irq, attach->id);
-#endif
 }
 
 #endif /* SRC_INTERRUPT_H_ */
