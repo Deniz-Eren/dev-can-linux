@@ -44,6 +44,9 @@ typedef struct queue {
 
     volatile int session_up;
     volatile int dequeue_waiting;
+
+    void* dropped_packet_arg;
+    void (*dropped_packet)(void*);
 } queue_t;
 
 

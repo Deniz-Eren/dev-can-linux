@@ -1341,7 +1341,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
         data->dcmd.stats.transmitted_frames = device->stats.tx_packets;
         data->dcmd.stats.received_frames = device->stats.rx_packets;
-        data->dcmd.stats.missing_ack = 0;
+        data->dcmd.stats.missing_ack = device->stats.tx_dropped;
 
         /* Bus errors */
         data->dcmd.stats.total_frame_errors =
@@ -1356,7 +1356,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         data->dcmd.stats.parity_errors = 0;
         data->dcmd.stats.crc_errors = device->stats.rx_crc_errors;
         data->dcmd.stats.hw_receive_overflows = device->stats.rx_over_errors;
-        data->dcmd.stats.sw_receive_q_full = 0;
+        data->dcmd.stats.sw_receive_q_full = device->stats.rx_dropped;
 
         /* Changes to error warning state */
         data->dcmd.stats.error_warning_state_count =

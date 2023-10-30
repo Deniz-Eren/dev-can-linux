@@ -68,6 +68,8 @@ int create_queue (queue_t* Q, const queue_attr_t* attr) {
 
     Q->session_up = 1;
     Q->dequeue_waiting = 0;
+    Q->dropped_packet_arg = NULL;
+    Q->dropped_packet = NULL;
 
     return EOK;
 }
@@ -145,6 +147,10 @@ int enqueue (queue_t* Q, struct can_msg* msg) {
         else {
             ++Q->begin; // 1 message lost if we use the entire queue size but did
                         // not wrap around; oldest message.
+
+            if (Q->dropped_packet) {
+                Q->dropped_packet(Q->dropped_packet_arg);
+            }
         }
     }
 
