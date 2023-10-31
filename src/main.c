@@ -22,6 +22,8 @@
 #include <signal.h>
 #include <unistd.h>
 
+#include <sys/netmgr.h>
+
 #include <config.h>
 #include <pci.h>
 #include <interrupt.h>
@@ -29,8 +31,25 @@
 #include <session.h>
 
 
+int main_chid = -1;
+
 static void sigint_signal_handler (int sig_no) {
-    terminate_run_wait();
+    struct sigevent terminate_event;
+
+    terminate_irq_loop();
+
+    if (main_chid == -1) {
+        return;
+    }
+
+    int coid = ConnectAttach(ND_LOCAL_NODE, 0, main_chid, _NTO_SIDE_CHANNEL, 0);
+
+    SIGEV_SET_TYPE(&terminate_event, SIGEV_PULSE);
+    terminate_event.sigev_coid = coid;
+
+    if (MsgDeliverEvent(0, &terminate_event) == -1) {
+        log_err("MsgDeliverEvent error; %s\n", strerror(errno));
+    }
 }
 
 int main (int argc, char* argv[]) {
@@ -412,7 +431,44 @@ int main (int argc, char* argv[]) {
         return -1;
     }
 
-    run_wait();
+    int err;
+    int policy;
+    struct sched_param param;
+
+    err = pthread_getschedparam(pthread_self(), &policy, &param);
+
+    if (err != EOK) {
+        log_err("error pthread_getschedparam: %s\n", strerror(err));
+
+        return -1;
+    }
+
+    pthread_attr_t irq_thread_attr;
+    pthread_t irq_thread;
+
+    pthread_attr_init(&irq_thread_attr);
+    pthread_attr_setdetachstate(&irq_thread_attr, PTHREAD_CREATE_DETACHED);
+
+    pthread_attr_setinheritsched(&irq_thread_attr, PTHREAD_EXPLICIT_SCHED);
+
+    param.sched_priority += IRQ_SCHED_PRIORITY_BOOST;
+    pthread_attr_setschedparam(&irq_thread_attr, &param);
+
+    pthread_create(&irq_thread, &irq_thread_attr, &irq_loop, NULL);
+
+    unsigned flags = _NTO_CHF_PRIVATE;
+    main_chid = ChannelCreate(flags);
+
+    for(;;) {
+        struct _pulse pulse;
+        MsgReceivePulse(main_chid, &pulse, sizeof(pulse), NULL);
+
+        if (shutdown_program) {
+            log_info("Shutdown program\n");
+
+            break;
+        }
+    }
 
     /*
      * In practice the program runs forever or until the user terminates it;

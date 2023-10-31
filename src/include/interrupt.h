@@ -28,8 +28,11 @@
 
 //#define MSI_DEBUG
 
-extern void run_wait();
-extern void terminate_run_wait();
+/* shutdown check */
+extern volatile unsigned shutdown_program; // 0x0 = running, 0x1 = shutdown
+
+extern void* irq_loop (void*);
+extern void terminate_irq_loop();
 
 
 #ifdef MSI_DEBUG

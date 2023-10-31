@@ -80,6 +80,11 @@ project( dev-can-linux
          VERSION ${PROGRAM_VERSION}
          LANGUAGES C CXX )
 
+set( IRQ_SCHED_PRIORITY_BOOST "20" CACHE STRING
+    "Schedule priority of transmission and interrupt processing" )
+
+add_compile_definitions( IRQ_SCHED_PRIORITY_BOOST=${IRQ_SCHED_PRIORITY_BOOST} )
+
 set( SSH_PORT "6022" CACHE STRING "SSH port number" )
 
 include( CodeCoverageProfiler )

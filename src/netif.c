@@ -85,22 +85,6 @@ void* netif_tx (void* arg) {
             cf->data[i] = canmsg->dat[i];
         }
 
-        pthread_mutex_lock(&ds->mutex);
-        while (ds->queue_stopped) {
-            struct timespec to;
-            clock_gettime(CLOCK_MONOTONIC, &to);
-            uint64_t nsec = timespec2nsec(&to);
-            nsec += optb_restart_ms * NANO / MILLI;
-            nsec2timespec(&to, nsec);
-
-            int err = pthread_cond_timedwait(&ds->cond, &ds->mutex, &to);
-
-            if (err == ETIMEDOUT) {
-                ds->queue_stopped = 0;
-            }
-        }
-        pthread_mutex_unlock(&ds->mutex);
-
         dev->netdev_ops->ndo_start_xmit(skb, dev);
     }
 
@@ -298,11 +282,11 @@ void netif_wake_queue (struct net_device* dev) {
 
     device_session_t* ds = dev->device_session;
 
+    assert( ds->tx_thread != pthread_self() );
+
     pthread_mutex_lock(&ds->mutex);
-    if (ds->queue_stopped == 1) {
-        ds->queue_stopped = 0;
-        pthread_cond_signal(&ds->cond);
-    }
+    ds->queue_stopped = 0;
+    pthread_cond_signal(&ds->cond);
     pthread_mutex_unlock(&ds->mutex);
 }
 
@@ -311,7 +295,13 @@ void netif_stop_queue (struct net_device* dev) {
 
     device_session_t* ds = dev->device_session;
 
+    assert( ds->tx_thread == pthread_self() );
+
     pthread_mutex_lock(&ds->mutex);
+    while (ds->queue_stopped && ds->tx_queue.attr.size != 0) {
+        pthread_cond_wait(&ds->cond, &ds->mutex);
+    }
+
     ds->queue_stopped = 1;
     pthread_mutex_unlock(&ds->mutex);
 }

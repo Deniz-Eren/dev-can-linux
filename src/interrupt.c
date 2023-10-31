@@ -22,19 +22,22 @@
 #include <atomic.h>
 #include <sys/netmgr.h>
 
+#include <linux/netdevice.h>
+
 #include "interrupt.h"
+#include "session.h"
 
 
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
     CONFIG_QNX_INTERRUPT_ATTACH == 1
-int chid = -1;
+int irq_chid = -1;
 struct sigevent terminate_event;
 #endif
 
 /* atomic shutdown check */
 volatile unsigned shutdown_program = 0x0; // 0x0 = running, 0x1 = shutdown
 
-void terminate_run_wait () {
+void terminate_irq_loop () {
     atomic_set_value(&shutdown_program, 0x01);
 
 #if CONFIG_QNX_INTERRUPT_ATTACH == 1 || \
@@ -55,7 +58,13 @@ void terminate_run_wait () {
  * The actual ISR actually does no work except returning a QNX signal event.
  */
 const struct sigevent *irq_handler (void *area, int id) {
-    return &event;
+    if (area == NULL) {
+        return NULL;
+    }
+
+    irq_attach_t* attach = (irq_attach_t*)area;
+
+    return &attach->event;
 }
 #elif CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
 /*
@@ -98,17 +107,32 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
 
     struct net_device *ndev = (struct net_device *)dev;
 
+    int err;
+    int policy;
+    struct sched_param param;
+
+    err = pthread_getschedparam(pthread_self(), &policy, &param);
+
+    if (err != EOK) {
+        log_err("error pthread_getschedparam: %s\n", strerror(err));
+
+        return -1;
+    }
+
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
     CONFIG_QNX_INTERRUPT_ATTACH == 1
-    if (chid == -1) {
+    if (irq_chid == -1) {
         unsigned flags = _NTO_CHF_PRIVATE;
 
-        chid = ChannelCreate(flags);
-        int coid = ConnectAttach(ND_LOCAL_NODE, 0, chid, _NTO_SIDE_CHANNEL, 0);
+        irq_chid = ChannelCreate(flags);
+        int coid =
+            ConnectAttach(ND_LOCAL_NODE, 0, irq_chid, _NTO_SIDE_CHANNEL, 0);
 
         SIGEV_SET_TYPE(&terminate_event, SIGEV_PULSE);
         terminate_event.sigev_coid = coid;
         terminate_event.sigev_code = 0; // not needed for termination
+        terminate_event.sigev_priority =
+            param.sched_priority + IRQ_SCHED_PRIORITY_BOOST;
     }
 #endif
 
@@ -130,10 +154,14 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
         SIGEV_SET_TYPE(&irq_attach[k].event, SIGEV_PULSE);
 #endif
 
-        int coid = ConnectAttach(ND_LOCAL_NODE, 0, chid, _NTO_SIDE_CHANNEL, 0);
+        int coid =
+            ConnectAttach(ND_LOCAL_NODE, 0, irq_chid, _NTO_SIDE_CHANNEL, 0);
 
         irq_attach[k].event.sigev_coid = coid;
         irq_attach[k].event.sigev_code = k;
+        irq_attach[k].event.sigev_priority =
+            param.sched_priority + IRQ_SCHED_PRIORITY_BOOST;
+
         irq_attach[k].irq = group->irq[i];
         irq_attach[k].irq_entry = i;
         irq_attach[k].handler = handler;
@@ -178,15 +206,21 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
                         &irq_attach[k].event, attach_flags )) == -1)
         {
             log_err("internal error; interrupt attach event failure\n");
+
+            return -1;
         }
 #else
         if ((id = InterruptAttach( group->irq[i],
-                        &irq_handler, NULL, 0, attach_flags )) == -1)
+                        &irq_handler, &irq_attach[k], 0, attach_flags )) == -1)
         {
             log_err("internal error; interrupt attach failure\n");
+
+            return -1;
         }
 #endif
         irq_attach[k].id = id;
+
+        irq_attach[k].unmask(k);
     }
 
     return 0;
@@ -211,7 +245,7 @@ void free_irq (unsigned int irq, void *dev) {
     }
 }
 
-void run_wait() {
+void* irq_loop (void* arg) {
 #if CONFIG_QNX_INTERRUPT_ATTACH == 1 || \
     CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
 
@@ -219,12 +253,12 @@ void run_wait() {
 
     for(;;) {
         struct _pulse pulse;
-        rcvid = MsgReceivePulse(chid, &pulse, sizeof(pulse), NULL);
+        rcvid = MsgReceivePulse(irq_chid, &pulse, sizeof(pulse), NULL);
 
         if (shutdown_program) {
             log_err("MsgReceivePulse error; %s\n", strerror(errno));
 
-            return;
+            return NULL;
         }
 
         if (rcvid == -1 ) {
@@ -269,7 +303,7 @@ void run_wait() {
     while (1) {
 
         if (shutdown_program) {
-            return;
+            return NULL;
         }
 
         /* Just spend some time doing nothing so the loop doesn't hard-lock */

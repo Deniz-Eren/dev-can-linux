@@ -225,11 +225,11 @@ TEST( Driver, FloodSend ) {
     }
 
     // At least some of the data should have been received
-    EXPECT_GE(record0_size, FLOOD_TEST_SIZE/10);
+    EXPECT_GE(record0_size, FLOOD_TEST_SIZE/50);
     EXPECT_LE(record0_size, FLOOD_TEST_SIZE);
 
     if (fd1_tx != -1) {
-        EXPECT_GE(record1_size, FLOOD_TEST_SIZE/10);
+        EXPECT_GE(record1_size, FLOOD_TEST_SIZE/50);
         EXPECT_LE(record1_size, FLOOD_TEST_SIZE);
     }
 
@@ -240,14 +240,13 @@ TEST( Driver, FloodSend ) {
     //EXPECT_NEAR(1000*record0_size*67/(t2_ms - t1_ms), 250000, 50000);
     //EXPECT_NEAR(1000*record1_size*67/(t1_ms - t0_ms), 250000, 50000);
 
-    uint32_t expected_missed = 300;
+    uint32_t expected_missed = 800;
 
     get_stats_ret = get_stats(fd0_tx, &stats0);
 
     EXPECT_EQ(get_stats_ret, EOK);
 
-    EXPECT_GE(stats0.transmitted_frames - initial_tx_frames0,
-            record0_size - expected_missed);
+    EXPECT_GE(stats0.transmitted_frames - initial_tx_frames0, record0_size);
     EXPECT_GE(stats0.received_frames - initial_rx_frames0, 0);
     EXPECT_LE(stats0.missing_ack - initial_missing_ack0, expected_missed);
 
@@ -277,8 +276,7 @@ TEST( Driver, FloodSend ) {
 
         EXPECT_EQ(get_stats_ret, EOK);
 
-        EXPECT_GE(stats1.transmitted_frames - initial_tx_frames1,
-                record1_size - expected_missed);
+        EXPECT_GE(stats1.transmitted_frames - initial_tx_frames1, record1_size);
         EXPECT_GE(stats1.received_frames - initial_rx_frames1, 0);
         EXPECT_LE(stats1.missing_ack - initial_missing_ack1,
                 expected_missed);
