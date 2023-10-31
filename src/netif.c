@@ -28,6 +28,7 @@
 #include <session.h>
 
 #include "netif.h"
+#include "interrupt.h"
 
 
 void* netif_tx (void* arg) {
@@ -282,7 +283,7 @@ void netif_wake_queue (struct net_device* dev) {
 
     device_session_t* ds = dev->device_session;
 
-    assert( ds->tx_thread != pthread_self() );
+    assert( ds->tx_thread != pthread_self() || shutdown_program );
 
     pthread_mutex_lock(&ds->mutex);
     ds->queue_stopped = 0;
@@ -295,7 +296,7 @@ void netif_stop_queue (struct net_device* dev) {
 
     device_session_t* ds = dev->device_session;
 
-    assert( ds->tx_thread == pthread_self() );
+    assert( ds->tx_thread == pthread_self() || shutdown_program );
 
     pthread_mutex_lock(&ds->mutex);
     while (ds->queue_stopped && ds->tx_queue.attr.size != 0) {
