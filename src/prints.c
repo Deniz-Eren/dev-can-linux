@@ -216,8 +216,7 @@ void print_help (char* program_name) {
     printf("\n");
     printf("    In this example we would chose the numbers \e[1mvid=13fe\e[m, \e[1mdid=c302\e[m\n");
     printf("\n");
-    printf("    Target specific hardware detection of hardware and enable max verbose mode for\n");
-    printf("    debugging:\n");
+    printf("    Target specific hardware to disable and enable max verbose mode for debugging:\n");
     printf("\n");
     printf("        \e[1mdev-can-linux -d 13fe:c302 -vv -ll\e[m\n");
     printf("\n");
