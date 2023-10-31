@@ -22,6 +22,7 @@
 
 #include "session.h"
 #include "netif.h"
+#include "interrupt.h"
 
 device_session_t* root_device_session = NULL;
 
@@ -73,9 +74,25 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
     new_device->tx_queue.dropped_packet_arg = &dev->stats.tx_dropped;
     new_device->tx_queue.dropped_packet = increment_dropped_packet;
 
+    int policy;
+    struct sched_param param;
+
+    err = pthread_getschedparam(pthread_self(), &policy, &param);
+
+    if (err != EOK) {
+        log_err("error pthread_getschedparam: %s\n", strerror(err));
+
+        return NULL;
+    }
+
     pthread_attr_init(&new_device->tx_thread_attr);
     pthread_attr_setdetachstate(
             &new_device->tx_thread_attr, PTHREAD_CREATE_DETACHED );
+
+    pthread_attr_setinheritsched(&new_device->tx_thread_attr, PTHREAD_EXPLICIT_SCHED);
+
+    param.sched_priority += IRQ_SCHED_PRIORITY_BOOST;
+    pthread_attr_setschedparam(&new_device->tx_thread_attr, &param);
 
     int result;
 
@@ -88,11 +105,7 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
         return NULL;
     }
 
-    pthread_condattr_t condattr;
-    pthread_condattr_init( &condattr);
-    pthread_condattr_setclock( &condattr, CLOCK_MONOTONIC);
-
-    if ((result = pthread_cond_init(&new_device->cond, &condattr)) != EOK) {
+    if ((result = pthread_cond_init(&new_device->cond, NULL)) != EOK) {
         pthread_mutex_destroy(&new_device->mutex);
 
         log_err("create_device_session pthread_cond_init failed: %d\n",

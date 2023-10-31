@@ -21,6 +21,7 @@
 #ifndef SRC_PCI_H_
 #define SRC_PCI_H_
 
+#include <pthread.h>
 #include <linux/pci.h>
 
 
@@ -64,14 +65,14 @@ static inline void store_driver_selection (
         return;
     }
 
-    driver_selection_t** last = &driver_selection_root;
+    driver_selection_t* last = driver_selection_root;
 
-    while ((*last)->next != NULL) {
-        last = &(*last)->next;
+    while (last->next != NULL) {
+        last = last->next;
     }
 
-    (*last)->next = new_driver_selection;
-    new_driver_selection->prev = (*last);
+    last->next = new_driver_selection;
+    new_driver_selection->prev = last;
     new_driver_selection->next = NULL;
 }
 
@@ -79,7 +80,7 @@ static inline int probe_all_driver_selections() {
     driver_selection_t* location = driver_selection_root;
 
     while (location != NULL) {
-        driver_selection_t** next = &location->next;
+        driver_selection_t* next = location->next;
 
         probe_driver_selection = location;
 
@@ -89,25 +90,22 @@ static inline int probe_all_driver_selections() {
 
         probe_driver_selection = NULL;
 
-        location = *next;
+        location = next;
     }
 
     return 0;
 }
 
 static inline void remove_all_driver_selections() {
-    driver_selection_t** location = &driver_selection_root;
+    while (driver_selection_root != NULL) {
+        driver_selection_t* next = driver_selection_root->next;
 
-    while (*location != NULL) {
-        driver_selection_t** next = &(*location)->next;
+        log_info("Shutting down %s\n", driver_selection_root->driver->name);
 
-        log_info("Shutting down %s\n",
-                (*location)->driver->name);
+        driver_selection_root->driver->remove(&driver_selection_root->pdev);
+        free(driver_selection_root);
 
-        (*location)->driver->remove(&(*location)->pdev);
-        free(*location);
-
-        *location = *next;
+        driver_selection_root = next;
     }
 }
 
@@ -144,28 +142,28 @@ static inline void store_bar (pci_ba_t ba) {
         return;
     }
 
-    bar_t** last = &bar_list_root;
+    bar_t* last = bar_list_root;
 
-    while ((*last)->next != NULL) {
-        last = &(*last)->next;
+    while (last->next != NULL) {
+        last = last->next;
     }
 
-    (*last)->next = new_bar;
-    new_bar->prev = (*last);
+    last->next = new_bar;
+    new_bar->prev = last;
     new_bar->next = NULL;
 }
 
 static inline bar_t* get_bar (uintptr_t addr) {
-    bar_t** location = &bar_list_root;
+    bar_t* location = bar_list_root;
 
-    while (*location != NULL) {
-        if (addr >= (*location)->ba.addr &&
-            addr < (*location)->ba.addr + (*location)->ba.size)
+    while (location != NULL) {
+        if (addr >= location->ba.addr &&
+            addr < location->ba.addr + location->ba.size)
         {
-            return *location;
+            return location;
         }
 
-        location = &(*location)->next;
+        location = location->next;
     }
 
     return NULL;
@@ -187,25 +185,25 @@ static inline void store_block (void __iomem* addr, size_t size, pci_ba_t ba) {
         return;
     }
 
-    ioblock_t** last = &ioblock_root;
+    ioblock_t* last = ioblock_root;
 
-    while ((*last)->next != NULL) {
-        last = &(*last)->next;
+    while (last->next != NULL) {
+        last = last->next;
     }
 
-    (*last)->next = new_block;
-    new_block->prev = (*last);
+    last->next = new_block;
+    new_block->prev = last;
     new_block->next = NULL;
     pthread_mutex_unlock(&ioblock_mutex);
 }
 
 static inline ioblock_t* remove_block (void __iomem* addr) {
     pthread_mutex_lock(&ioblock_mutex);
-    ioblock_t** location = &ioblock_root;
+    ioblock_t* location = ioblock_root;
 
-    while (*location != NULL) {
-        if ((*location)->addr == addr) {
-            ioblock_t* result = (*location);
+    while (location != NULL) {
+        if (location->addr == addr) {
+            ioblock_t* result = location;
 
             if (result->prev == NULL) {
                 ioblock_root = result->next;
@@ -231,7 +229,7 @@ static inline ioblock_t* remove_block (void __iomem* addr) {
             return result;
         }
 
-        location = &(*location)->next;
+        location = location->next;
     }
 
     pthread_mutex_unlock(&ioblock_mutex);

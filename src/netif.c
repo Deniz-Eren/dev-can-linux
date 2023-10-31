@@ -28,6 +28,7 @@
 #include <session.h>
 
 #include "netif.h"
+#include "interrupt.h"
 
 
 void* netif_tx (void* arg) {
@@ -84,22 +85,6 @@ void* netif_tx (void* arg) {
         for (i = 0; i < canmsg->len; ++i) {
             cf->data[i] = canmsg->dat[i];
         }
-
-        pthread_mutex_lock(&ds->mutex);
-        while (ds->queue_stopped) {
-            struct timespec to;
-            clock_gettime(CLOCK_MONOTONIC, &to);
-            uint64_t nsec = timespec2nsec(&to);
-            nsec += optb_restart_ms * NANO / MILLI;
-            nsec2timespec(&to, nsec);
-
-            int err = pthread_cond_timedwait(&ds->cond, &ds->mutex, &to);
-
-            if (err == ETIMEDOUT) {
-                ds->queue_stopped = 0;
-            }
-        }
-        pthread_mutex_unlock(&ds->mutex);
 
         dev->netdev_ops->ndo_start_xmit(skb, dev);
     }
@@ -219,14 +204,14 @@ int netif_rx (struct sk_buff* skb) {
 
     device_session_t* ds = skb->dev->device_session;
 
-    client_session_t** it = &ds->root_client_session;
-    while (it != NULL && *it != NULL) {
-        if ((canmsg.mid & *(*it)->mfilter) == canmsg.mid) {
-            if (enqueue(&(*it)->rx_queue, &canmsg) != EOK) {
+    client_session_t* it = ds->root_client_session;
+    while (it != NULL) {
+        if ((canmsg.mid & *it->mfilter) == canmsg.mid) {
+            if (enqueue(&it->rx_queue, &canmsg) != EOK) {
             }
         }
 
-        it = &(*it)->next;
+        it = it->next;
     }
 
     pthread_mutex_unlock(&device_session_create_mutex);
@@ -298,11 +283,11 @@ void netif_wake_queue (struct net_device* dev) {
 
     device_session_t* ds = dev->device_session;
 
+    assert( ds->tx_thread != pthread_self() || shutdown_program );
+
     pthread_mutex_lock(&ds->mutex);
-    if (ds->queue_stopped == 1) {
-        ds->queue_stopped = 0;
-        pthread_cond_signal(&ds->cond);
-    }
+    ds->queue_stopped = 0;
+    pthread_cond_signal(&ds->cond);
     pthread_mutex_unlock(&ds->mutex);
 }
 
@@ -311,7 +296,13 @@ void netif_stop_queue (struct net_device* dev) {
 
     device_session_t* ds = dev->device_session;
 
+    assert( ds->tx_thread == pthread_self() || shutdown_program );
+
     pthread_mutex_lock(&ds->mutex);
+    while (ds->queue_stopped && ds->tx_queue.attr.size != 0) {
+        pthread_cond_wait(&ds->cond, &ds->mutex);
+    }
+
     ds->queue_stopped = 1;
     pthread_mutex_unlock(&ds->mutex);
 }

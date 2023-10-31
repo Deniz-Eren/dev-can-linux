@@ -20,6 +20,9 @@
 
 #include <stdio.h>
 #include <signal.h>
+#include <unistd.h>
+
+#include <sys/netmgr.h>
 
 #include <config.h>
 #include <pci.h>
@@ -28,12 +31,29 @@
 #include <session.h>
 
 
+int main_chid = -1;
+
 static void sigint_signal_handler (int sig_no) {
-    terminate_run_wait();
+    struct sigevent terminate_event;
+
+    terminate_irq_loop();
+
+    if (main_chid == -1) {
+        return;
+    }
+
+    int coid = ConnectAttach(ND_LOCAL_NODE, 0, main_chid, _NTO_SIDE_CHANNEL, 0);
+
+    SIGEV_SET_TYPE(&terminate_event, SIGEV_PULSE);
+    terminate_event.sigev_coid = coid;
+
+    if (MsgDeliverEvent(0, &terminate_event) == -1) {
+        log_err("MsgDeliverEvent error; %s\n", strerror(errno));
+    }
 }
 
 int main (int argc, char* argv[]) {
-    int opt;
+    int opt, vid, did, cap, n;
     char *options, *value;
 
     /*
@@ -70,7 +90,7 @@ int main (int argc, char* argv[]) {
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "b:d:U:u:viqstlVCwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "b:d:e:U:u:viqstlVCwcx?h")) != -1) {
         switch (opt) {
         case 'b':
             optb++;
@@ -78,11 +98,77 @@ int main (int argc, char* argv[]) {
             break;
 
         case 'd':
-            optd++;
-            sscanf(optarg, "%x:%x", &opt_vid, &opt_did);
-            log_info("manually disabling device: %x:%x\n", opt_vid, opt_did);
-            break;
+        {
+            device_config_t* new_disable_device_config;
 
+            new_disable_device_config =
+                malloc( (num_disable_device_configs + 1) *
+                        sizeof(device_config_t) );
+
+            int i;
+            for (i = 0; i < num_disable_device_configs; ++i) {
+                new_disable_device_config[i] = disable_device_config[i];
+            }
+
+            if (num_disable_device_configs) {
+                free(disable_device_config);
+            }
+
+            optd++;
+            n = sscanf(optarg, "%x:%x,%x", &vid, &did, &cap);
+
+            new_disable_device_config[i].vid = vid;
+            new_disable_device_config[i].did = did;
+            new_disable_device_config[i].cap = -1;
+
+            if (n == 3) {
+                new_disable_device_config[i].cap = cap;
+            }
+
+            num_disable_device_configs++;
+            disable_device_config = new_disable_device_config;
+
+            if (cap == -1) {
+                log_info("manually disabling device %04x:%04x\n", vid, did);
+            }
+            else {
+                log_info("manually disabling capability 0x%02x for device "
+                        "%04x:%04x\n", cap, vid, did);
+            }
+
+            break;
+        }
+        case 'e':
+        {
+            device_config_t* new_enable_device_cap_config;
+
+            new_enable_device_cap_config =
+                malloc( (num_enable_device_cap_configs + 1) *
+                        sizeof(device_config_t) );
+
+            int i;
+            for (i = 0; i < num_enable_device_cap_configs; ++i) {
+                new_enable_device_cap_config[i] = enable_device_cap_config[i];
+            }
+
+            if (num_enable_device_cap_configs) {
+                free(enable_device_cap_config);
+            }
+
+            opte++;
+            sscanf(optarg, "%x:%x,%x", &vid, &did, &cap);
+
+            new_enable_device_cap_config[i].vid = vid;
+            new_enable_device_cap_config[i].did = did;
+            new_enable_device_cap_config[i].cap = cap;
+
+            num_enable_device_cap_configs++;
+            enable_device_cap_config = new_enable_device_cap_config;
+
+            log_info( "enabling capability 0x%02x for device %04x:%04x\n",
+                    cap, vid, did );
+            break;
+        }
         case 'U':
             next_device_id = atoi(optarg);
 
@@ -310,19 +396,17 @@ int main (int argc, char* argv[]) {
         return -1;
     }
 
-    if (optd > 1) {
-        printf("error: only a single device can be disabled.\n");
-
-        return -1;
-    }
-
 #if RELEASE_BUILD == 1
     if (optv > 2) {
         optv = 2;
+
+        printf("warning: release versions allow at max -vv option.\n");
     }
 
     if (optl > 2) {
         optl = 2;
+
+        printf("warning: release versions allow at max -ll option.\n");
     }
 #endif
 
@@ -358,13 +442,52 @@ int main (int argc, char* argv[]) {
         return -1;
     }
 
-    run_wait();
+    int err;
+    int policy;
+    struct sched_param param;
+
+    err = pthread_getschedparam(pthread_self(), &policy, &param);
+
+    if (err != EOK) {
+        log_err("error pthread_getschedparam: %s\n", strerror(err));
+
+        return -1;
+    }
+
+    pthread_attr_t irq_thread_attr;
+    pthread_t irq_thread;
+
+    pthread_attr_init(&irq_thread_attr);
+    pthread_attr_setdetachstate(&irq_thread_attr, PTHREAD_CREATE_DETACHED);
+
+    pthread_attr_setinheritsched(&irq_thread_attr, PTHREAD_EXPLICIT_SCHED);
+
+    param.sched_priority += IRQ_SCHED_PRIORITY_BOOST;
+    pthread_attr_setschedparam(&irq_thread_attr, &param);
+
+    pthread_create(&irq_thread, &irq_thread_attr, &irq_loop, NULL);
+
+    unsigned flags = _NTO_CHF_PRIVATE;
+    main_chid = ChannelCreate(flags);
+
+    for(;;) {
+        struct _pulse pulse;
+        MsgReceivePulse(main_chid, &pulse, sizeof(pulse), NULL);
+
+        if (shutdown_program) {
+            log_info("Shutdown program\n");
+
+            break;
+        }
+    }
 
     /*
      * In practice the program runs forever or until the user terminates it;
      * thus we can never reach here.
      */
     remove_all_driver_selections();
+
+    irq_group_cleanup();
 
     free(optu_config);
 

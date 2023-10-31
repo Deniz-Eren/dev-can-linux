@@ -12,8 +12,11 @@
  *              pci_write_config_word()
  *              pci_enable_device()
  *              pci_disable_device()
+ *              pci_set_master()
  *              pci_request_regions()
  *              pci_release_regions()
+ *              pci_alloc_irq_vectors()
+ *              pci_free_irq_vectors()
  *              pci_iomap()
  *              pci_iounmap()
  *
@@ -70,9 +73,12 @@ extern void pci_iounmap(struct pci_dev *dev, void __iomem* addr);
  * The pci_dev structure is used to describe PCI devices.
  */
 struct pci_dev {
-	pci_devhdl_t hdl; /* QNX type */
-	pci_ba_t* ba; /* QNX type */
-	int_t nba;
+    pci_devhdl_t hdl;           /* QNX type */
+    pci_ba_t* ba;               /* QNX type */
+    int_t nba;                  /* QNX type */
+    pci_cap_t msi_cap;          /* QNX type */
+    pci_cap_t pcie_cap;         /* QNX type */
+    bool is_msix;
     void __iomem** addr;
 
 	unsigned int	devfn;		/* encoded device & function index */
@@ -134,11 +140,23 @@ struct pci_driver {
 extern int pci_read_config_word(const struct pci_dev *dev, int where, u16 *val);
 extern int pci_write_config_word(const struct pci_dev *dev, int where, u16 val);
 
-extern int pci_enable_device(struct pci_dev *dev);
+extern pci_err_t pci_enable_device (struct pci_dev* dev);
 extern void pci_disable_device(struct pci_dev *dev);
+
+#define PCI_IRQ_LEGACY		(1 << 0) /* Allow legacy interrupts */
+#define PCI_IRQ_MSI		(1 << 1) /* Allow MSI interrupts */
+#define PCI_IRQ_MSIX		(1 << 2) /* Allow MSI-X interrupts */
+#define PCI_IRQ_AFFINITY	(1 << 3) /* Auto-assign affinity */
+
+void pci_set_master(struct pci_dev *dev);
 
 int pci_request_regions(struct pci_dev *, const char *);
 void pci_release_regions(struct pci_dev *);
+
+int pci_alloc_irq_vectors(struct pci_dev *dev, unsigned int min_vecs,
+			  unsigned int max_vecs, unsigned int flags);
+
+void pci_free_irq_vectors(struct pci_dev *dev);
 
 /* These manipulate per-pci_dev driver-specific data.  They are really just a
  * wrapper around the generic device structure functions of these calls.

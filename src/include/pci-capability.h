@@ -1,5 +1,5 @@
 /*
- * \file    driver-prints.h
+ * \file    pci-capability.h
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -18,13 +18,14 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef SRC_DRIVER_PRINTS_H_
-#define SRC_DRIVER_PRINTS_H_
+#ifndef SRC_PCI_CAPABILITY_H_
+#define SRC_PCI_CAPABILITY_H_
 
-#include "prints.h"
-
-/* Info prints */
-extern void print_support (int detailed);
+#include <pthread.h>
+#include <linux/pci.h>
 
 
-#endif /* SRC_DRIVER_PRINTS_H_ */
+extern pci_err_t msix_init (struct pci_dev* dev);
+extern void msix_uninit (struct pci_dev* dev);
+
+#endif /* SRC_PCI_CAPABILITY_H_ */

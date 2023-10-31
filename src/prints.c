@@ -165,6 +165,14 @@ void print_help (char* program_name) {
     printf("                 The driver detects and enables all supported PCI CAN-bus\n");
     printf("                 devices on the bus. However, if you want the driver to ignore\n");
     printf("                 a particular device use this option.\n");
+    printf("    \e[1m-d vid:did,cap\e[m\n");
+    printf("               - Disable PCI/PCIe capability cap for device,\n");
+    printf("                 e.g. -d 13fe:00d7,0x11 -d 13fe:00d7,0x05\n");
+    printf("    \e[1m-e vid:did,cap\e[m\n");
+    printf("               - Enable PCI/PCIe capability cap for device,\n");
+    printf("                 e.g. -e 13fe:00d7,0x05\n");
+    printf("                 By default all capabilities are disabled and require enabling to\n");
+    printf("                 be activated (EXPERIMENTAL).\n");
     printf("    \e[1m-b delay\e[m   - Bus-off recovery delay timer length (milliseconds).\n");
     printf("                 If set to 0ms, then the bus-off recovery is disabled!\n");
     printf("                 The netif transmission queue fault recovery is also set to this\n");
@@ -208,8 +216,7 @@ void print_help (char* program_name) {
     printf("\n");
     printf("    In this example we would chose the numbers \e[1mvid=13fe\e[m, \e[1mdid=c302\e[m\n");
     printf("\n");
-    printf("    Target specific hardware detection of hardware and enable max verbose mode for\n");
-    printf("    debugging:\n");
+    printf("    Target specific hardware to disable and enable max verbose mode for debugging:\n");
     printf("\n");
     printf("        \e[1mdev-can-linux -d 13fe:c302 -vv -ll\e[m\n");
     printf("\n");

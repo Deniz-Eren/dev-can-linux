@@ -106,6 +106,14 @@ Options:
                  The driver detects and enables all supported PCI CAN-bus
                  devices on the bus. However, if you want the driver to ignore
                  a particular device use this option.
+    -d vid:did,cap
+               - Disable PCI/PCIe capability cap for device,
+                 e.g. -d 13fe:00d7,0x11 -d 13fe:00d7,0x05
+    -e vid:did,cap
+               - Enable PCI/PCIe capability cap for device,
+                 e.g. -e 13fe:00d7,0x05
+                 By default all capabilities are disabled and require enabling to
+                 be activated (EXPERIMENTAL).
     -b delay   - Bus-off recovery delay timer length (milliseconds).
                  If set to 0ms, then the bus-off recovery is disabled!
                  The netif transmission queue fault recovery is also set to this
@@ -539,6 +547,97 @@ Current version output:
         { vendor: 1393, device: 100, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
         { vendor: 10b5, device: 9030, subvendor: 3000, subdevice: 1001, class: 0, class_mask: 0 }
         { vendor: 10b5, device: 9030, subvendor: 3000, subdevice: 1002, class: 0, class_mask: 0 }
+
+
+## PCIe MSI and MSI-X Capability Devices
+
+These capabilities are currently disabled by default. They are experimental and
+have not been verified with real hardware.
+
+For PCIe devices that support capability 0x05 (MSI) and/or 0x11 (MSI-X), both
+`pci-server` driver and `dev-can-linux` driver needs to have the environment
+variable `PCI_CAP_MODULE_DIR` defined.
+
+To check if your device supports this capability, just run the driver with high
+verbose configurations `dev-can-linux -vvvvv` and you should see the following
+during the detection process:
+
+    read capability[#]: 0x05
+    read capability[#]: 0x11
+
+For the `dev-can-linux` driver you can simply define this variable in your
+console, however for `pci-server` driver it is usually defined in the image.
+Furthermore, your environment must contain the PCIe module shared libraries
+`pci_cap-0x05.so*` and/or `pci_cap-0x11.so*` installed.
+
+As an example take a look at our QNX 7.1 emulation image setup scripts within the
+[workspace](https://github.com/Deniz-Eren/workspace) submodule.
+
+The scripts you should check are, firstly
+[workspace/emulation/qnx710/image/parts/ifs.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx710/image/parts/ifs.build)
+defines file `/proc/boot/pci_server.cfg` embedded in the image contains the
+environment variable `PCI_CAP_MODULE_DIR`, specifying where the capability
+modules are located for `pci-server` driver to find them:
+
+    [buscfg]
+    DO_BUS_CONFIG=no
+
+    [envars]
+    PCI_CAP_MODULE_DIR=/proc/boot/lib/dll/pci/
+    PCI_DEBUG_MODULE=pci_debug2.so
+    PCI_HW_MODULE=pci_hw-Intel_x86.so
+
+You can also see in the `ifs.build` file the PCIe 0x05 (MSI) and/or 0x11 (MSI-X)
+capability module dynamic libraries are installed in the `lib/dll/pci/` path
+which mounts to `/proc/boot/lib/dll/pci/`
+
+    lib/dll/pci/pci_cap-0x05.so=lib/dll/pci/pci_cap-0x05.so
+    lib/dll/pci/pci_cap-0x05.so.2.3=lib/dll/pci/pci_cap-0x05.so.2.3
+    lib/dll/pci/pci_cap-0x05.so.2.3.sym=lib/dll/pci/pci_cap-0x05.so.2.3.sym
+    lib/dll/pci/pci_cap-0x11.so=lib/dll/pci/pci_cap-0x11.so
+    lib/dll/pci/pci_cap-0x11.so.2.2=lib/dll/pci/pci_cap-0x11.so.2.2
+    lib/dll/pci/pci_cap-0x11.so.2.2.sym=lib/dll/pci/pci_cap-0x11.so.2.2.sym
+
+Next in file
+[workspace/emulation/qnx710/image/parts/system.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx710/image/parts/system.build)
+we define the same environment variable for dev-can-linux to find the PCI
+modules:
+
+    etc/profile = {
+    export TERM=qansi
+    export PATH=/opt/bin:/proc/boot:/system/xbin
+    export LD_LIBRARY_PATH=/opt/lib:/proc/boot:/system/lib:/system/lib/dll
+    export PCI_CAP_MODULE_DIR=/proc/boot/lib/dll/pci/
+    export SYSNAME=QNXTEST
+    export TZ=AEST-10
+    export PS1=\[$SYSNAME]\#
+    }
+
+This shows the file `etc/profile` defining the needed environment variables so
+that the user console have them defined for dev-can-linux to find the PCI
+modules.
+
+For advanced user, if you wish to enable the 0x11 (MSI-X) capability or the
+the 0x05 (MSI) capability (if it's available), simply specific device and
+capability number with `-e` option program options to the `dev-can-linux` driver.
+
+To force MSI-X to be used:
+
+    dev-can-linux -e vid:did,0x11
+
+To force MSI to be used:
+
+    dev-can-linux -e vid:did,0x05
+
+Note it is NOT recommended to enable capabilities, in production until we release
+a hardware tested and verified version. However this ability is provided for
+advanced users to adopt at their discretion.
+
+One final note on legacy MSI, PCI 3.0 onwards allow each interrupt to be masked
+individually. If this feature is not available on the device, that is, if Per
+Vector Masking (PVM) isn't supported, then currently the driver will revert to
+regular IRQ operation.
+
 
 ## Hardware Test Status
 

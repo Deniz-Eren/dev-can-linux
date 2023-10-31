@@ -80,6 +80,11 @@ project( dev-can-linux
          VERSION ${PROGRAM_VERSION}
          LANGUAGES C CXX )
 
+set( IRQ_SCHED_PRIORITY_BOOST "20" CACHE STRING
+    "Schedule priority of transmission and interrupt processing" )
+
+add_compile_definitions( IRQ_SCHED_PRIORITY_BOOST=${IRQ_SCHED_PRIORITY_BOOST} )
+
 set( SSH_PORT "6022" CACHE STRING "SSH port number" )
 
 include( CodeCoverageProfiler )
@@ -119,6 +124,7 @@ list( APPEND C_SOURCE_FILES
     ${CMAKE_SOURCE_DIR}/src/logs.c
     ${CMAKE_SOURCE_DIR}/src/netif.c
     ${CMAKE_SOURCE_DIR}/src/pci.c
+    ${CMAKE_SOURCE_DIR}/src/pci-capability.c
     ${CMAKE_SOURCE_DIR}/src/prints.c
     ${CMAKE_SOURCE_DIR}/src/driver-prints.c
     ${CMAKE_SOURCE_DIR}/src/queue.c

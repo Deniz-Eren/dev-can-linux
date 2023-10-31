@@ -44,6 +44,13 @@
  */
 extern volatile unsigned log_enabled;
 
+#define log_cus(fmt, arg...) { \
+        if (log_enabled) { \
+            syslog(LOG_INFO, fmt, ##arg); \
+            fprintf(stderr, fmt, ##arg); \
+        } \
+    }
+
 #define log_err(fmt, arg...) { \
         if (log_enabled) { \
             syslog(LOG_ERR, fmt, ##arg); \

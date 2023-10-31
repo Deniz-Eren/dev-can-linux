@@ -26,6 +26,7 @@
 
 #include "config.h"
 #include "pci.h"
+#include "pci-capability.h"
 
 #include <linux/io.h>
 
@@ -112,7 +113,21 @@ int process_driver_selection() {
             }
 
             if (detected_driver_temp) {
-                if (!optd || opt_vid != vid || opt_did != did) {
+                bool device_disabled = false;
+
+                int i;
+                for (i = 0; i < num_disable_device_configs; ++i) {
+                    if (disable_device_config[i].vid == vid &&
+                        disable_device_config[i].did == did &&
+                        disable_device_config[i].cap == -1)
+                    {
+                        device_disabled = true;
+
+                        break;
+                    }
+                }
+
+                if (!optd || !device_disabled) {
                     store_driver_selection(vid, did, detected_driver_temp);
                 }
             }
@@ -125,69 +140,31 @@ int process_driver_selection() {
     return 0;
 }
 
-int pci_enable_device (struct pci_dev* dev) {
-    log_trace("pci_enable_device: %x:%x\n",
+pci_err_t pci_enable_device (struct pci_dev* dev) {
+    log_trace("pci_enable_device: %04x:%04x\n",
             dev->vendor, dev->device);
 
     uint_t idx = 0;
-    pci_bdf_t bdf = 0;
+    pci_bdf_t bdf;
 
     while ((bdf = pci_device_find(
             idx, dev->vendor, dev->device, PCI_CCODE_ANY) ) != PCI_BDF_NONE)
     {
+        if (idx > 0) {
+            log_err("only single device per vendor and device id combination "
+                    "supported\n");
+
+            return PCI_ERR_ENOTSUP; // Not supported
+        }
+
         pci_err_t r;
 
-        pci_devhdl_t hdl =
-                pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
+        dev->hdl = pci_device_attach(bdf, pci_attachFlags_EXCLUSIVE_OWNER, &r);
 
-        dev->hdl = hdl;
+        if (dev->hdl == NULL) {
+            log_err("pci_device_attach error: %s\n", pci_strerror(r));
 
-        if (hdl == NULL) {
-            switch (r) {
-            case PCI_ERR_EINVAL:
-                log_err("pci device attach failed; Invalid flags.\n");
-                break;
-            case PCI_ERR_ENODEV:
-                log_err("pci device attach failed; "
-                        "The bdf argument doesn't refer to a valid device.\n");
-                break;
-            case PCI_ERR_ATTACH_EXCLUSIVE:
-                log_err("pci device attach failed; "
-                        "The device identified by bdf is already exclusively "
-                        "owned.\n");
-                break;
-            case PCI_ERR_ATTACH_SHARED:
-                log_err("pci device attach failed; "
-                        "The request was for exclusive attachment, but the "
-                        "device identified by bdf has already been "
-                        "successfully attached to.\n");
-                break;
-            case PCI_ERR_ATTACH_OWNED:
-                log_err("pci device attach failed; "
-                        "The request was for ownership of the device, but the "
-                        "device is already owned.\n");
-                break;
-            case PCI_ERR_ENOMEM:
-                log_err("pci device attach failed; Memory for internal "
-                        "resources couldn't be obtained. This may be a "
-                        "temporary condition.\n");
-                break;
-            case PCI_ERR_LOCK_FAILURE:
-                log_err("pci device attach failed; "
-                        "There was an error related to the creation, "
-                        "acquisition, or use of a synchronization object.\n");
-                break;
-            case PCI_ERR_ATTACH_LIMIT:
-                log_err("pci device attach failed; There have been too many "
-                        "attachments to the device identified by bdf.\n");
-                break;
-            default:
-                log_err("pci device attach failed; Unknown error: %d\n",
-                        (int)r);
-                break;
-            }
-
-            return -1;
+            return r;
         }
 
         /*
@@ -199,21 +176,21 @@ int pci_enable_device (struct pci_dev* dev) {
         pci_cs_t cs; /* chassis and slot */
 
         if ((r = pci_device_read_ssvid(bdf, &ssvid)) != PCI_ERR_OK) {
-            log_err("error reading ssvid\n");
+            log_err("pci_device_read_ssvid error: %s\n", pci_strerror(r));
 
-            return -1;
+            return r;
         }
 
-        log_info("read ssvid: %x\n", ssvid);
+        log_info("read ssvid: %04x\n", ssvid);
         dev->subsystem_vendor = ssvid;
 
         if ((r = pci_device_read_ssid(bdf, &ssid)) != PCI_ERR_OK) {
-            log_err("error reading ssid\n");
+            log_err("pci_device_read_ssid error: %s\n", pci_strerror(r));
 
-            return -1;
+            return r;
         }
 
-        log_info("read ssid: %x\n", ssid);
+        log_info("read ssid: %04x\n", ssid);
         dev->subsystem_device = ssid;
 
         cs = pci_device_chassis_slot(bdf);
@@ -224,22 +201,25 @@ int pci_enable_device (struct pci_dev* dev) {
                 cs, PCI_SLOT(cs), PCI_FUNC(bdf), dev->devfn);
 
         /*
-         * Currently no device capabilities are needed to be processed
+         * Load capabilities
          */
 
-        /* optionally determine capabilities of device */
-        uint_t capid_idx = 0;
-        pci_capid_t capid;
+        bool device_cap_enabled = false;
 
-        /* instead of looping could use pci_device_find_capid() to select
-         * which capabilities to use */
-        while ((r = pci_device_read_capid(
-                bdf, &capid, capid_idx) ) == PCI_ERR_OK)
-        {
-            log_info("read capability[%d]: %x\n", capid_idx, capid);
+        int i;
+        for (i = 0; i < num_enable_device_cap_configs; ++i) {
+            if (enable_device_cap_config[i].vid == dev->vendor &&
+                enable_device_cap_config[i].did == dev->device &&
+                enable_device_cap_config[i].cap != -1)
+            {
+                device_cap_enabled = true;
 
-            /* get next capability ID */
-            ++capid_idx;
+                break;
+            }
+        }
+
+        if (device_cap_enabled) {
+            msix_init(dev);
         }
 
         /*
@@ -253,7 +233,8 @@ int pci_enable_device (struct pci_dev* dev) {
         int_t nba = NELEMENTS(ba);
 
         /* read the address space information */
-        r = pci_device_read_ba(hdl, &nba, ba, pci_reqType_e_UNSPECIFIED);
+        r = pci_device_read_ba(dev->hdl, &nba, ba, pci_reqType_e_UNSPECIFIED);
+
         if ((r == PCI_ERR_OK) && (nba > 0))
         {
             dev->nba = nba;
@@ -313,7 +294,7 @@ int pci_enable_device (struct pci_dev* dev) {
                     log_err("pci_enable_device error; unknown PCI region "
                             "type: %d\n", dev->ba[i].type);
 
-                    return -1;
+                    return PCI_ERR_ENOTSUP; // Not supported
                 }
 
                 log_info("read ba[%d] %s { addr: %x, size: %x }\n",
@@ -331,7 +312,7 @@ int pci_enable_device (struct pci_dev* dev) {
                             (void*)pci_mem_addr_space_begin,
                             (void*)pci_mem_addr_space_end);
 
-                    return -1;
+                    return PCI_ERR_ENOTSUP; // Not supported
                 }
 
                 // Used in linux/io.h
@@ -351,11 +332,12 @@ int pci_enable_device (struct pci_dev* dev) {
          * Process IRQ info
          */
 
-        pci_irq_t irq[10];
+        pci_irq_t irq[32];
         int_t nirq = NELEMENTS(irq);
 
         /* read the irq information */
-        r = pci_device_read_irq(hdl, &nirq, irq);
+        r = pci_device_read_irq(dev->hdl, &nirq, irq);
+
         if ((r == PCI_ERR_OK) && (nirq > 0))
         {
             dev->irq = irq[0];
@@ -364,22 +346,54 @@ int pci_enable_device (struct pci_dev* dev) {
                 log_info("read irq[%d]: %d\n", i, irq[i]);
             }
 
-            if (nirq > 1) {
-                log_err("read multiple (%d) IRQs\n", nirq);
+            irq_group_add(irq, nirq, dev->hdl, dev->msi_cap, dev->is_msix);
+        }
 
-                return -1;
-            }
+        if (dev->irq == 0) {
+            log_err("failed to read any IRQs\n");
+
+            return PCI_ERR_ENOTSUP; // Not supported
         }
 
         /* get next device instance */
         ++idx;
     }
 
-    return 0;
+    return PCI_ERR_OK;
 }
 
 void pci_disable_device (struct pci_dev* dev) {
     log_trace("pci_disable_device\n");
+
+    if (pci_bdf(dev->hdl) == PCI_BDF_NONE) {
+        log_err("pci device not enabled\n");
+
+        return;
+    }
+
+    if (dev->hdl == NULL) {
+        log_err("pci device not attached\n");
+
+        return;
+    }
+
+    bool device_cap_enabled = false;
+
+    int i;
+    for (i = 0; i < num_enable_device_cap_configs; ++i) {
+        if (enable_device_cap_config[i].vid == dev->vendor &&
+            enable_device_cap_config[i].did == dev->device &&
+            enable_device_cap_config[i].cap != -1)
+        {
+            device_cap_enabled = true;
+
+            break;
+        }
+    }
+
+    if (device_cap_enabled) {
+        msix_uninit(dev);
+    }
 
     if (dev != NULL) {
         if (dev->hdl != NULL) {
@@ -533,6 +547,10 @@ void pci_iounmap (struct pci_dev* dev, void __iomem* addr) {
     free(block);
 }
 
+void pci_set_master (struct pci_dev *dev) {
+    log_trace("pci_set_master\n");
+}
+
 int pci_request_regions (struct pci_dev* dev, const char* res_name) {
     log_trace("pci_request_regions\n");
 
@@ -542,6 +560,26 @@ int pci_request_regions (struct pci_dev* dev, const char* res_name) {
 
 void pci_release_regions (struct pci_dev* dev) {
     log_trace("pci_release_regions\n");
+
+    // We will perform this in pci_disable_device()
+}
+
+int pci_alloc_irq_vectors (struct pci_dev *dev,
+        unsigned int min_vecs, unsigned int max_vecs, unsigned int flags)
+{
+    log_trace("pci_alloc_irq_vectors\n");
+
+    // We will perform this in pci_enable_device()
+
+    if (dev->msi_cap) {
+        return 1;
+    }
+
+    return 0;
+}
+
+void pci_free_irq_vectors (struct pci_dev *dev) {
+    log_trace("pci_free_irq_vectors\n");
 
     // We will perform this in pci_disable_device()
 }
@@ -572,7 +610,7 @@ int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
 
     pci_err_t err = pci_device_cfg_rd16( bdf,
             where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
-            val );
+                             val );
 
     if (err != PCI_ERR_OK) {
         return -1;
@@ -584,7 +622,7 @@ int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
 int pci_write_config_word (const struct pci_dev* dev, int where, u16 val) {
     pci_err_t err = pci_device_cfg_wr16( dev->hdl,
             where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
-            val, NULL );
+                             val, NULL );
 
     if (err != PCI_ERR_OK) {
         return -1;
