@@ -256,13 +256,14 @@ void* irq_loop (void* arg) {
         rcvid = MsgReceivePulse(irq_chid, &pulse, sizeof(pulse), NULL);
 
         if (shutdown_program) {
-            log_err("MsgReceivePulse error; %s\n", strerror(errno));
+            log_info("Shutdown IRQ loop\n");
 
             return NULL;
         }
 
         if (rcvid == -1 ) {
-            // handle error (errno)
+            log_err("MsgReceivePulse error; %s\n", strerror(errno));
+
             continue;
         }
 
