@@ -113,7 +113,7 @@ Options:
                - Enable PCI/PCIe capability cap for device,
                  e.g. -e 13fe:00d7,0x05
                  By default all capabilities are disabled and require enabling to
-                 to be activated (EXPERIMENTAL).
+                 be activated (EXPERIMENTAL).
     -b delay   - Bus-off recovery delay timer length (milliseconds).
                  If set to 0ms, then the bus-off recovery is disabled!
                  The netif transmission queue fault recovery is also set to this

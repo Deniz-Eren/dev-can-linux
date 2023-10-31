@@ -172,7 +172,7 @@ void print_help (char* program_name) {
     printf("               - Enable PCI/PCIe capability cap for device,\n");
     printf("                 e.g. -e 13fe:00d7,0x05\n");
     printf("                 By default all capabilities are disabled and require enabling to\n");
-    printf("                 to be activated (EXPERIMENTAL).\n");
+    printf("                 be activated (EXPERIMENTAL).\n");
     printf("    \e[1m-b delay\e[m   - Bus-off recovery delay timer length (milliseconds).\n");
     printf("                 If set to 0ms, then the bus-off recovery is disabled!\n");
     printf("                 The netif transmission queue fault recovery is also set to this\n");
