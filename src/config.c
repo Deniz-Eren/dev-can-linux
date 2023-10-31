@@ -34,7 +34,7 @@
 #endif
 
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-#warning CONFIG_QNX_INTERRUPT_ATTACH_EVENT is deprecated; we recommend CONFIG_QNX_INTERRUPT_ATTACH (see docs/Config-Options.md)
+#warning CONFIG_QNX_INTERRUPT_ATTACH_EVENT is deprecated; we recommend CONFIG_QNX_INTERRUPT_ATTACH
 #endif
 
 #if CONFIG_QNX_RESMGR_SINGLE_THREAD == 1 && \
@@ -69,7 +69,9 @@ size_t num_optu_configs = 0;
 channel_config_t* optu_config = NULL;
 
 size_t num_disable_device_configs;
-disable_device_config_t* disable_device_config;
+device_config_t* disable_device_config;
+size_t num_enable_device_cap_configs;
+device_config_t* enable_device_cap_config;
 
 /*
  * IRQ Management

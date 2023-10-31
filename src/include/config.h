@@ -79,10 +79,12 @@ typedef struct {
     int vid;
     int did;
     int cap; // cap=-1 to disable entire device
-} disable_device_config_t;
+} device_config_t;
 
 extern size_t num_disable_device_configs;
-extern disable_device_config_t* disable_device_config;
+extern device_config_t* disable_device_config;
+extern size_t num_enable_device_cap_configs;
+extern device_config_t* enable_device_cap_config;
 
 
 /*

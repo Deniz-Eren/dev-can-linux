@@ -82,12 +82,46 @@ pci_err_t msix_init (struct pci_dev* dev) {
     pci_err_t r;
     int i;
 
-    bool disabled_msi = false;
-    bool disabled_msix = false;
+    /*
+     * By default both MSI and MSI-X are disabled
+     */
+
+    bool disabled_msi = true;
+    bool disabled_msix = true;
 
     pcie_init(dev);
 
     dev->msi_cap = NULL;
+
+    /*
+     * Enable MSI or MSI-X base on program options
+     */
+
+    for (i = 0; i < num_enable_device_cap_configs; ++i) {
+        if (enable_device_cap_config[i].vid == dev->vendor &&
+            enable_device_cap_config[i].did == dev->device &&
+            enable_device_cap_config[i].cap == CAPID_MSI)
+        {
+            disabled_msi = false;
+
+            break;
+        }
+    }
+
+    for (i = 0; i < num_enable_device_cap_configs; ++i) {
+        if (enable_device_cap_config[i].vid == dev->vendor &&
+            enable_device_cap_config[i].did == dev->device &&
+            enable_device_cap_config[i].cap == CAPID_MSIX)
+        {
+            disabled_msix = false;
+
+            break;
+        }
+    }
+
+    /*
+     * Disable MSI or MSI-X base on program options (this takes precedence)
+     */
 
     for (i = 0; i < num_disable_device_configs; ++i) {
         if (disable_device_config[i].vid == dev->vendor &&

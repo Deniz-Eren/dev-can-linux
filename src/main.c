@@ -53,7 +53,7 @@ static void sigint_signal_handler (int sig_no) {
 }
 
 int main (int argc, char* argv[]) {
-    int opt, vid, did, cap;
+    int opt, vid, did, cap, n;
     char *options, *value;
 
     /*
@@ -99,11 +99,11 @@ int main (int argc, char* argv[]) {
 
         case 'd':
         {
-            disable_device_config_t* new_disable_device_config;
+            device_config_t* new_disable_device_config;
 
             new_disable_device_config =
                 malloc( (num_disable_device_configs + 1) *
-                        sizeof(disable_device_config_t) );
+                        sizeof(device_config_t) );
 
             int i;
             for (i = 0; i < num_disable_device_configs; ++i) {
@@ -115,46 +115,57 @@ int main (int argc, char* argv[]) {
             }
 
             optd++;
-            sscanf(optarg, "%x:%x", &vid, &did);
+            n = sscanf(optarg, "%x:%x,%x", &vid, &did, &cap);
 
             new_disable_device_config[i].vid = vid;
             new_disable_device_config[i].did = did;
             new_disable_device_config[i].cap = -1;
 
+            if (n == 3) {
+                new_disable_device_config[i].cap = cap;
+            }
+
             num_disable_device_configs++;
             disable_device_config = new_disable_device_config;
 
-            log_info("manually disabling device %x:%x\n", vid, did);
+            if (cap == -1) {
+                log_info("manually disabling device %04x:%04x\n", vid, did);
+            }
+            else {
+                log_info("manually disabling capability 0x%02x for device "
+                        "%04x:%04x\n", cap, vid, did);
+            }
+
             break;
         }
         case 'e':
         {
-            disable_device_config_t* new_disable_device_config;
+            device_config_t* new_enable_device_cap_config;
 
-            new_disable_device_config =
-                malloc( (num_disable_device_configs + 1) *
-                        sizeof(disable_device_config_t) );
+            new_enable_device_cap_config =
+                malloc( (num_enable_device_cap_configs + 1) *
+                        sizeof(device_config_t) );
 
             int i;
-            for (i = 0; i < num_disable_device_configs; ++i) {
-                new_disable_device_config[i] = disable_device_config[i];
+            for (i = 0; i < num_enable_device_cap_configs; ++i) {
+                new_enable_device_cap_config[i] = enable_device_cap_config[i];
             }
 
-            if (num_disable_device_configs) {
-                free(disable_device_config);
+            if (num_enable_device_cap_configs) {
+                free(enable_device_cap_config);
             }
 
             opte++;
             sscanf(optarg, "%x:%x,%x", &vid, &did, &cap);
 
-            new_disable_device_config[i].vid = vid;
-            new_disable_device_config[i].did = did;
-            new_disable_device_config[i].cap = cap;
+            new_enable_device_cap_config[i].vid = vid;
+            new_enable_device_cap_config[i].did = did;
+            new_enable_device_cap_config[i].cap = cap;
 
-            num_disable_device_configs++;
-            disable_device_config = new_disable_device_config;
+            num_enable_device_cap_configs++;
+            enable_device_cap_config = new_enable_device_cap_config;
 
-            log_info( "manually disabling PCIe capability 0x%02x for device %x:%x\n",
+            log_info( "enabling capability 0x%02x for device %04x:%04x\n",
                     cap, vid, did );
             break;
         }

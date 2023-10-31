@@ -106,8 +106,14 @@ Options:
                  The driver detects and enables all supported PCI CAN-bus
                  devices on the bus. However, if you want the driver to ignore
                  a particular device use this option.
+    -d vid:did,cap
+               - Disable PCI/PCIe capability cap for device,
+                 e.g. -d 13fe:00d7,0x11 -d 13fe:00d7,0x05
     -e vid:did,cap
-               - Disable PCIe capability cap for device, e.g. -e 13fe:00d7,0x05
+               - Enable PCI/PCIe capability cap for device,
+                 e.g. -e 13fe:00d7,0x05
+                 By default all capabilities are disabled and require enabling to
+                 to be activated (EXPERIMENTAL).
     -b delay   - Bus-off recovery delay timer length (milliseconds).
                  If set to 0ms, then the bus-off recovery is disabled!
                  The netif transmission queue fault recovery is also set to this
@@ -545,6 +551,9 @@ Current version output:
 
 ## PCIe MSI and MSI-X Capability Devices
 
+These capabilities are currently disabled by default. They are experimental and
+have not been verified with real hardware.
+
 For PCIe devices that support capability 0x05 (MSI) and/or 0x11 (MSI-X), both
 `pci-server` driver and `dev-can-linux` driver needs to have the environment
 variable `PCI_CAP_MODULE_DIR` defined.
@@ -608,21 +617,21 @@ This shows the file `etc/profile` defining the needed environment variables so
 that the user console have them defined for dev-can-linux to find the PCI
 modules.
 
-For advanced user, if you wish to disable the 0x11 (MSI-X) capability to force
-the driver to use 0x05 (MSI) capability instead (if it's available) or if you
-wish to disable both, simply specific device and capability number with `-e`
-option program options to the `dev-can-linux` driver.
+For advanced user, if you wish to enable the 0x11 (MSI-X) capability or the
+the 0x05 (MSI) capability (if it's available), simply specific device and
+capability number with `-e` option program options to the `dev-can-linux` driver.
 
-To force MSI to be used, disable MSI-X:
+To force MSI-X to be used:
 
     dev-can-linux -e vid:did,0x11
 
-To force a regular IRQ to be used disable both MSI and MSI-X:
+To force MSI to be used:
 
-    dev-can-linux -e vid:did,0x11 -e vid:did,0x05
+    dev-can-linux -e vid:did,0x05
 
-Note it is NOT recommended to disable capabilities, however this ability is
-provided for advanced users to adopt at their discretion.
+Note it is NOT recommended to enable capabilities, in production until we release
+a hardware tested and verified version. However this ability is provided for
+advanced users to adopt at their discretion.
 
 One final note on legacy MSI, PCI 3.0 onwards allow each interrupt to be masked
 individually. If this feature is not available on the device, that is, if Per

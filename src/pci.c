@@ -204,7 +204,23 @@ pci_err_t pci_enable_device (struct pci_dev* dev) {
          * Load capabilities
          */
 
-        msix_init(dev);
+        bool device_cap_enabled = false;
+
+        int i;
+        for (i = 0; i < num_enable_device_cap_configs; ++i) {
+            if (enable_device_cap_config[i].vid == dev->vendor &&
+                enable_device_cap_config[i].did == dev->device &&
+                enable_device_cap_config[i].cap != -1)
+            {
+                device_cap_enabled = true;
+
+                break;
+            }
+        }
+
+        if (device_cap_enabled) {
+            msix_init(dev);
+        }
 
         /*
          * Process bar info
@@ -361,7 +377,23 @@ void pci_disable_device (struct pci_dev* dev) {
         return;
     }
 
-    msix_uninit(dev);
+    bool device_cap_enabled = false;
+
+    int i;
+    for (i = 0; i < num_enable_device_cap_configs; ++i) {
+        if (enable_device_cap_config[i].vid == dev->vendor &&
+            enable_device_cap_config[i].did == dev->device &&
+            enable_device_cap_config[i].cap != -1)
+        {
+            device_cap_enabled = true;
+
+            break;
+        }
+    }
+
+    if (device_cap_enabled) {
+        msix_uninit(dev);
+    }
 
     if (dev != NULL) {
         if (dev->hdl != NULL) {
