@@ -64,7 +64,7 @@ void print_support (int detailed) {
 
     printf("\n");
 
-    if (detailed) {
+    if (detailed > 1) {
         printf("\e[1mAdvantech PCI cards:\e[m\n");
         print_card(stdout, &adv_pci_driver);
 
