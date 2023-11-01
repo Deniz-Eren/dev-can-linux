@@ -114,10 +114,8 @@ Options:
                  e.g. -e 13fe:00d7,0x05
                  By default all capabilities are disabled and require enabling to
                  be activated (EXPERIMENTAL).
-    -b delay   - Bus-off recovery delay timer length (milliseconds).
+    -r delay   - Bus-off recovery delay timer duration (milliseconds).
                  If set to 0ms, then the bus-off recovery is disabled!
-                 The netif transmission queue fault recovery is also set to this
-                 delay value.
                  Default: 50ms
     -x         - Start the driver with extended MIDs enabled.
                  Device suboptions take precedence over this option.

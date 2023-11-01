@@ -143,7 +143,7 @@ int register_netdev (struct net_device* dev) {
 
     struct user_dev_setup user = {
             .set_restart_ms = true,
-            .restart_ms = optb_restart_ms,
+            .restart_ms = optr_restart_ms,
             .set_bittiming = true,
             .bittiming = { .bitrate = 250000 }
     };
