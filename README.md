@@ -651,7 +651,11 @@ regular IRQ operation.
 
 Actual hardware tested currently are:
 
-- Advantech PCIe (vendor: 13fe, device: c302) running on UNO2484G and UNO1483G
+- Advantech cards running on UNO2484G and UNO1483G (x86_64 architecture)
+  * PCM-3680i PCI CAN (vendor: 13fe, device: c302)
+  * PCM-26D2CA mPCIe CAN (vendor: 13fe, device: 00d7)
+- PEAK PCIe CAN board (vendor: 1c, device: 8) running on a Toradex IMX8QM SOM
+  (aarch64le architecture)
 
 Please report back findings from any hardware you test so we can update this
 list, your help is much appreciated.
