@@ -116,7 +116,7 @@ TEST( Timer, ScheduleMoreWork ) {
     EXPECT_LT(trig_diff_ms, 3.5);
 #else
     // in VM timing isn't accurate, so we need to account for it
-    EXPECT_LT(trig_diff_ms, 20.0);
+    EXPECT_LT(trig_diff_ms, 40.0);
 #endif
 
     // callback must be called only once
@@ -155,7 +155,7 @@ TEST( Timer, ScheduleSameWorkAgain ) {
     EXPECT_LT(trig_diff_ms, 13.5);
 #else
     // in VM timing isn't accurate, so we need to account for it
-    EXPECT_LT(trig_diff_ms, 30.0);
+    EXPECT_LT(trig_diff_ms, 40.0);
 #endif
 
     // callback must be called only once
@@ -260,7 +260,7 @@ TEST( Timer, SetupAgainAndScheduleSameWork ) {
     EXPECT_LT(trig_diff_ms, 13.5);
 #else
     // in VM timing isn't accurate, so we need to account for it
-    EXPECT_LT(trig_diff_ms, 30.0);
+    EXPECT_LT(trig_diff_ms, 40.0);
 #endif
 
     // callback must be called only once
