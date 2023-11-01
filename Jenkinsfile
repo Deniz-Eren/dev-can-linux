@@ -311,6 +311,15 @@ node('jenkins-agent') {
                                 -DBUILD_TESTING=OFF ../project_repo \
                         && make -j8 \
                         && cpack \
+                        && cp dev-can-linux-*.tar.gz \\\"../\\\$DIR\\\" \
+                        && cd .. \
+                        && mkdir -p build_release_armv7le \
+                        && cd build_release_armv7le \
+                        && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
+                                -DCMAKE_TOOLCHAIN_FILE=../project_repo/workspace/cmake/Toolchain/qnx710-armv7le.toolchain.cmake \
+                                -DBUILD_TESTING=OFF ../project_repo \
+                        && make -j8 \
+                        && cpack \
                         && cp dev-can-linux-*.tar.gz \\\"../\\\$DIR\\\""
 
                 docker cp \

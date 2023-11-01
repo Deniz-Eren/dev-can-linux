@@ -35,5 +35,6 @@
 #define MODULE_DEVICE_TABLE(pci, tbl)
 #define module_pci_driver(pci_driver)
 #define EXPORT_SYMBOL_GPL(func)
+#define EXPORT_SYMBOL(func)
 
 #endif /* _LINUX_MODULE_H */
