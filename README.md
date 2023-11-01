@@ -657,5 +657,7 @@ Actual hardware tested currently are:
 - PEAK PCIe CAN board (vendor: 1c, device: 8) running on a Toradex IMX8QM SOM
   (aarch64le architecture)
 
-Please report back findings from any hardware you test so we can update this
-list, your help is much appreciated.
+Please help us update this list; if you have tested any hardware consider
+reporting back your findings by creating an
+[Issue](https://github.com/Deniz-Eren/dev-can-linux/issues) using our _Report
+hardware tested_ template, your help is much appreciated.
