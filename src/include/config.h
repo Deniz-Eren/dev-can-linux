@@ -94,7 +94,11 @@ extern device_config_t* enable_device_cap_config;
 #define __KERNEL__
 #define __iomem volatile
 
+#if defined(__X86_64__) || defined(__aarch64__)
 #define BITS_PER_LONG (64)
+#else /* 32-bit system */
+#define BITS_PER_LONG (32)
+#endif
 
 /* Defines the need for macro IFNAMSIZ */
 #define __UAPI_DEF_IF_IFNAMSIZ (1)

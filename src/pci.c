@@ -404,7 +404,7 @@ void pci_disable_device (struct pci_dev* dev) {
 
 void __iomem* pci_iomap (struct pci_dev* dev, int bar, unsigned long max) {
     log_trace("pci_iomap; bar: %d, addr: %p, max: %p\n", bar,
-            (void*)dev->ba[bar].addr, (void*)max);
+            (void*)(unsigned long)dev->ba[bar].addr, (void*)max);
 
     if (bar >= dev->nba) {
         log_err("internal error; bar: %d, nba: %d\n", bar, dev->nba);
@@ -454,7 +454,7 @@ void __iomem* pci_iomap (struct pci_dev* dev, int bar, unsigned long max) {
 
 uintptr_t pci_resource_start (struct pci_dev* dev, int bar) {
     log_trace("pci_resource_start; bar: %d, addr: %p\n", bar,
-            (void*)dev->ba[bar].addr);
+            (void*)(unsigned long)dev->ba[bar].addr);
 
     return dev->ba[bar].addr;
 }

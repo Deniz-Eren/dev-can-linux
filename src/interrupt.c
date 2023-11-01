@@ -141,8 +141,8 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
     uint_t i;
     for (i = 0; i < group->num_irq; ++i) {
         if (irq_attach_size == MAX_IRQ_ATTACH_COUNT) {
-            log_err( "error request_irq reached max IRQ attach count: %lu\n",
-                    irq_attach_size );
+            log_err( "error request_irq reached max IRQ attach count: %d\n",
+                    (int)irq_attach_size );
 
             return -1;
         }

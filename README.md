@@ -331,6 +331,14 @@ To build for aarch64le architecture:
           -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
     cpack
 
+To build for armle-v7 architecture:
+
+    cd dev-can-linux
+    mkdir build ; cd build
+    cmake -DCMAKE_TOOLCHAIN_FILE=../workspace/cmake/Toolchain/qnx710-armle-v7.toolchain.cmake \
+          -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
+    cpack
+
 The following installer files will be created:
 
     dev-can-linux-1.0.0-qnx710-[architecture][build type].tar.gz
