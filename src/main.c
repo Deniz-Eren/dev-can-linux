@@ -90,11 +90,11 @@ int main (int argc, char* argv[]) {
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "b:d:e:U:u:viqstlVCwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "r:d:e:U:u:viqstlVCwcx?h")) != -1) {
         switch (opt) {
-        case 'b':
-            optb++;
-            optb_restart_ms = atoi(optarg);
+        case 'r':
+            optr++;
+            optr_restart_ms = atoi(optarg);
             break;
 
         case 'd':
@@ -390,8 +390,8 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    if (optb > 1) {
-        printf("error: only a single entry for option -b is allowed.\n");
+    if (optr > 1) {
+        printf("error: only a single entry for option -r is allowed.\n");
 
         return -1;
     }

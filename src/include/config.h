@@ -45,8 +45,8 @@
  * See print_help() or dev-can-linux -h for details
  */
 
-extern int optb;
-extern int optb_restart_ms;
+extern int optr;
+extern int optr_restart_ms;
 extern int optv;
 extern int optl;
 extern int opti;

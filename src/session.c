@@ -89,7 +89,8 @@ create_device_session (struct net_device* dev, const queue_attr_t* tx_attr) {
     pthread_attr_setdetachstate(
             &new_device->tx_thread_attr, PTHREAD_CREATE_DETACHED );
 
-    pthread_attr_setinheritsched(&new_device->tx_thread_attr, PTHREAD_EXPLICIT_SCHED);
+    pthread_attr_setinheritsched( &new_device->tx_thread_attr,
+            PTHREAD_EXPLICIT_SCHED );
 
     param.sched_priority += IRQ_SCHED_PRIORITY_BOOST;
     pthread_attr_setschedparam(&new_device->tx_thread_attr, &param);

@@ -52,8 +52,8 @@
  *
  * See print_help() or dev-can-linux -h for details
  */
-int optb = 0;
-int optb_restart_ms = DEFAULT_RESTART_MS;
+int optr = 0;
+int optr_restart_ms = DEFAULT_RESTART_MS;
 int optv = 0;
 int optl = 0;
 int opti = 0;
