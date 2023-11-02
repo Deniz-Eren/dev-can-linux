@@ -90,7 +90,7 @@ int main (int argc, char* argv[]) {
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "r:d:e:U:u:viqstlVCwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "r:d:e:U:u:b:viqstlVCwcx?h")) != -1) {
         switch (opt) {
         case 'r':
             optr++;
@@ -180,6 +180,7 @@ int main (int argc, char* argv[]) {
             break;
 
         case 'u':
+        {
             optu++;
             if ((optarg = strdup(optarg)) == NULL)  {
                 printf("strdup failure\n");
@@ -191,13 +192,6 @@ int main (int argc, char* argv[]) {
                 .num_rx_channels = DEFAULT_NUM_RX_CHANNELS,
                 .num_tx_channels = DEFAULT_NUM_TX_CHANNELS,
                 .is_extended_mid = -1,
-                .bitrate = 0,           /* Bit-rate in bits/second */
-                .bprm = 0,              /* Bit-rate prescaler */
-                .phase_seg1 = 0,        /* Phase buffer segment 1 in TQs */
-                .phase_seg2 = 0,        /* Phase buffer segment 2 in TQs */
-                .sjw = 0,               /* Synchronisation jump width in TQs */
-                .btr0 = 0,              /* SJA1000 BTR0 register */
-                .btr1 = 0               /* SJA1000 BTR1 register */
             };
 
             channel_config_t new_channel_config = default_channel_config;
@@ -241,54 +235,6 @@ int main (int argc, char* argv[]) {
                     new_channel_config.is_extended_mid = 1;
                     break;
 
-                case FREQ:              /* process freq[kKmM] option */
-                {
-                    int freq;
-                    char units[16];
-
-                    sscanf(value, "%d%s", &freq, units);
-
-                    if (units[0] == 'k' || units[0] == 'K') {
-                        new_channel_config.bitrate = freq * 1000;
-                    }
-                    else if (units[0] == 'm' || units[0] == 'M') {
-                        new_channel_config.bitrate = freq * 1000000;
-                    }
-                    else {
-                        new_channel_config.bitrate = freq;
-                    }
-                    break;
-                }
-                case BPRM:              /* process bprm option */
-                    new_channel_config.bprm = atoi(value);
-                    break;
-
-                case TS1:               /* process ts1 option */
-                    new_channel_config.phase_seg1 = atoi(value);
-                    break;
-
-                case TS2:               /* process ts2 option */
-                    new_channel_config.phase_seg2 = atoi(value);
-                    break;
-
-                case SJW:               /* process sjw option */
-                    new_channel_config.sjw = atoi(value);
-                    break;
-
-                case BTR0:              /* process btr0 option */
-                {
-                    int btr0;
-                    sscanf(value, "%x", &btr0);
-                    new_channel_config.btr0 = btr0;
-                    break;
-                }
-                case BTR1:              /* process btr1 option */
-                {
-                    int btr1;
-                    sscanf(value, "%x", &btr1);
-                    new_channel_config.btr1 = btr1;
-                    break;
-                }
                 default :
                     /* process unknown token */
                     printf("unknown\n");
@@ -334,7 +280,129 @@ int main (int argc, char* argv[]) {
                 return EXIT_FAILURE;
             }
             break;
+        }
+        case 'b':
+        {
+            optb++;
+            if ((optarg = strdup(optarg)) == NULL)  {
+                printf("strdup failure\n");
 
+                return EXIT_FAILURE;
+            }
+            bitrate_config_t default_bitrate_config = {
+                .id = -1,
+                .bitrate = 0,           /* Bit-rate in bits/second */
+                .bprm = 0,              /* Bit-rate prescaler */
+                .phase_seg1 = 0,        /* Phase buffer segment 1 in TQs */
+                .phase_seg2 = 0,        /* Phase buffer segment 2 in TQs */
+                .sjw = 0,               /* Synchronisation jump width in TQs */
+                .btr0 = 0,              /* SJA1000 BTR0 register */
+                .btr1 = 0               /* SJA1000 BTR1 register */
+            };
+
+            bitrate_config_t new_bitrate_config = default_bitrate_config;
+
+            options = optarg;
+            while (*options != '\0') {
+                switch (getsubopt(&options, sub_opts, &value)) {
+                case CHANNEL_ID:        /* process id option */
+                    new_bitrate_config.id = atoi(value);
+                    break;
+
+                case FREQ:              /* process freq[kKmM] option */
+                {
+                    int freq;
+                    char units[16];
+
+                    sscanf(value, "%d%s", &freq, units);
+
+                    if (units[0] == 'k' || units[0] == 'K') {
+                        new_bitrate_config.bitrate = freq * 1000;
+                    }
+                    else if (units[0] == 'm' || units[0] == 'M') {
+                        new_bitrate_config.bitrate = freq * 1000000;
+                    }
+                    else {
+                        new_bitrate_config.bitrate = freq;
+                    }
+                    break;
+                }
+                case BPRM:              /* process bprm option */
+                    new_bitrate_config.bprm = atoi(value);
+                    break;
+
+                case TS1:               /* process ts1 option */
+                    new_bitrate_config.phase_seg1 = atoi(value);
+                    break;
+
+                case TS2:               /* process ts2 option */
+                    new_bitrate_config.phase_seg2 = atoi(value);
+                    break;
+
+                case SJW:               /* process sjw option */
+                    new_bitrate_config.sjw = atoi(value);
+                    break;
+
+                case BTR0:              /* process btr0 option */
+                {
+                    int btr0;
+                    sscanf(value, "%x", &btr0);
+                    new_bitrate_config.btr0 = btr0;
+                    break;
+                }
+                case BTR1:              /* process btr1 option */
+                {
+                    int btr1;
+                    sscanf(value, "%x", &btr1);
+                    new_bitrate_config.btr1 = btr1;
+                    break;
+                }
+                default :
+                    /* process unknown token */
+                    printf("unknown\n");
+                    break;
+                }
+            }
+            free(optarg);
+
+            int id = new_bitrate_config.id;
+
+            if (num_optb_configs < id + 1) {
+                bitrate_config_t* new_optb_config;
+
+                int new_num_optb_configs = id + 1;
+                new_optb_config =
+                    malloc(new_num_optb_configs*sizeof(bitrate_config_t));
+
+                /* Fill all newly created configs with default settings */
+                int i;
+                for (i = num_optb_configs; i < new_num_optb_configs; ++i) {
+                    new_optb_config[i] = default_bitrate_config;
+                }
+
+                /* Copy previous configs to the new configs */
+                if (optb_config != NULL) {
+                    memcpy( new_optb_config, optb_config,
+                            num_optb_configs*sizeof(bitrate_config_t) );
+
+                    free(optb_config);
+                }
+
+                /* Set the configs to the new configs */
+                num_optb_configs = new_num_optb_configs;
+                optb_config = new_optb_config;
+            }
+
+            if (id >= 0) {
+                optb_config[id] = new_bitrate_config;
+            }
+            else {
+                printf("channel id (%d) invalid\n", id);
+
+                return EXIT_FAILURE;
+            }
+            break;
+        }
         case 'v':
             optv++;
             break;

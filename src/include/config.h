@@ -56,6 +56,7 @@ extern int opte;
 extern int opts;
 extern int optt;
 extern int optu;
+extern int optb;
 extern int optx;
 
 typedef struct {
@@ -63,6 +64,13 @@ typedef struct {
     int num_rx_channels;
     int num_tx_channels;
     int is_extended_mid;
+} channel_config_t;
+
+extern size_t num_optu_configs;
+extern channel_config_t* optu_config;
+
+typedef struct {
+    int id;
     int bitrate;            /* Bit-rate in bits/second */
     int bprm;               /* Bit-rate prescaler */
     int phase_seg1;         /* Phase buffer segment 1 in TQs */
@@ -70,10 +78,10 @@ typedef struct {
     int sjw;                /* Synchronisation jump width in TQs */
     int btr0;               /* SJA1000 BTR0 register */
     int btr1;               /* SJA1000 BTR1 register */
-} channel_config_t;
+} bitrate_config_t;
 
-extern size_t num_optu_configs;
-extern channel_config_t* optu_config;
+extern size_t num_optb_configs;
+extern bitrate_config_t* optb_config;
 
 typedef struct {
     int vid;

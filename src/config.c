@@ -63,10 +63,14 @@ int opte = 0;
 int opts = 0;
 int optt = 0;
 int optu = 0;
+int optb = 0;
 int optx = 0;
 
 size_t num_optu_configs = 0;
 channel_config_t* optu_config = NULL;
+
+size_t num_optb_configs = 0;
+bitrate_config_t* optb_config = NULL;
 
 size_t num_disable_device_configs;
 device_config_t* disable_device_config;
