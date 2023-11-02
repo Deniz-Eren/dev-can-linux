@@ -37,13 +37,38 @@ Options:
                               Default: is setup as standard MIDs or determined by
                               driver level -x option if specified
 
-                 Baud Rate Suboptions (subopts):
+                 Examples:
+                     # Specify 2 RX and 0 TX file descriptors in /dev/can0/*:
+                     dev-can-linux -u id=0,rx=2,tx=0
+
+    -b subopts - Configure individual device port baud rate or bitrate.
 
                  Normally you would use canctl command to set baud rate, however
                  you do have the option of setting it here at driver startup.
                  See section [Setting Bitrate](#setting-bitrate) for more
                  details.
 
+                 Note baud rate is set per device port and file descriptors from
+                 the same device port have the same baud rate. One way to think
+                 about it is the device port (e.g. /dev/can0) is a physical bus
+                 with a baud rate and device descriptors (e.g. /dev/can0/rx0,
+                 /dev/can0/rx1 or /dev/can0/tx0) are all software constructs
+                 intended for grouping, allocating and supporting your
+                 application layer.
+
+                 For example, when using cards that have dual ports, the driver
+                 will allow both ports to be configured to have different baud
+                 rates. However, if you used option -u to create multiple file
+                 descriptors for a particular port (e.g. /dev/can0/*), they will
+                 all have the same baud rate (that is /dev/can0/rx0 and
+                 /dev/can0/rx1 share the same device thus same baud rate).
+
+                 Suboptions (subopts):
+
+                 id=#         - Specify ID number of the device to configure;
+                                e.g. /dev/can0/ is id=0
+                                This id is consistent with the base_id you have
+                                specified with the -U option.
                  freq[kKmM]=# - The clock rate in Hz, optionally followed by a
                                 multiplier of k or K for 1000, and m or M for
                                 1000000
@@ -68,14 +93,11 @@ Options:
                  btr1=#     - SJA1000 Bus Timing Register 1
 
                  Examples:
-                     # Specify 2 RX and 0 TX file descriptors in /dev/can0/*:
-                     dev-can-linux -u id=0,rx=2,tx=0
-
                      # Setting baud-rate at driver start time:
-                     dev-can-linux -u id=0,freq=250k,bprm=2,ts1=7,ts2=2,sjw=1
+                     dev-can-linux -b id=0,freq=250k,bprm=2,ts1=7,ts2=2,sjw=1
 
                      # (Special cases only) Forced btr* baud-rate setting method:
-                     dev-can-linux -u id=0,freq=125k,btr0=0x07,btr1=0x14
+                     dev-can-linux -b id=0,freq=125k,btr0=0x07,btr1=0x14
 
     -w         - Print warranty message and exit.
     -c         - Print license details and exit.

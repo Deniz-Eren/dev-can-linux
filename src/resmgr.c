@@ -148,25 +148,25 @@ int register_netdev (struct net_device* dev) {
             .bittiming = { .bitrate = 250000 }
     };
 
-    if (id < num_optu_configs) {
-        if (id == optu_config[id].id && optu_config[id].bitrate != 0) {
-            if (optu_config[id].btr0 != 0 || optu_config[id].btr1 != 0) {
+    if (id < num_optb_configs) {
+        if (id == optb_config[id].id && optb_config[id].bitrate != 0) {
+            if (optb_config[id].btr0 != 0 || optb_config[id].btr1 != 0) {
                 user.set_bittiming = false;
                 user.set_btr = true;
-                user.bittiming.bitrate = optu_config[id].bitrate;
-                user.can_btr.btr0 = optu_config[id].btr0;
-                user.can_btr.btr1 = optu_config[id].btr1;
+                user.bittiming.bitrate = optb_config[id].bitrate;
+                user.can_btr.btr0 = optb_config[id].btr0;
+                user.can_btr.btr1 = optb_config[id].btr1;
             }
-            else if (optu_config[id].bitrate != 0) {
+            else if (optb_config[id].bitrate != 0) {
                 struct can_priv* priv = netdev_priv(dev);
                 struct can_devctl_timing timing;
 
-                user.bittiming.bitrate = optu_config[id].bitrate;
-                timing.ref_clock_freq = optu_config[id].bitrate;
-                timing.sync_jump_width = optu_config[id].sjw;
-                timing.time_segment_1 = optu_config[id].phase_seg1;
-                timing.time_segment_2 = optu_config[id].phase_seg2;
-                timing.bit_rate_prescaler = optu_config[id].bprm;
+                user.bittiming.bitrate = optb_config[id].bitrate;
+                timing.ref_clock_freq = optb_config[id].bitrate;
+                timing.sync_jump_width = optb_config[id].sjw;
+                timing.time_segment_1 = optb_config[id].phase_seg1;
+                timing.time_segment_2 = optb_config[id].phase_seg2;
+                timing.bit_rate_prescaler = optb_config[id].bprm;
 
                 create_user_dev_setup(&timing, priv->clock.freq, &user);
             }
