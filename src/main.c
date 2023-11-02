@@ -458,25 +458,9 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    if (optr > 1) {
-        printf("error: only a single entry for option -r is allowed.\n");
-
-        return -1;
+    if (!optq) {
+        print_notice();
     }
-
-#if RELEASE_BUILD == 1
-    if (optv > 2) {
-        optv = 2;
-
-        printf("warning: release versions allow at max -vv option.\n");
-    }
-
-    if (optl > 2) {
-        optl = 2;
-
-        printf("warning: release versions allow at max -ll option.\n");
-    }
-#endif
 
     if (opti) {
         print_support(opti);
@@ -484,8 +468,50 @@ int main (int argc, char* argv[]) {
         return EXIT_SUCCESS;
     }
 
-    if (!optq) {
-        print_notice();
+    bool allow_driver_start = true;
+
+    if (optr > 1) {
+        log_err("error: only a single entry for option -r is allowed.\n");
+
+        allow_driver_start = false;
+    }
+
+#if RELEASE_BUILD == 1
+    if (optv > 2) {
+        optv = 2;
+
+        log_warn("warning: release versions allow at max -vv option.\n");
+    }
+
+    if (optl > 2) {
+        optl = 2;
+
+        log_warn("warning: release versions allow at max -ll option.\n");
+    }
+#endif
+
+    // Make sure all -u id=# are greater than the -U# base index
+    for (int i = 0; i < num_optu_configs; ++i) {
+        if (optu_config[i].id != -1
+            && optu_config[i].id < next_device_id)
+        {
+            log_err("error: config -u with invalid id=%d less than -U %d\n",
+                    optu_config[i].id, next_device_id);
+
+            allow_driver_start = false;
+        }
+    }
+
+    // Make sure all -b id=# are greater than the -U# base index
+    for (int i = 0; i < num_optb_configs; ++i) {
+        if (optb_config[i].id != -1
+            && optb_config[i].id < next_device_id)
+        {
+            log_err("error: config -b with invalid id=%d less than -U %d\n",
+                    optb_config[i].id, next_device_id);
+
+            allow_driver_start = false;
+        }
     }
 
     log_info("driver start (version: %s)\n", PROGRAM_VERSION);
@@ -497,17 +523,47 @@ int main (int argc, char* argv[]) {
     if (fixed_memory_init()) {
         log_err("fixed_memory_init fail\n");
 
-        return -1;
+        return EXIT_FAILURE;
     }
 
     if (process_driver_selection()) {
-        return -1;
+        allow_driver_start = false;
     }
 
     print_driver_selection_results();
 
     if (probe_all_driver_selections()) {
-        return -1;
+        allow_driver_start = false;
+    }
+
+    // Make sure all -u id=# are less than the maximum detected device index
+    for (int i = 0; i < num_optu_configs; ++i) {
+        if (optu_config[i].id != -1
+            && optu_config[i].id >= next_device_id)
+        {
+            log_err("error: config -u with invalid id=%d greater than maximum "
+                    "detected device id=%d\n",
+                    optu_config[i].id, next_device_id-1);
+
+            allow_driver_start = false;
+        }
+    }
+
+    // Make sure all -b id=# are less than the maximum detected device index
+    for (int i = 0; i < num_optb_configs; ++i) {
+        if (optb_config[i].id != -1
+            && optb_config[i].id >= next_device_id)
+        {
+            log_err("error: config -b with invalid id=%d greater than maximum "
+                    "detected device id=%d\n",
+                    optb_config[i].id, next_device_id-1);
+
+            allow_driver_start = false;
+        }
+    }
+
+    if (!allow_driver_start) {
+        return EXIT_FAILURE;
     }
 
     int err;
@@ -519,7 +575,7 @@ int main (int argc, char* argv[]) {
     if (err != EOK) {
         log_err("error pthread_getschedparam: %s\n", strerror(err));
 
-        return -1;
+        return EXIT_FAILURE;
     }
 
     pthread_attr_t irq_thread_attr;
