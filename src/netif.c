@@ -36,6 +36,8 @@ void* netif_tx (void* arg) {
     struct net_device* dev = ds->device;
     struct can_msg* canmsg;
 
+    ds->tx_queue.queue_stopped = &ds->queue_stopped;
+
     while (1) {
         if (ds->tx_queue.attr.size == 0) {
             log_trace("netif_tx exit: %s\n", dev->name);
@@ -269,13 +271,7 @@ int netif_queue_stopped(const struct net_device *dev)
 
     device_session_t* ds = dev->device_session;
 
-    int result = 0;
-
-    pthread_mutex_lock(&ds->mutex);
-    result = ds->queue_stopped;
-    pthread_mutex_unlock(&ds->mutex);
-
-    return result;
+    return ds->queue_stopped;
 }
 
 void netif_wake_queue (struct net_device* dev) {
@@ -285,10 +281,10 @@ void netif_wake_queue (struct net_device* dev) {
 
     assert( ds->tx_thread != pthread_self() || shutdown_program );
 
-    pthread_mutex_lock(&ds->mutex);
+    pthread_mutex_lock(&ds->tx_queue.mutex);
     ds->queue_stopped = 0;
-    pthread_cond_signal(&ds->cond);
-    pthread_mutex_unlock(&ds->mutex);
+    pthread_cond_signal(&ds->tx_queue.cond);
+    pthread_mutex_unlock(&ds->tx_queue.mutex);
 }
 
 void netif_stop_queue (struct net_device* dev) {
@@ -298,11 +294,5 @@ void netif_stop_queue (struct net_device* dev) {
 
     assert( ds->tx_thread == pthread_self() || shutdown_program );
 
-    pthread_mutex_lock(&ds->mutex);
-    while (ds->queue_stopped && ds->tx_queue.attr.size != 0) {
-        pthread_cond_wait(&ds->cond, &ds->mutex);
-    }
-
     ds->queue_stopped = 1;
-    pthread_mutex_unlock(&ds->mutex);
 }
