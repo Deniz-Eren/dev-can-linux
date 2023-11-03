@@ -169,6 +169,7 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
         irq_attach[k].hdl = group->hdl;
         irq_attach[k].msi_cap = group->msi_cap;
         irq_attach[k].is_msix = group->is_msix;
+        irq_attach[k].is_msi = group->is_msi;
         irq_attach[k].mask = NULL;
         irq_attach[k].unmask = NULL;
 
@@ -185,11 +186,17 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
 
                 log_trace("attached MSI-X IRQ %d\n", group->irq[i]);
             }
-            else { // MSI Support
+            else if (group->is_msi) { // MSI Support (with PVM)
                 irq_attach[k].mask = mask_irq_msi;
                 irq_attach[k].unmask = unmask_irq_msi;
 
                 log_trace("attached MSI IRQ %d\n", group->irq[i]);
+            }
+            else { // MSI Support (without PVM)
+                irq_attach[k].mask = mask_irq_msi_legacy;
+                irq_attach[k].unmask = unmask_irq_msi_legacy;
+
+                log_trace("attached Legacy-MSI IRQ %d\n", group->irq[i]);
             }
         }
         else { // Regular IRQ
