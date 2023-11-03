@@ -78,8 +78,8 @@ struct pci_dev {
     int_t nba;                  /* QNX type */
     pci_cap_t msi_cap;          /* QNX type */
     pci_cap_t pcie_cap;         /* QNX type */
-    bool is_msix;
     bool is_msi;
+    bool is_msix;
     void __iomem** addr;
 
 	unsigned int	devfn;		/* encoded device & function index */

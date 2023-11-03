@@ -168,8 +168,8 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
         irq_attach[k].dev = ndev;
         irq_attach[k].hdl = group->hdl;
         irq_attach[k].msi_cap = group->msi_cap;
-        irq_attach[k].is_msix = group->is_msix;
         irq_attach[k].is_msi = group->is_msi;
+        irq_attach[k].is_msix = group->is_msix;
         irq_attach[k].mask = NULL;
         irq_attach[k].unmask = NULL;
 

@@ -168,8 +168,8 @@ typedef struct {
     size_t              num_irq;
     pci_devhdl_t        hdl;
     pci_cap_t           msi_cap;
-    bool                is_msix;
     bool                is_msi;
+    bool                is_msix;
 } irq_group_t;
 
 typedef struct {
@@ -181,8 +181,8 @@ typedef struct {
     pci_devhdl_t        hdl;
     pci_cap_t           msi_cap;
     uint_t              irq_entry;
-    bool                is_msix;
     bool                is_msi;
+    bool                is_msix;
 
     void                (*unmask)(uint_t);
     void                (*mask)(uint_t);
@@ -196,7 +196,7 @@ extern irq_attach_t     irq_attach[MAX_IRQ_ATTACH_COUNT];
 extern size_t           irq_attach_size;
 
 void irq_group_add (pci_irq_t* irq, size_t nirq,
-        pci_devhdl_t hdl, pci_cap_t msi_cap, bool is_msix, bool is_msi);
+        pci_devhdl_t hdl, pci_cap_t msi_cap, bool is_msi, bool is_msix);
 
 void irq_group_cleanup (void);
 
