@@ -346,7 +346,8 @@ pci_err_t pci_enable_device (struct pci_dev* dev) {
                 log_info("read irq[%d]: %d\n", i, irq[i]);
             }
 
-            irq_group_add(irq, nirq, dev->hdl, dev->msi_cap, dev->is_msix);
+            irq_group_add( irq, nirq, dev->hdl, dev->msi_cap,
+                    dev->is_msix, dev->is_msi );
         }
 
         if (dev->irq == 0) {

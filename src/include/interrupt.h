@@ -68,7 +68,7 @@ static inline void mask_irq_debug (uint_t attach_index) {
                     break;
             };
         }
-        else {
+        else if (attach->is_msi) {
             pci_err_t err =
                 cap_msi_mask_irq_entry(
                         attach->hdl,
@@ -89,6 +89,11 @@ static inline void mask_irq_debug (uint_t attach_index) {
                             pci_strerror(err));
                     break;
             };
+        }
+        else {
+            log_dbg("IRQ: %d Legacy-MSI\n", attach->irq);
+
+            InterruptMask(attach->irq, attach->id);
         }
     }
     else {
@@ -126,7 +131,7 @@ static inline void unmask_irq_debug (uint_t attach_index) {
                     break;
             };
         }
-        else {
+        else if (attach->is_msi) {
             pci_err_t err =
                 cap_msi_unmask_irq_entry(
                         attach->hdl,
@@ -145,6 +150,9 @@ static inline void unmask_irq_debug (uint_t attach_index) {
                             pci_strerror(err));
                     break;
             };
+        }
+        else {
+            InterruptUnmask(attach->irq, attach->id);
         }
     }
 }
@@ -230,6 +238,7 @@ static inline void mask_irq_msi (uint_t attach_index) {
      *
      *      pci_device_cfg_cap_isenabled(attach->hdl, attach->msi_cap)
      *      AND !attach->is_msix
+     *      AND attach->is_msi
      */
 
     pci_err_t err =
@@ -261,6 +270,7 @@ static inline void unmask_irq_msi (uint_t attach_index) {
      *
      *      pci_device_cfg_cap_isenabled(attach->hdl, attach->msi_cap)
      *      AND !attach->is_msix
+     *      AND attach->is_msi
      */
 
     pci_err_t err =
@@ -272,6 +282,54 @@ static inline void unmask_irq_msi (uint_t attach_index) {
     if (err != PCI_ERR_OK) {
         log_err("cap_msi_unmask_irq_entry error: %s\n", pci_strerror(err));
     }
+}
+
+static inline void mask_irq_msi_legacy (uint_t attach_index) {
+    if (attach_index >= irq_attach_size) {
+        return;
+    }
+
+    irq_attach_t* attach = &irq_attach[attach_index];
+
+    if (attach->msi_cap == NULL) {
+        return;
+    }
+
+    /*
+     * This function (mask_irq_msi) is optimized assuming the user has already
+     * setup the PCI capabilities and verified they are enabled. Thus we skip the
+     * check:
+     *
+     *      pci_device_cfg_cap_isenabled(attach->hdl, attach->msi_cap)
+     *      AND !attach->is_msix
+     *      AND !attach->is_msi
+     */
+
+    InterruptMask(attach->irq, attach->id);
+}
+
+static inline void unmask_irq_msi_legacy (uint_t attach_index) {
+    if (attach_index >= irq_attach_size) {
+        return;
+    }
+
+    irq_attach_t* attach = &irq_attach[attach_index];
+
+    if (attach->msi_cap == NULL) {
+        return;
+    }
+
+    /*
+     * This function (unmask_irq_msi) is optimized assuming the user has already
+     * setup the PCI capabilities and verified they are enabled. Thus we skip the
+     * check:
+     *
+     *      pci_device_cfg_cap_isenabled(attach->hdl, attach->msi_cap)
+     *      AND !attach->is_msix
+     *      AND !attach->is_msi
+     */
+
+    InterruptUnmask(attach->irq, attach->id);
 }
 
 static inline void mask_irq_regular (uint_t attach_index) {

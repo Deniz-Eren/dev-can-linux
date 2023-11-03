@@ -126,7 +126,7 @@ static inline void irq_to_group_add (
 }
 
 void irq_group_add (pci_irq_t* irq, size_t nirq,
-        pci_devhdl_t hdl, pci_cap_t msi_cap, bool is_msix)
+        pci_devhdl_t hdl, pci_cap_t msi_cap, bool is_msix, bool is_msi)
 {
     uint_t i;
 
@@ -143,6 +143,7 @@ void irq_group_add (pci_irq_t* irq, size_t nirq,
     new_irq_group[irq_group_size].hdl = hdl;
     new_irq_group[irq_group_size].msi_cap = msi_cap;
     new_irq_group[irq_group_size].is_msix = is_msix;
+    new_irq_group[irq_group_size].is_msi = is_msi;
 
     for (i = 0; i < nirq; ++i) {
         new_irq_group[irq_group_size].irq[i] = irq[i];

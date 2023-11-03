@@ -257,12 +257,13 @@ pci_err_t msix_init (struct pci_dev* dev) {
 
         r = cap_msi_get_irq_mask(dev->hdl, dev->msi_cap, &mask);
 
+        dev->is_msi = true;
+
         if (r == PCI_ERR_ENOTSUP) {
             log_err("capability 0x%02x (MSI) Per Vector Masking (PVM) not "
                     "supported\n", capid);
 
-            msix_uninit(dev);
-            return r;
+            dev->is_msi = false;
         }
         else if (r != PCI_ERR_OK) {
             log_err("cap_msi_get_irq_mask error; %s\n", pci_strerror(r));
