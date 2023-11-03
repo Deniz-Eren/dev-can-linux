@@ -36,7 +36,7 @@ void* netif_tx (void* arg) {
     struct net_device* dev = ds->device;
     struct can_msg* canmsg;
 
-    ds->tx_queue.queue_stopped = &ds->queue_stopped;
+    queue_start(&ds->tx_queue);
 
     while (1) {
         if (ds->tx_queue.attr.size == 0) {
@@ -271,7 +271,7 @@ int netif_queue_stopped(const struct net_device *dev)
 
     device_session_t* ds = dev->device_session;
 
-    return ds->queue_stopped;
+    return queue_is_stopped(&ds->tx_queue);
 }
 
 void netif_wake_queue (struct net_device* dev) {
@@ -281,10 +281,7 @@ void netif_wake_queue (struct net_device* dev) {
 
     assert( ds->tx_thread != pthread_self() || shutdown_program );
 
-    pthread_mutex_lock(&ds->tx_queue.mutex);
-    ds->queue_stopped = 0;
-    pthread_cond_signal(&ds->tx_queue.cond);
-    pthread_mutex_unlock(&ds->tx_queue.mutex);
+    queue_start_signal(&ds->tx_queue);
 }
 
 void netif_stop_queue (struct net_device* dev) {
@@ -294,5 +291,5 @@ void netif_stop_queue (struct net_device* dev) {
 
     assert( ds->tx_thread == pthread_self() || shutdown_program );
 
-    ds->queue_stopped = 1;
+    queue_stop(&ds->tx_queue);
 }
