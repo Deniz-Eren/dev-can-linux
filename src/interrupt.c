@@ -353,6 +353,14 @@ void* irq_loop (void* arg) {
         }
 
         attach->unmask(k);
+
+        for (size_t i = 0; i < irq_attach[k].num_handlers; ++i) {
+            device_session_t* ds = irq_attach[k].dev[i]->device_session;
+            if (queue_wake_pending(&ds->tx_queue)) {
+                queue_start_signal(&ds->tx_queue);
+                queue_awake(&ds->tx_queue);
+            }
+        }
     }
 #else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 &&
          CONFIG_QNX_INTERRUPT_ATTACH != 1 */

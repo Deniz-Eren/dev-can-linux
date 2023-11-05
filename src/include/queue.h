@@ -44,7 +44,8 @@ typedef struct queue {
 
     volatile int session_up;
     volatile int dequeue_waiting;
-    volatile int queue_stopped;
+    volatile int stopped;
+    volatile int wake_pending;
 
     void* dropped_packet_arg;
     void (*dropped_packet)(void*);
@@ -61,33 +62,45 @@ static inline void queue_shutdown_signal (queue_t* Q) {
 }
 
 static inline int queue_is_stopped (queue_t* Q) {
-    return Q->queue_stopped;
+    return Q->stopped;
 }
 
 static inline void queue_stop_signal (queue_t* Q) {
     pthread_mutex_lock(&Q->mutex);
 
-    Q->queue_stopped = 1;
+    Q->stopped = 1;
 
     pthread_cond_signal(&Q->cond);
     pthread_mutex_unlock(&Q->mutex);
 }
 
 static inline void queue_stop (queue_t* Q) {
-    Q->queue_stopped = 1;
+    Q->stopped = 1;
 }
 
 static inline void queue_start_signal (queue_t* Q) {
     pthread_mutex_lock(&Q->mutex);
 
-    Q->queue_stopped = 0;
+    Q->stopped = 0;
 
     pthread_cond_signal(&Q->cond);
     pthread_mutex_unlock(&Q->mutex);
 }
 
 static inline void queue_start (queue_t* Q) {
-    Q->queue_stopped = 0;
+    Q->stopped = 0;
+}
+
+static inline int queue_wake_pending (queue_t* Q) {
+    return Q->wake_pending;
+}
+
+static inline void queue_wake_up (queue_t* Q) {
+    Q->wake_pending = 1;
+}
+
+static inline void queue_awake (queue_t* Q) {
+    Q->wake_pending = 0;
 }
 
 extern int create_queue (queue_t* Q, const queue_attr_t* attr);
