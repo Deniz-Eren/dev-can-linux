@@ -281,7 +281,7 @@ void netif_wake_queue (struct net_device* dev) {
 
     assert( ds->tx_thread != pthread_self() || shutdown_program );
 
-    queue_start_signal(&ds->tx_queue);
+    queue_wake_up(&ds->tx_queue);
 }
 
 void netif_stop_queue (struct net_device* dev) {

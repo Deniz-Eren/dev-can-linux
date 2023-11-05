@@ -39,7 +39,8 @@ int create_queue (queue_t* Q, const queue_attr_t* attr) {
 
     Q->session_up = 0;
     Q->dequeue_waiting = 0;
-    Q->queue_stopped = 0;
+    Q->stopped = 0;
+    Q->wake_pending = 0;
 
     if ((result = pthread_mutex_init(&Q->mutex, NULL)) != EOK) {
         return result;
@@ -171,7 +172,7 @@ struct can_msg* dequeue (queue_t* Q, uint32_t latency_limit_ms) {
 
         Q->dequeue_waiting = 1;
         while (Q->dequeue_waiting && Q->session_up == 1
-                && (Q->begin == Q->end || Q->queue_stopped))
+                && (Q->begin == Q->end || Q->stopped))
         {
             pthread_cond_wait(&Q->cond, &Q->mutex);
         }
