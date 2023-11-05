@@ -159,10 +159,20 @@ TEST( Driver, FloodSend ) {
     uint32_t initial_tx_frames0 = stats0.transmitted_frames;
     uint32_t initial_rx_frames0 = stats0.received_frames;
     uint32_t initial_missing_ack0 = stats0.missing_ack;
+    uint32_t initial_total_frame_errors0 = stats0.total_frame_errors;
+    uint32_t initial_hw_receive_overflows0 = stats0.hw_receive_overflows;
+    uint32_t initial_rx_interrupts0 = stats0.rx_interrupts;
+    uint32_t initial_tx_interrupts0 = stats0.tx_interrupts;
+    uint32_t initial_total_interrupts0 = stats0.total_interrupts;
 
     uint32_t initial_tx_frames1 = 0;
     uint32_t initial_rx_frames1 = 0;
     uint32_t initial_missing_ack1 = 0;
+    uint32_t initial_total_frame_errors1 = 0;
+    uint32_t initial_hw_receive_overflows1 = 0;
+    uint32_t initial_rx_interrupts1 = 0;
+    uint32_t initial_tx_interrupts1 = 0;
+    uint32_t initial_total_interrupts1 = 0;
 
     if (fd1_tx != -1) {
         get_stats_ret = get_stats(fd1_tx, &stats1);
@@ -172,6 +182,11 @@ TEST( Driver, FloodSend ) {
         initial_tx_frames1 = stats1.transmitted_frames;
         initial_rx_frames1 = stats1.received_frames;
         initial_missing_ack1 = stats1.missing_ack;
+        initial_total_frame_errors1 = stats1.total_frame_errors;
+        initial_hw_receive_overflows1 = stats1.hw_receive_overflows;
+        initial_rx_interrupts1 = stats1.rx_interrupts;
+        initial_tx_interrupts1 = stats1.tx_interrupts;
+        initial_total_interrupts1 = stats1.total_interrupts;
     }
 
     // ensure all channels are empty
@@ -249,15 +264,18 @@ TEST( Driver, FloodSend ) {
     EXPECT_GE(stats0.transmitted_frames - initial_tx_frames0, record0_size);
     EXPECT_GE(stats0.received_frames - initial_rx_frames0, 0);
     EXPECT_LE(stats0.missing_ack - initial_missing_ack0, expected_missed);
+    EXPECT_EQ(stats0.total_frame_errors - initial_total_frame_errors0, 0);
+    EXPECT_EQ(stats0.hw_receive_overflows - initial_hw_receive_overflows0, 0);
+    EXPECT_EQ(stats0.rx_interrupts - initial_rx_interrupts0, 0);
+    EXPECT_EQ(stats0.tx_interrupts - initial_tx_interrupts0, 0);
+    EXPECT_EQ(stats0.total_interrupts - initial_total_interrupts0, 0);
 
-    EXPECT_EQ(stats0.total_frame_errors, 0);
     EXPECT_EQ(stats0.stuff_errors, 0);
     EXPECT_EQ(stats0.form_errors, 0);
     EXPECT_EQ(stats0.dom_bit_recess_errors, 0);
     EXPECT_EQ(stats0.recess_bit_dom_errors, 0);
     EXPECT_EQ(stats0.parity_errors, 0);
     EXPECT_EQ(stats0.crc_errors, 0);
-    EXPECT_EQ(stats0.hw_receive_overflows, 0);
     EXPECT_EQ(stats0.sw_receive_q_full, 0);
     EXPECT_EQ(stats0.error_warning_state_count, 0);
     EXPECT_EQ(stats0.error_passive_state_count, 0);
@@ -265,9 +283,6 @@ TEST( Driver, FloodSend ) {
     EXPECT_EQ(stats0.bus_idle_count, 0);
     EXPECT_EQ(stats0.power_down_count, 0);
     EXPECT_EQ(stats0.wake_up_count, 0);
-    EXPECT_EQ(stats0.rx_interrupts, 0);
-    EXPECT_EQ(stats0.tx_interrupts, 0);
-    EXPECT_EQ(stats0.total_interrupts, 0);
 
     close(fd0_tx);
 
@@ -281,14 +296,18 @@ TEST( Driver, FloodSend ) {
         EXPECT_LE(stats1.missing_ack - initial_missing_ack1,
                 expected_missed);
 
-        EXPECT_EQ(stats1.total_frame_errors, 0);
+        EXPECT_EQ(stats1.total_frame_errors - initial_total_frame_errors1, 0);
+        EXPECT_EQ(stats1.hw_receive_overflows - initial_hw_receive_overflows1, 0);
+        EXPECT_EQ(stats1.rx_interrupts - initial_rx_interrupts1, 0);
+        EXPECT_EQ(stats1.tx_interrupts - initial_tx_interrupts1, 0);
+        EXPECT_EQ(stats1.total_interrupts - initial_total_interrupts1, 0);
+
         EXPECT_EQ(stats1.stuff_errors, 0);
         EXPECT_EQ(stats1.form_errors, 0);
         EXPECT_EQ(stats1.dom_bit_recess_errors, 0);
         EXPECT_EQ(stats1.recess_bit_dom_errors, 0);
         EXPECT_EQ(stats1.parity_errors, 0);
         EXPECT_EQ(stats1.crc_errors, 0);
-        EXPECT_EQ(stats1.hw_receive_overflows, 0);
         EXPECT_EQ(stats1.sw_receive_q_full, 0);
         EXPECT_EQ(stats1.error_warning_state_count, 0);
         EXPECT_EQ(stats1.error_passive_state_count, 0);
@@ -296,9 +315,6 @@ TEST( Driver, FloodSend ) {
         EXPECT_EQ(stats1.bus_idle_count, 0);
         EXPECT_EQ(stats1.power_down_count, 0);
         EXPECT_EQ(stats1.wake_up_count, 0);
-        EXPECT_EQ(stats1.rx_interrupts, 0);
-        EXPECT_EQ(stats1.tx_interrupts, 0);
-        EXPECT_EQ(stats1.total_interrupts, 0);
 
         close(fd1_tx);
     }
