@@ -75,7 +75,11 @@ const struct sigevent *irq_handler (void *area, int id) {
         return NULL;
     }
 
+    log_enabled = false;
+
     attach->mask(k);
+
+    log_enabled = true;
 # endif
 
     return &attach->event;
@@ -161,6 +165,31 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
             return -1;
         }
 
+        bool create_new_attach = true;
+
+        uint_t j;
+        for (j = 0; j < irq_attach_size; ++j) {
+            if (irq_attach[j].irq == group->irq[i]) {
+                irq_attach[j].handler[irq_attach[j].num_handlers] = handler;
+                irq_attach[j].dev[irq_attach[j].num_handlers] = ndev;
+                irq_attach[j].num_handlers++;
+
+                if (irq_attach[j].num_handlers >= MAX_HANDLERS_PER_IRQ) {
+                    log_err( "error reached max handlers per IRQ count: %d\n",
+                            MAX_HANDLERS_PER_IRQ );
+
+                    return -1;
+                }
+
+                create_new_attach = false;
+                break;
+            }
+        }
+
+        if (!create_new_attach) {
+            continue;
+        }
+
         int k = irq_attach_size++;
 
 #if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
@@ -178,8 +207,9 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
 
         irq_attach[k].irq = group->irq[i];
         irq_attach[k].irq_entry = i;
-        irq_attach[k].handler = handler;
-        irq_attach[k].dev = ndev;
+        irq_attach[k].handler[irq_attach[k].num_handlers] = handler;
+        irq_attach[k].dev[irq_attach[k].num_handlers] = ndev;
+        irq_attach[k].num_handlers++;
         irq_attach[k].hdl = group->hdl;
         irq_attach[k].msi_cap = group->msi_cap;
         irq_attach[k].is_msi = group->is_msi;
@@ -318,7 +348,9 @@ void* irq_loop (void* arg) {
 #endif
 
         // Handle IRQ
-        irq_attach[k].handler(irq_attach[k].irq, irq_attach[k].dev);
+        for (size_t i = 0; i < irq_attach[k].num_handlers; ++i) {
+            irq_attach[k].handler[i](irq_attach[k].irq, irq_attach[k].dev[i]);
+        }
 
         attach->unmask(k);
     }

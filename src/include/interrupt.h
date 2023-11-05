@@ -98,6 +98,8 @@ static inline void mask_irq_debug (uint_t attach_index) {
     }
     else {
         log_dbg("IRQ: %d non-MSI\n", attach->irq);
+
+        InterruptMask(attach->irq, attach->id);
     }
 }
 
@@ -119,6 +121,10 @@ static inline void unmask_irq_debug (uint_t attach_index) {
                         attach->msi_cap,
                         attach->irq_entry );
 
+#if CONFIG_QNX_INTERRUPT_MASK_ISR == 1
+            log_dbg("IRQ: %d MSI-X\n", attach->irq);
+#endif
+
             switch (err) {
                 case PCI_ERR_EALREADY:
                     log_info("IRQ: PCI_ERR_EALREADY\n");
@@ -138,6 +144,10 @@ static inline void unmask_irq_debug (uint_t attach_index) {
                         attach->msi_cap,
                         attach->irq_entry );
 
+#if CONFIG_QNX_INTERRUPT_MASK_ISR == 1
+            log_dbg("IRQ: %d MSI\n", attach->irq);
+#endif
+
             switch (err) {
                 case PCI_ERR_ENOTSUP:
                     log_info("IRQ: Per Vector Masking (PVM) not "
@@ -152,8 +162,18 @@ static inline void unmask_irq_debug (uint_t attach_index) {
             };
         }
         else {
+#if CONFIG_QNX_INTERRUPT_MASK_ISR == 1
+            log_dbg("IRQ: %d Legacy-MSI\n", attach->irq);
+#endif
             InterruptUnmask(attach->irq, attach->id);
         }
+    }
+    else {
+#if CONFIG_QNX_INTERRUPT_MASK_ISR == 1
+        log_dbg("IRQ: %d non-MSI\n", attach->irq);
+#endif
+
+        InterruptUnmask(attach->irq, attach->id);
     }
 }
 
@@ -333,9 +353,23 @@ static inline void unmask_irq_msi_legacy (uint_t attach_index) {
 }
 
 static inline void mask_irq_regular (uint_t attach_index) {
+    if (attach_index >= irq_attach_size) {
+        return;
+    }
+
+    irq_attach_t* attach = &irq_attach[attach_index];
+
+    InterruptMask(attach->irq, attach->id);
 }
 
 static inline void unmask_irq_regular (uint_t attach_index) {
+    if (attach_index >= irq_attach_size) {
+        return;
+    }
+
+    irq_attach_t* attach = &irq_attach[attach_index];
+
+    InterruptUnmask(attach->irq, attach->id);
 }
 
 #endif /* SRC_INTERRUPT_H_ */
