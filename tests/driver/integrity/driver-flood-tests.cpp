@@ -36,7 +36,12 @@ extern "C" {
  * skip these */
 #if PROFILING_BUILD != 1
 
-#define FLOOD_TEST_SIZE 1024
+#define FLOOD_TEST_SIZE         (1024)
+#ifdef TESTING_REAL_HARDWARE
+ #define FLOOT_TEST_SLEEP_US    (0)
+#else
+ #define FLOOT_TEST_SLEEP_US    (100)
+#endif
 
 static volatile bool receive_loop0_started = false, receive_loop1_started = false;
 static volatile bool receive_loop0_stop = false, receive_loop1_stop = false;
@@ -211,11 +216,13 @@ TEST( Driver, FloodSend ) {
     // flood messages
     for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
         write_frame_raw(fd0_tx, &canmsg);
+        usleep(FLOOT_TEST_SLEEP_US);
     }
 
     if (fd1_tx != -1) {
         for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
             write_frame_raw(fd1_tx, &canmsg);
+            usleep(FLOOT_TEST_SLEEP_US);
         }
     }
 
