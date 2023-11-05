@@ -75,8 +75,12 @@ TEST( Timer, ScheduleWork ) {
     // callback must not trigger earlier than expected
     EXPECT_GT(trig_diff_ms, 5.0);
 
+#ifdef TESTING_REAL_HARDWARE
     // give 1.5 millisecond buffer from expected time
     EXPECT_LT(trig_diff_ms, 6.5);
+#else
+    EXPECT_LT(trig_diff_ms, 40.0);
+#endif
 
     // callback must be called only once
     EXPECT_EQ(test_data1.sum, 376);
