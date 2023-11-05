@@ -64,6 +64,20 @@ const struct sigevent *irq_handler (void *area, int id) {
 
     irq_attach_t* attach = (irq_attach_t*)area;
 
+# if CONFIG_QNX_INTERRUPT_MASK_ISR == 1
+    if (attach->mask == NULL) {
+        return NULL;
+    }
+
+    int k = attach->event.sigev_code;
+
+    if (k < 0 || k >= MAX_IRQ_ATTACH_COUNT) {
+        return NULL;
+    }
+
+    attach->mask(k);
+# endif
+
     return &attach->event;
 }
 #elif CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
@@ -299,7 +313,9 @@ void* irq_loop (void* arg) {
             continue;
         }
 
+#if CONFIG_QNX_INTERRUPT_MASK_PULSE == 1
         attach->mask(k);
+#endif
 
         // Handle IRQ
         irq_attach[k].handler(irq_attach[k].irq, irq_attach[k].dev);
