@@ -292,7 +292,7 @@ TEST( Raw, SingleSendMultiReceive ) {
     pthread_create(&thread1, NULL, &receive_loop0, &canmsg1);
 
     while (!receive_loop0_started) {
-        usleep(1000);
+        usleep(2000);
     }
 
     int write_ret = write_frame_raw(fd, &canmsg);
