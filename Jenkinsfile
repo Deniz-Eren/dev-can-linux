@@ -71,7 +71,6 @@ node('jenkins-agent') {
                     -v \
                     -b /data/home/root/build_coverage \
                     -c "dev-can-linux -x" \
-                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Coverage \
                     -p $sshport
@@ -149,7 +148,6 @@ node('jenkins-agent') {
                     -v \
                     -b /data/home/root/build_memcheck \
                     -c "dev-can-linux -x" \
-                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
@@ -186,7 +184,6 @@ node('jenkins-agent') {
                     -v \
                     -b /data/home/root/build_helgrind \
                     -c "dev-can-linux -x" \
-                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
@@ -221,7 +218,6 @@ node('jenkins-agent') {
                     -v \
                     -b /data/home/root/build_drd \
                     -c "dev-can-linux -x" \
-                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
@@ -256,7 +252,6 @@ node('jenkins-agent') {
                     -v \
                     -b /data/home/root/build_exp-sgcheck \
                     -c "dev-can-linux -x" \
-                    -e /root/project_repo/tests/driver/common/env/dual-channel.env \
                     -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
