@@ -25,6 +25,10 @@ endif()
 option( TESTING_REAL_HARDWARE
     "Build tighter timer checks in tests when testing real hardware" OFF )
 
+set( TESTING_DEVICE_ENV_FILE
+    "${CMAKE_CURRENT_SOURCE_DIR}/driver/common/env/dual-channel.env"
+    CACHE STRING "Test device selection environment variable file to use" )
+
 if (TESTING_REAL_HARDWARE)
     add_compile_definitions( TESTING_REAL_HARDWARE=1 )
 endif()

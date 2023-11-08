@@ -44,10 +44,7 @@ add_custom_target( ssh-timer-tests ALL
     COMMAND ${CMAKE_SOURCE_DIR}/workspace/cmake/Modules/MakeSSHCommand.sh
         -p ${SSH_PORT}
         -s ${CMAKE_CURRENT_BINARY_DIR}/timer-tests
-        -e "DRIVER_TEST_DEVICE0_RX0=\\\${DRIVER_TEST_DEVICE0_RX0} \
-            DRIVER_TEST_DEVICE0_TX0=\\\${DRIVER_TEST_DEVICE0_TX0} \
-            DRIVER_TEST_DEVICE1_RX0=\\\${DRIVER_TEST_DEVICE1_RX0} \
-            DRIVER_TEST_DEVICE1_TX0=\\\${DRIVER_TEST_DEVICE1_TX0}"
+        -e ${TESTING_DEVICE_ENV_FILE}
         -r ${CMAKE_BINARY_DIR}
         -o ${CMAKE_CURRENT_BINARY_DIR}/ssh-timer-tests.sh
     BYPRODUCTS ssh-timer-tests.sh
