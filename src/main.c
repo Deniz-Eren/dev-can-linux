@@ -458,14 +458,14 @@ int main (int argc, char* argv[]) {
         }
     }
 
-    if (!optq) {
-        print_notice();
-    }
-
     if (opti) {
         print_support(opti);
 
         return EXIT_SUCCESS;
+    }
+
+    if (!optq) {
+        print_notice();
     }
 
     bool allow_driver_start = true;
