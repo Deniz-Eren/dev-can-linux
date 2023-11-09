@@ -56,6 +56,8 @@
 #if __UAPI_DEF_IF_IFNAMSIZ
 #define	IFNAMSIZ	16
 #endif /* __UAPI_DEF_IF_IFNAMSIZ */
+#define	IFALIASZ	256
+#define	ALTIFNAMSIZ	128
 
 /* For glibc compatibility. An empty enum does not compile. */
 #if __UAPI_DEF_IF_NET_DEVICE_FLAGS_LOWER_UP_DORMANT_ECHO != 0 || \

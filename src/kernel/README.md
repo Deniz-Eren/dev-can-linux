@@ -121,7 +121,8 @@ File modification chart:
     │   │   └── div64.h <-------------------- Unchanged
     │   ├── linux
     │   │   ├── bitops.h <------------------- Only kept fls_long()
-    │   │   ├── bits.h <--------------------- Only kept include vdso/bits.h
+    │   │   ├── bits.h <--------------------- Minor changes
+    │   │   ├── build_bug.h <---------------- Minor changes
     │   │   ├── can
     │   │   │   ├── bittiming.h <------------ Unchanged
     │   │   │   ├── dev.h <------------------ Some removed
