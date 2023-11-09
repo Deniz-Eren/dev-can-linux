@@ -367,12 +367,6 @@ void* irq_loop (void* arg) {
             err = irq_attach[k].handler[i](
                     irq_attach[k].irq, irq_attach[k].dev[i] );
 
-            if (err) {
-                log_err("IRQ handler error: %d\n", err);
-
-                continue;
-            }
-
             if (err == IRQ_WAKE_THREAD
                 && irq_attach[k].reset_interrupt != NULL)
             {
@@ -382,6 +376,11 @@ void* irq_loop (void* arg) {
                 if (err != IRQ_HANDLED) {
                     log_err("reset_interrupt error: %d\n", err);
                 }
+            }
+            else if (err != IRQ_NONE && err != IRQ_HANDLED) {
+                log_err("IRQ handler error: %d\n", err);
+
+                continue;
             }
         }
 
