@@ -103,6 +103,13 @@ const struct sigevent *irq_handler (void *area, int id) {
 int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
         const char *name, void *dev)
 {
+    return request_threaded_irq(irq, handler, NULL, flags, name, dev);
+}
+
+int request_threaded_irq(unsigned int irq, irq_handler_t handler,
+        irq_handler_t thread_fn,
+        unsigned long flags, const char *name, void *dev)
+{
     log_trace("request_irq; irq: %d, name: %s\n", irq, name);
 
     unsigned attach_flags =
@@ -170,9 +177,7 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
         uint_t j;
         for (j = 0; j < irq_attach_size; ++j) {
             if (irq_attach[j].irq == group->irq[i]) {
-                irq_attach[j].handler[irq_attach[j].num_handlers] = handler;
-                irq_attach[j].dev[irq_attach[j].num_handlers] = ndev;
-                irq_attach[j].num_handlers++;
+                int h = irq_attach[j].num_handlers++;
 
                 if (irq_attach[j].num_handlers >= MAX_HANDLERS_PER_IRQ) {
                     log_err( "error reached max handlers per IRQ count: %d\n",
@@ -180,6 +185,10 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
 
                     return -1;
                 }
+
+                irq_attach[j].handler[h] = handler;
+                irq_attach[j].reset_interrupt[h] = thread_fn;
+                irq_attach[j].dev[h] = ndev;
 
                 create_new_attach = false;
                 break;
@@ -207,9 +216,13 @@ int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
 
         irq_attach[k].irq = group->irq[i];
         irq_attach[k].irq_entry = i;
-        irq_attach[k].handler[irq_attach[k].num_handlers] = handler;
-        irq_attach[k].dev[irq_attach[k].num_handlers] = ndev;
-        irq_attach[k].num_handlers++;
+
+        /* Guaranteed to be the first handler installation */
+        irq_attach[k].handler[0] = handler;
+        irq_attach[k].reset_interrupt[0] = thread_fn;
+        irq_attach[k].dev[0] = ndev;
+        irq_attach[k].num_handlers = 1;
+
         irq_attach[k].hdl = group->hdl;
         irq_attach[k].msi_cap = group->msi_cap;
         irq_attach[k].is_msi = group->is_msi;
@@ -301,8 +314,10 @@ void* irq_loop (void* arg) {
     CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
 
     int rcvid;
+    irqreturn_t err;
 
     for(;;) {
+        size_t i;
         struct _pulse pulse;
         rcvid = MsgReceivePulse(irq_chid, &pulse, sizeof(pulse), NULL);
 
@@ -348,13 +363,31 @@ void* irq_loop (void* arg) {
 #endif
 
         // Handle IRQ
-        for (size_t i = 0; i < irq_attach[k].num_handlers; ++i) {
-            irq_attach[k].handler[i](irq_attach[k].irq, irq_attach[k].dev[i]);
+        for (i = 0; i < irq_attach[k].num_handlers; ++i) {
+            err = irq_attach[k].handler[i](
+                    irq_attach[k].irq, irq_attach[k].dev[i] );
+
+            if (err) {
+                log_err("IRQ handler error: %d\n", err);
+
+                continue;
+            }
+
+            if (err == IRQ_WAKE_THREAD
+                && irq_attach[k].reset_interrupt != NULL)
+            {
+                err = irq_attach[k].reset_interrupt[i](
+                        irq_attach[k].irq, irq_attach[k].dev[i] );
+
+                if (err != IRQ_HANDLED) {
+                    log_err("reset_interrupt error: %d\n", err);
+                }
+            }
         }
 
         attach->unmask(k);
 
-        for (size_t i = 0; i < irq_attach[k].num_handlers; ++i) {
+        for (i = 0; i < irq_attach[k].num_handlers; ++i) {
             device_session_t* ds = irq_attach[k].dev[i]->device_session;
             if (queue_wake_pending(&ds->tx_queue)) {
                 queue_start_signal(&ds->tx_queue);

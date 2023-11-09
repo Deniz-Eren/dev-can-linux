@@ -3,8 +3,8 @@
  * \file    linux/interrupt.h
  * \brief   This file is originally from the Linux Kernel source-code and has
  *          been modified by removing contents, such that only some needed macro
- *          definitions and functions request_irq() and free_irq() remain as
- *          stubs implemented with QNX functionality.
+ *          definitions and functions request_threaded_irq(), request_irq() and
+ *          free_irq() remain as stubs implemented with QNX functionality.
  *
  * Please also check the "SPDX-License-Identifier" documentation from the Linux
  * Kernel source code repository: github.com/torvalds/linux.git for further
@@ -110,6 +110,11 @@ enum {
 };
 
 typedef irqreturn_t (*irq_handler_t)(int, void *);
+
+extern int
+request_threaded_irq(unsigned int irq, irq_handler_t handler,
+		     irq_handler_t thread_fn,
+		     unsigned long flags, const char *name, void *dev);
 
 extern int
 request_irq(unsigned int irq, irq_handler_t handler, unsigned long flags,

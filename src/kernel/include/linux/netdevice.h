@@ -254,6 +254,15 @@ void netif_carrier_on(struct net_device *dev);
 
 void netif_carrier_off(struct net_device *dev);
 
+/**
+ *	netif_tx_lock - grab network device transmit lock
+ *	@dev: network device
+ *
+ * Get network device transmit lock
+ */
+void netif_tx_lock(struct net_device *dev);
+void netif_tx_unlock(struct net_device *dev);
+
 /* Set the sysfs physical device reference for the network logical device
  * if set prior to registration will cause a symlink during initialization.
  */

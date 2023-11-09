@@ -293,3 +293,13 @@ void netif_stop_queue (struct net_device* dev) {
 
     queue_stop(&ds->tx_queue);
 }
+
+/*
+ * Current design utilized a single thread to process IRQ requests, so the
+ * following lock/unlock functions are not required at this stage.
+ */
+void netif_tx_lock (struct net_device *dev) {
+}
+
+void netif_tx_unlock (struct net_device *dev) {
+}
