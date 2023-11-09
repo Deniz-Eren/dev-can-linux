@@ -316,7 +316,7 @@ the echo from tx file descriptor doesn't count here.
 
 To install untar a release package directly to your desired install prefix:
 
-    tar -xf dev-can-linux-#.#.#-qnx710.tar.gz -C /opt/
+    tar -xf dev-can-linux-##-#.#.#-qnx710.tar.gz -C /opt/
 
 This example command installs to the prefix "/opt/" but you can specify "/usr/"
 or "/usr/local/" or another location.
@@ -361,12 +361,13 @@ To build for armle-v7 architecture:
 
 The following installer files will be created:
 
-    dev-can-linux-1.0.0-qnx710-[architecture][build type].tar.gz
-    dev-can-linux-1.0.0-qnx710-dev.tar.gz
+    dev-can-linux-[linux]-#.#.#-qnx710-[architecture][build type].tar.gz
+    dev-can-linux-[linux]-#.#.#-qnx710-dev.tar.gz
 
-Where the "[architecture]" is the target architecture, for example x86_64 or
-aarch64le, "[build type]" is empty for Release, "-g" for Debug, "-cov" for
-Coverage and "-pro" for Profiling.
+Where the "[linux]" is the Linux Kernel version, which the driver has been
+harmonized with, for example v6.6 is written as 66. Then "[architecture]" is the
+target architecture, for example x86_64 or aarch64le, "[build type]" is empty for
+Release, "-g" for Debug, "-cov" for Coverage and "-pro" for Profiling.
 
 The '-dev' variant contains the application development headers used to develope
 software that talks to dev-can-linux driver. You do not need to install this on
