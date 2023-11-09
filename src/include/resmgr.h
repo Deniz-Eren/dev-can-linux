@@ -87,7 +87,8 @@ struct user_dev_setup {
  *  @fill_xstats:     Function to dump device specific statistics
  */
 struct resmgr_ops {
-    int     (*changelink)(struct net_device* dev, struct user_dev_setup* user);
+    int     (*changelink)(struct net_device* dev, struct user_dev_setup* user,
+                          struct netlink_ext_ack *extack);
 
     size_t  (*get_xstats_size)(const struct net_device* dev);
 

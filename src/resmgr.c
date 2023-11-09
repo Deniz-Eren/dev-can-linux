@@ -179,7 +179,7 @@ int register_netdev (struct net_device* dev) {
     }
 
     int err;
-    if ((err = dev->resmgr_ops->changelink(dev, &user)) != 0) {
+    if ((err = dev->resmgr_ops->changelink(dev, &user, NULL)) != 0) {
         log_err("register_netdev: changelink failed: %d\n", err);
 
         return -1;
@@ -1484,7 +1484,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
 
         device->flags &= ~IFF_UP;
 
-        if ((err = device->resmgr_ops->changelink(device, &user)) != 0) {
+        if ((err = device->resmgr_ops->changelink(device, &user, NULL)) != 0) {
             log_err("CAN_DEVCTL_SET_TIMING: changelink failed: (%d) %s\n",
                     -err, strerror(-err));
 
