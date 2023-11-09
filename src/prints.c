@@ -35,6 +35,8 @@ void print_version (void) {
 #else
     printf("\e[1mdev-can-linux v%s\e[m\n", PROGRAM_VERSION);
 #endif
+    printf( "Harmonized with Linux Kernel version %s\n",
+            HARMONIZED_LINUX_VERSION );
 
     return;
 }
