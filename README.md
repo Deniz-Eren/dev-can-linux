@@ -378,7 +378,6 @@ From CMake you can also run the tests. First start the emulation environment and
 copy/run the dev-can-linux release driver, then from the development environment:
 
     cd dev-can-linux
-    . tests/driver/common/env/dual-channel.env
     rm -rf build ; mkdir build ; cd build
     cmake -DCMAKE_BUILD_TYPE=Coverage -DBUILD_TESTING=ON ..
     ctest
