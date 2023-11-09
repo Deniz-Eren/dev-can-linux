@@ -127,6 +127,7 @@ extern device_config_t* enable_device_cap_config;
 #define __always_inline     inline // Impact: reduce binary size
 #define __must_check
 #define __attribute_const__
+#define __force
 
 /*
  * Mapping stdint.h types to Linux Kernel needed type names
@@ -179,6 +180,7 @@ typedef struct {
     pci_irq_t           irq;
     struct net_device*  dev[MAX_HANDLERS_PER_IRQ];
     irqreturn_t         (*handler[MAX_HANDLERS_PER_IRQ])(int, void*);
+    irqreturn_t         (*reset_interrupt[MAX_HANDLERS_PER_IRQ])(int, void*);
     size_t              num_handlers;
     pci_devhdl_t        hdl;
     pci_cap_t           msi_cap;
