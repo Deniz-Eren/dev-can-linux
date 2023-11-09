@@ -4,6 +4,10 @@ Copied (and modification kept to a minimum) source files from the Linux Kernel
 source repository are located here; the same directory structure and file names
 are preserved.
 
+To check which version of the Linux Kernel the driver is currently harmonized
+with, check config file
+[config/HARMONIZED_LINUX_VERSION](https://github.com/Deniz-Eren/dev-can-linux/blob/main/config/HARMONIZED_LINUX_VERSION).
+
 ## Support
 
 Current version aims to support all Linux PCI SJA1000 drivers for QNX 7.1 RTOS.
@@ -84,7 +88,8 @@ File modification chart:
     │   └── x86
     │       └── include
     │           └── asm
-    │               └── div64.h <------------ Unchanged
+    │               ├── div64.h <------------ Unchanged
+    │               └── io.h <--------------- Unchanged
     ├── drivers
     │   └── net
     │       └── can
@@ -129,6 +134,7 @@ File modification chart:
     │   │   ├── const.h <-------------------- Unchanged
     │   │   ├── delay.h <-------------------- Replaced with QNX udelay()
     │   │   ├── device.h <------------------- Reduced struct device to 1 member
+    │   │   ├── err.h <---------------------- Minor changes
     │   │   ├── interrupt.h <---------------- request_irq() and free_irq() are
     │   │   │                                 only stubs for QNX implementation.
     │   │   ├── io.h <----------------------- Replaced all with QNX in*() and
@@ -136,6 +142,7 @@ File modification chart:
     │   │   ├── irqreturn.h <---------------- Unchanged
     │   │   ├── kernel.h <------------------- Kept only includes of some headers
     │   │   ├── log2.h <--------------------- Unchanged
+    │   │   ├── math64.h <------------------- Minor changes
     │   │   ├── math.h <--------------------- Unchanged
     │   │   ├── minmax.h <------------------- Minor changes
     │   │   ├── mod_devicetable.h <---------- Only kept struct pci_device_id
@@ -162,6 +169,7 @@ File modification chart:
     │   │       └── pci_regs.h <------------- Unchanged
     │   └── vdso
     │       ├── bits.h <--------------------- Unchanged
-    │       └── const.h <-------------------- Unchanged
+    │       ├── const.h <-------------------- Unchanged
+    │       └── time64.h <------------------- Unchanged
     └── README.md <-------------------------- This document.
 

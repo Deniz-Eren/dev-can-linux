@@ -129,6 +129,8 @@ extern device_config_t* enable_device_cap_config;
 #define __attribute_const__
 #define __force
 
+struct netlink_ext_ack {}; // Unused null declaration
+
 /*
  * Mapping stdint.h types to Linux Kernel needed type names
  */

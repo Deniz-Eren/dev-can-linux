@@ -50,7 +50,7 @@
 #include <linux/can/skb.h>
 #include <linux/netdevice.h>
 #include <linux/skbuff.h>
-#include <asm/div64.h>
+#include <linux/math64.h>
 
 #include "timer.h"
 

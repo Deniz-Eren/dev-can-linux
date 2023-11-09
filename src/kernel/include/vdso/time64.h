@@ -1,9 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /*
- * \file    asm/io.h
+ * \file    vdso/time64.h
  * \brief   This file is originally from the Linux Kernel source-code and has
- *          been modified to integrate to QNX RTOC and only contains the
- *          function ioremap.
+ *          not been modified.
  *
  * Please also check the "SPDX-License-Identifier" documentation from the Linux
  * Kernel source code repository: github.com/torvalds/linux.git for further
@@ -24,23 +23,17 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
 
-#ifndef _ASM_X86_IO_H
-#define _ASM_X86_IO_H
+#ifndef __VDSO_TIME64_H
+#define __VDSO_TIME64_H
 
-/**
- * ioremap     -   map bus memory into CPU space
- * @offset:    bus address of the memory
- * @size:      size of the resource to map
- *
- * ioremap performs a platform specific sequence of operations to
- * make bus memory CPU accessible via the readb/readw/readl/writeb/
- * writew/writel functions and the other mmio helpers. The returned
- * address is not guaranteed to be usable directly as a virtual
- * address.
- *
- * If the area you are trying to map is a PCI BAR you should have a
- * look at pci_iomap().
- */
-void __iomem* ioremap (uintptr_t offset, size_t size);
+/* Parameters used to convert the timespec values: */
+#define MSEC_PER_SEC	1000L
+#define USEC_PER_MSEC	1000L
+#define NSEC_PER_USEC	1000L
+#define NSEC_PER_MSEC	1000000L
+#define USEC_PER_SEC	1000000L
+#define NSEC_PER_SEC	1000000000L
+#define PSEC_PER_SEC	1000000000000LL
+#define FSEC_PER_SEC	1000000000000000LL
 
-#endif /* _ASM_X86_IO_H */
+#endif /* __VDSO_TIME64_H */

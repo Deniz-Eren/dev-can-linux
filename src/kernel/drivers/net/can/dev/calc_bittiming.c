@@ -106,7 +106,7 @@ can_update_sample_point(const struct can_bittiming_const *btc,
 #endif
 
 int can_calc_bittiming(const struct net_device *dev, struct can_bittiming *bt,
-		       const struct can_bittiming_const *btc)
+		       const struct can_bittiming_const *btc, struct netlink_ext_ack *extack)
 {
 	struct can_priv *priv = netdev_priv(dev);
 	unsigned int bitrate;			/* current bitrate */
@@ -119,6 +119,7 @@ int can_calc_bittiming(const struct net_device *dev, struct can_bittiming *bt,
 	unsigned int best_brp = 0;		/* current best value for brp */
 	unsigned int brp, tsegall, tseg, tseg1 = 0, tseg2 = 0;
 	u64 v64;
+	int err;
 
 	/* Use CiA recommended sample points */
 	if (bt->sample_point) {
@@ -176,12 +177,13 @@ int can_calc_bittiming(const struct net_device *dev, struct can_bittiming *bt,
 		do_div(v64, bt->bitrate);
 		bitrate_error = (u32)v64;
 		if (bitrate_error > CAN_CALC_MAX_ERROR) {
-			netdev_err(dev,
-				   "bitrate error %d.%d%% too high\n",
+			NL_SET_ERR_MSG_FMT(extack,
+					   "bitrate error: %u.%u%% too high",
 				   bitrate_error / 10, bitrate_error % 10);
-			return -EDOM;
+			return -EINVAL;
 		}
-		netdev_warn(dev, "bitrate error %d.%d%%\n",
+		NL_SET_ERR_MSG_FMT(extack,
+				   "bitrate error: %u.%u%%",
 			    bitrate_error / 10, bitrate_error % 10);
 	}
 
@@ -197,23 +199,17 @@ int can_calc_bittiming(const struct net_device *dev, struct can_bittiming *bt,
 	bt->phase_seg1 = tseg1 - bt->prop_seg;
 	bt->phase_seg2 = tseg2;
 
-	/* check for sjw user settings */
-	if (!bt->sjw || !btc->sjw_max) {
-		bt->sjw = 1;
-	} else {
-		/* bt->sjw is at least 1 -> sanitize upper bound to sjw_max */
-		if (bt->sjw > btc->sjw_max)
-			bt->sjw = btc->sjw_max;
-		/* bt->sjw must not be higher than tseg2 */
-		if (tseg2 < bt->sjw)
-			bt->sjw = tseg2;
-	}
+	can_sjw_set_default(bt);
+
+	err = can_sjw_check(dev, bt, btc, extack);
+	if (err)
+		return err;
 
 	bt->brp = best_brp;
 
 	/* real bitrate */
 	bt->bitrate = priv->clock.freq /
-		(bt->brp * (CAN_SYNC_SEG + tseg1 + tseg2));
+		(bt->brp * can_bit_time(bt));
 
 	return 0;
 }
