@@ -133,9 +133,9 @@ Options:
                  e.g. -d 13fe:00d7,0x11 -d 13fe:00d7,0x05
     -e vid:did,cap
                - Enable PCI/PCIe capability cap for device,
-                 e.g. -e 13fe:00d7,0x05
-                 By default all capabilities are disabled and require enabling to
-                 be activated (EXPERIMENTAL).
+                 e.g. -e 13fe:00d7,0x11
+                 By default MSI capability is enabled and MSI-X is disabled,
+                 and requires enabling to be activated (EXPERIMENTAL).
     -r delay   - Bus-off recovery delay timer duration (milliseconds).
                  If set to 0ms, then the bus-off recovery is disabled!
                  Default: 50ms
@@ -579,7 +579,7 @@ Current version output:
 
 ## PCIe MSI and MSI-X Capability Devices
 
-These capabilities are currently disabled by default. They are experimental and
+Some capabilities are currently disabled by default. They are experimental and
 have not been verified with real hardware.
 
 For PCIe devices that support capability 0x05 (MSI) and/or 0x11 (MSI-X), both
@@ -645,26 +645,19 @@ This shows the file `etc/profile` defining the needed environment variables so
 that the user console have them defined for dev-can-linux to find the PCI
 modules.
 
-For advanced user, if you wish to enable the 0x11 (MSI-X) capability or the
-the 0x05 (MSI) capability (if it's available), simply specific device and
-capability number with `-e` option program options to the `dev-can-linux` driver.
+For advanced user, if you wish to enable the 0x11 (MSI-X) capability (if it's
+available), simply specify device and capability number with `-e` option program
+options to the `dev-can-linux` driver. Note that capability MSI is enabled by
+default since it has been verified with real hardware, MSI-X is still unverified
+and experimental.
 
 To force MSI-X to be used:
 
     dev-can-linux -e vid:did,0x11
 
-To force MSI to be used:
-
-    dev-can-linux -e vid:did,0x05
-
 Note it is NOT recommended to enable capabilities, in production until we release
 a hardware tested and verified version. However this ability is provided for
 advanced users to adopt at their discretion.
-
-One final note on legacy MSI, PCI 3.0 onwards allow each interrupt to be masked
-individually. If this feature is not available on the device, that is, if Per
-Vector Masking (PVM) isn't supported, then currently the driver will revert to
-regular IRQ operation.
 
 
 ## Hardware Test Status

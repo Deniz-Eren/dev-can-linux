@@ -83,10 +83,14 @@ pci_err_t msix_init (struct pci_dev* dev) {
     int i;
 
     /*
-     * By default both MSI and MSI-X are disabled
+     * By default MSI-X is disabled because it is still an experimental feature
+     * that has not been validated with real hardware testing. To use it the
+     * command-line options -e must be used.
+     *
+     * MSI is a hardware verified feature and is enabled by default.
      */
 
-    bool disabled_msi = true;
+    bool disabled_msi = false;
     bool disabled_msix = true;
 
     pcie_init(dev);
