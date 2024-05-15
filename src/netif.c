@@ -159,6 +159,12 @@ int netif_rx (struct sk_buff* skb) {
         return NET_RX_SUCCESS;
     }
 
+    if (!optE) {
+        if (skb->is_echo) {
+            return NET_RX_SUCCESS;
+        }
+    }
+
     struct can_msg canmsg;
 
     /* set MID; omit EFF, RTR, ERR flags */

@@ -159,6 +159,7 @@ void print_help (char* program_name) {
     printf("                     # (Special cases only) Forced btr* baud-rate setting method:\n");
     printf("                     \e[1mdev-can-linux -b id=0,freq=125k,btr0=0x07,btr1=0x14\e[m\n");
     printf("\n");
+    printf("    \e[1m-E\e[m         - Enable internal loopback (echo TX to RX of each device)\n");
     printf("    \e[1m-w\e[m         - Print warranty message and exit.\n");
     printf("    \e[1m-c\e[m         - Print license details and exit.\n");
     printf("    \e[1m-q\e[m         - Quiet mode turns of all terminal printing and trumps all\n");
