@@ -58,6 +58,7 @@ extern int optt;
 extern int optu;
 extern int optb;
 extern int optx;
+extern int optE;
 
 typedef struct {
     int id;

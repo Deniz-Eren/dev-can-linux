@@ -99,6 +99,7 @@ Options:
                      # (Special cases only) Forced btr* baud-rate setting method:
                      dev-can-linux -b id=0,freq=125k,btr0=0x07,btr1=0x14
 
+    -E         - Enable internal loopback (echo TX to RX of each device)
     -w         - Print warranty message and exit.
     -c         - Print license details and exit.
     -q         - Quiet mode turns of all terminal printing and trumps all

@@ -70,7 +70,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_coverage \
-                    -c "dev-can-linux -x" \
+                    -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Coverage \
                     -p $sshport
@@ -147,7 +147,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_memcheck \
-                    -c "dev-can-linux -x" \
+                    -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
@@ -183,7 +183,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_helgrind \
-                    -c "dev-can-linux -x" \
+                    -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
@@ -217,7 +217,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_drd \
-                    -c "dev-can-linux -x" \
+                    -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
                     -s 1 \
@@ -251,7 +251,7 @@ node('jenkins-agent') {
                 $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
                     -v \
                     -b /data/home/root/build_exp-sgcheck \
-                    -c "dev-can-linux -x" \
+                    -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
                     -s 1 \

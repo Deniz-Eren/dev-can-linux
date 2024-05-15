@@ -82,6 +82,7 @@ int optt = 0;
 int optu = 0;
 int optb = 0;
 int optx = 0;
+int optE = 0;
 
 size_t num_optu_configs = 0;
 channel_config_t* optu_config = NULL;

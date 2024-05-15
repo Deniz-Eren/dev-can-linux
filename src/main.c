@@ -90,7 +90,7 @@ int main (int argc, char* argv[]) {
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "r:d:e:U:u:b:viqstlVCwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "r:d:e:U:u:b:viqstlVCEwcx?h")) != -1) {
         switch (opt) {
         case 'r':
             optr++;
@@ -425,6 +425,10 @@ int main (int argc, char* argv[]) {
 
         case 'i':
             opti++;
+            break;
+
+        case 'E':
+            optE = 1;
             break;
 
         case 'V':

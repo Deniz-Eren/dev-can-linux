@@ -1449,7 +1449,7 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
         data->dcmd.info.loopback_external = 0; // TODO: set loopback_external
 
         /* Internal loopback is enabled */
-        data->dcmd.info.loopback_internal = 1; // TODO: check meaning of this
+        data->dcmd.info.loopback_internal = optE; // TODO: check meaning of this
 
         /* Auto timed bus on after bus off */
         data->dcmd.info.autobus_on = 0; // TODO: set autobus_on
