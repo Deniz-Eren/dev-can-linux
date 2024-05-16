@@ -28,11 +28,8 @@
 #include "session.h"
 
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
-    CONFIG_QNX_INTERRUPT_ATTACH == 1
 int irq_chid = -1;
 struct sigevent terminate_event;
-#endif
 
 /* atomic shutdown check */
 volatile unsigned shutdown_program = 0x0; // 0x0 = running, 0x1 = shutdown
@@ -40,22 +37,15 @@ volatile unsigned shutdown_program = 0x0; // 0x0 = running, 0x1 = shutdown
 void terminate_irq_loop () {
     atomic_set_value(&shutdown_program, 0x01);
 
-#if CONFIG_QNX_INTERRUPT_ATTACH == 1 || \
-    CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-
     if (MsgDeliverEvent(0, &terminate_event) == -1) {
         log_err("irq_trigger_event error; %s\n", strerror(errno));
     }
-#else
-    sleep(2);
-#endif
 }
 
-#if CONFIG_QNX_INTERRUPT_ATTACH == 1
 /*
  * Interrupt Service Routine (ISR)
  *
- * The actual ISR actually does no work except returning a QNX signal event.
+ * The ISR returns a QNX signal event.
  */
 const struct sigevent *irq_handler (void *area, int id) {
     if (area == NULL) {
@@ -84,21 +74,6 @@ const struct sigevent *irq_handler (void *area, int id) {
 
     return &attach->event;
 }
-#elif CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1
-/*
- * Interrupt Service Routine (ISR)
- *
- * The actual ISR performs the work.
- */
-const struct sigevent *irq_handler (void *area, int id) {
-    log_enabled = false;
-
-    // TODO: If raw ISR is ever needed it needs to be implemented here
-
-    log_enabled = true;
-    return NULL;
-}
-#endif
 
 int request_irq (unsigned int irq, irq_handler_t handler, unsigned long flags,
         const char *name, void *dev)
@@ -144,8 +119,6 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
         return -1;
     }
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
-    CONFIG_QNX_INTERRUPT_ATTACH == 1
     if (irq_chid == -1) {
         unsigned flags = _NTO_CHF_PRIVATE;
 
@@ -159,7 +132,6 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
         terminate_event.sigev_priority =
             param.sched_priority + IRQ_SCHED_PRIORITY_BOOST;
     }
-#endif
 
     irq_group_t* group = irq_to_group_map[irq];
 
@@ -201,10 +173,7 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
 
         int k = irq_attach_size++;
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1 || \
-    CONFIG_QNX_INTERRUPT_ATTACH == 1
         SIGEV_SET_TYPE(&irq_attach[k].event, SIGEV_PULSE);
-#endif
 
         int coid =
             ConnectAttach(ND_LOCAL_NODE, 0, irq_chid, _NTO_SIDE_CHANNEL, 0);
@@ -265,23 +234,44 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
 #endif
 
         int id;
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-        if ((id = InterruptAttachEvent( group->irq[i],
+
+        if (irq_attach[k].mask == mask_irq_msi_legacy ||
+            irq_attach[k].mask == mask_irq_regular)
+        {
+            // When working with regular IRQ or legacy MSI devices that
+            // are handled at the regular IRQ level, we use InterruptAttachEvent
+            // to minimize Kernel called ISR code.
+            //
+            // Additionally, InterruptAttachEvent will already mask the regular
+            // IRQ.
+
+            if ((id = InterruptAttachEvent( group->irq[i],
                         &irq_attach[k].event, attach_flags )) == -1)
-        {
-            log_err("internal error; interrupt attach event failure\n");
+            {
+                log_err("internal error; interrupt attach event failure\n");
 
-            return -1;
+                return -1;
+            }
         }
-#else
-        if ((id = InterruptAttach( group->irq[i],
+        else {
+            // When working with MSI supported (with PVM) or MSI-X supported
+            // devices, we want to use InterruptAttach. This is because
+            // InterruptAttachEvent would mask the regular IRQ assoicated with
+            // the device. We definitely want to avoid doing that and instead we
+            // want to benefit from the MSI/MSI-X PVM support.
+            //
+            // As such, in this case we cannot avoid implementing an ISR, which
+            // the Kernel will call.
+
+            if ((id = InterruptAttach( group->irq[i],
                         &irq_handler, &irq_attach[k], 0, attach_flags )) == -1)
-        {
-            log_err("internal error; interrupt attach failure\n");
+            {
+                log_err("internal error; interrupt attach failure\n");
 
-            return -1;
+                return -1;
+            }
         }
-#endif
+
         irq_attach[k].id = id;
 
         irq_attach[k].unmask(k);
@@ -310,9 +300,6 @@ void free_irq (unsigned int irq, void *dev) {
 }
 
 void* irq_loop (void* arg) {
-#if CONFIG_QNX_INTERRUPT_ATTACH == 1 || \
-    CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-
     int rcvid;
     irqreturn_t err;
 
@@ -341,26 +328,17 @@ void* irq_loop (void* arg) {
 
         irq_attach_t* attach = &irq_attach[k];
 
-#if CONFIG_QNX_INTERRUPT_ATTACH_EVENT == 1
-        /*
-         * Case when InterruptAttachEvent() is used:
-         *
-         * To prevent infinite interrupt recursion, the kernel automatically does
-         * an InterruptMask() for intr when delivering the event. After the
-         * interrupt-handling thread has dealt with the event, it must call
-         * InterruptUnmask() to reenable the interrupt.
-         */
-
-        InterruptUnmask(attach->irq, attach->id);
-#endif
-
         if (attach->mask == NULL || attach->unmask == NULL) {
             continue;
         }
 
+        if (irq_attach[k].mask != mask_irq_msi_legacy &&
+            irq_attach[k].mask != mask_irq_regular)
+        {
 #if CONFIG_QNX_INTERRUPT_MASK_PULSE == 1
-        attach->mask(k);
+            attach->mask(k);
 #endif
+        }
 
         // Handle IRQ
         for (i = 0; i < irq_attach[k].num_handlers; ++i) {
@@ -394,16 +372,4 @@ void* irq_loop (void* arg) {
             }
         }
     }
-#else /* CONFIG_QNX_INTERRUPT_ATTACH_EVENT != 1 &&
-         CONFIG_QNX_INTERRUPT_ATTACH != 1 */
-    while (1) {
-
-        if (shutdown_program) {
-            return NULL;
-        }
-
-        /* Just spend some time doing nothing so the loop doesn't hard-lock */
-        sleep(1);
-    }
-#endif
 }

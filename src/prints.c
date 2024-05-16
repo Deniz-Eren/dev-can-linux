@@ -45,10 +45,10 @@ void print_configs (void) {
     print_version();
 
     printf("CONFIG_HZ=%d\n", CONFIG_HZ);
-    printf("CONFIG_QNX_INTERRUPT_ATTACH=%d\n",
-            CONFIG_QNX_INTERRUPT_ATTACH);
-    printf("CONFIG_QNX_INTERRUPT_ATTACH_EVENT=%d\n",
-            CONFIG_QNX_INTERRUPT_ATTACH_EVENT);
+    printf("CONFIG_QNX_INTERRUPT_MASK_ISR=%d\n",
+            CONFIG_QNX_INTERRUPT_MASK_ISR);
+    printf("CONFIG_QNX_INTERRUPT_MASK_PULSE=%d\n",
+            CONFIG_QNX_INTERRUPT_MASK_PULSE);
     printf("CONFIG_QNX_RESMGR_SINGLE_THREAD=%d\n",
             CONFIG_QNX_RESMGR_SINGLE_THREAD);
     printf("CONFIG_QNX_RESMGR_THREAD_POOL=%d\n",
