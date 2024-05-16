@@ -57,6 +57,9 @@ file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_QNX_RESMGR_SINGLE_THREAD"
 file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_QNX_RESMGR_THREAD_POOL"
     CONFIG_QNX_RESMGR_THREAD_POOL )
 
+file( STRINGS "${PROJECT_SOURCE_DIR}/config/CONFIG_IRQ_SCHED_PRIORITY_BOOST"
+    CONFIG_IRQ_SCHED_PRIORITY_BOOST )
+
 add_compile_options( -Wall )
 
 add_compile_definitions( PROGRAM_VERSION="${PROGRAM_VERSION}" )
@@ -75,6 +78,9 @@ add_compile_definitions(
 add_compile_definitions(
     CONFIG_QNX_RESMGR_THREAD_POOL=${CONFIG_QNX_RESMGR_THREAD_POOL} )
 
+add_compile_definitions(
+    CONFIG_IRQ_SCHED_PRIORITY_BOOST=${CONFIG_IRQ_SCHED_PRIORITY_BOOST} )
+
 add_compile_definitions( DEVCANLINUX_SYSLOG=1 )
 add_compile_definitions( DEVCANLINUX_STDERR=1 )
 
@@ -85,11 +91,6 @@ add_compile_definitions( CONFIG_X86_64 ) # 32-bit alternative is CONFIG_X86_32
 project( dev-can-linux
          VERSION ${PROGRAM_VERSION}
          LANGUAGES C CXX )
-
-set( IRQ_SCHED_PRIORITY_BOOST "20" CACHE STRING
-    "Schedule priority of transmission and interrupt processing" )
-
-add_compile_definitions( IRQ_SCHED_PRIORITY_BOOST=${IRQ_SCHED_PRIORITY_BOOST} )
 
 set( SSH_PORT "6022" CACHE STRING "SSH port number" )
 

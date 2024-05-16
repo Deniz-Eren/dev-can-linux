@@ -53,6 +53,8 @@ void print_configs (void) {
             CONFIG_QNX_RESMGR_SINGLE_THREAD);
     printf("CONFIG_QNX_RESMGR_THREAD_POOL=%d\n",
             CONFIG_QNX_RESMGR_THREAD_POOL);
+    printf("CONFIG_IRQ_SCHED_PRIORITY_BOOST=%d\n",
+            CONFIG_IRQ_SCHED_PRIORITY_BOOST);
 
     return;
 }

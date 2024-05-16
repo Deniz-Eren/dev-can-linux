@@ -590,7 +590,7 @@ int main (int argc, char* argv[]) {
 
     pthread_attr_setinheritsched(&irq_thread_attr, PTHREAD_EXPLICIT_SCHED);
 
-    param.sched_priority += IRQ_SCHED_PRIORITY_BOOST;
+    param.sched_priority += CONFIG_IRQ_SCHED_PRIORITY_BOOST;
     pthread_attr_setschedparam(&irq_thread_attr, &param);
 
     pthread_create(&irq_thread, &irq_thread_attr, &irq_loop, NULL);
