@@ -130,7 +130,7 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
         terminate_event.sigev_coid = coid;
         terminate_event.sigev_code = 0; // not needed for termination
         terminate_event.sigev_priority =
-            param.sched_priority + IRQ_SCHED_PRIORITY_BOOST;
+            param.sched_priority + CONFIG_IRQ_SCHED_PRIORITY_BOOST;
     }
 
     irq_group_t* group = irq_to_group_map[irq];
@@ -181,7 +181,7 @@ int request_threaded_irq(unsigned int irq, irq_handler_t handler,
         irq_attach[k].event.sigev_coid = coid;
         irq_attach[k].event.sigev_code = k;
         irq_attach[k].event.sigev_priority =
-            param.sched_priority + IRQ_SCHED_PRIORITY_BOOST;
+            param.sched_priority + CONFIG_IRQ_SCHED_PRIORITY_BOOST;
 
         irq_attach[k].irq = group->irq[i];
         irq_attach[k].irq_entry = i;
