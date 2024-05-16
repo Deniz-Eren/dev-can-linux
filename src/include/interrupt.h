@@ -304,54 +304,6 @@ static inline void unmask_irq_msi (uint_t attach_index) {
     }
 }
 
-static inline void mask_irq_msi_legacy (uint_t attach_index) {
-    if (attach_index >= irq_attach_size) {
-        return;
-    }
-
-    irq_attach_t* attach = &irq_attach[attach_index];
-
-    if (attach->msi_cap == NULL) {
-        return;
-    }
-
-    /*
-     * This function (mask_irq_msi) is optimized assuming the user has already
-     * setup the PCI capabilities and verified they are enabled. Thus we skip the
-     * check:
-     *
-     *      pci_device_cfg_cap_isenabled(attach->hdl, attach->msi_cap)
-     *      AND !attach->is_msix
-     *      AND !attach->is_msi
-     */
-
-    InterruptMask(attach->irq, attach->id);
-}
-
-static inline void unmask_irq_msi_legacy (uint_t attach_index) {
-    if (attach_index >= irq_attach_size) {
-        return;
-    }
-
-    irq_attach_t* attach = &irq_attach[attach_index];
-
-    if (attach->msi_cap == NULL) {
-        return;
-    }
-
-    /*
-     * This function (unmask_irq_msi) is optimized assuming the user has already
-     * setup the PCI capabilities and verified they are enabled. Thus we skip the
-     * check:
-     *
-     *      pci_device_cfg_cap_isenabled(attach->hdl, attach->msi_cap)
-     *      AND !attach->is_msix
-     *      AND !attach->is_msi
-     */
-
-    InterruptUnmask(attach->irq, attach->id);
-}
-
 static inline void mask_irq_regular (uint_t attach_index) {
     if (attach_index >= irq_attach_size) {
         return;
@@ -370,6 +322,50 @@ static inline void unmask_irq_regular (uint_t attach_index) {
     irq_attach_t* attach = &irq_attach[attach_index];
 
     InterruptUnmask(attach->irq, attach->id);
+}
+
+static inline void mask_irq_msi_legacy (uint_t attach_index) {
+    irq_attach_t* attach = &irq_attach[attach_index];
+
+    if (attach->msi_cap == NULL) {
+        return;
+    }
+
+    /*
+     * This function (mask_irq_msi) is optimized assuming the user has already
+     * setup the PCI capabilities and verified they are enabled. Thus we skip the
+     * check:
+     *
+     *      pci_device_cfg_cap_isenabled(attach->hdl, attach->msi_cap)
+     *      AND !attach->is_msix
+     *      AND !attach->is_msi
+     *
+     * Furthermore, these are handled as regular IRQs
+     */
+
+    mask_irq_regular(attach_index);
+}
+
+static inline void unmask_irq_msi_legacy (uint_t attach_index) {
+    irq_attach_t* attach = &irq_attach[attach_index];
+
+    if (attach->msi_cap == NULL) {
+        return;
+    }
+
+    /*
+     * This function (unmask_irq_msi) is optimized assuming the user has already
+     * setup the PCI capabilities and verified they are enabled. Thus we skip the
+     * check:
+     *
+     *      pci_device_cfg_cap_isenabled(attach->hdl, attach->msi_cap)
+     *      AND !attach->is_msix
+     *      AND !attach->is_msi
+     *
+     * Furthermore, these are handled as regular IRQs
+     */
+
+    unmask_irq_regular(attach_index);
 }
 
 #endif /* SRC_INTERRUPT_H_ */
