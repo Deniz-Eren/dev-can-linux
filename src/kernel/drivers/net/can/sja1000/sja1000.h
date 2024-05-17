@@ -179,7 +179,7 @@ struct sja1000_priv {
 	void *priv;		/* for board-specific data */
 	struct net_device *dev;
 
-	void __iomem* reg_base;	 /* ioremap'ed address to registers */
+	void __iomem *reg_base;	 /* ioremap'ed address to registers */
 	unsigned long irq_flags; /* for request_irq() */
 
 	u16 flags;		/* custom mode flags */

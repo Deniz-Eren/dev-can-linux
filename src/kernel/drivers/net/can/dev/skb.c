@@ -80,11 +80,11 @@ int can_put_echo_skb(struct sk_buff *skb, struct net_device *dev,
 	struct can_priv *priv = netdev_priv(dev);
 
 	if (idx >= priv->echo_skb_max) {
-        netdev_err(dev, "%s: BUG! echo_skb %d >= %d !\n",
+        netdev_err(dev, "%s: BUG! Trying to access can_priv::echo_skb out of bounds (%u/max %u)\n",
                 __func__, idx, priv->echo_skb_max);
 
-	    kfree_skb(skb);
-        return -ENOMEM;
+        kfree_skb(skb);
+        return -EINVAL;
 	}
 
 	/* check flag whether this packet has to be looped back */

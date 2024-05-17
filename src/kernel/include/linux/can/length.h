@@ -32,7 +32,7 @@
 /*
  * Size of a Classical CAN Standard Frame header in bits
  *
- * Name of Field			Bits
+ * Name of Field				Bits
  * ---------------------------------------------------------
  * Start Of Frame (SOF)				1
  * Arbitration field:
@@ -50,7 +50,7 @@
 /*
  * Size of a Classical CAN Extended Frame header in bits
  *
- * Name of Field			Bits
+ * Name of Field				Bits
  * ---------------------------------------------------------
  * Start Of Frame (SOF)				1
  * Arbitration field:
@@ -62,7 +62,7 @@
  * Control field:
  *	FD Format indicator (FDF)		1
  *	Reserved bit (r0)			1
- * Data length code (DLC)		4
+ *	Data length code (DLC)			4
  *
  * including all fields preceding the data field, ignoring bitstuffing
  */
@@ -71,7 +71,7 @@
 /*
  * Size of a CAN-FD Standard Frame in bits
  *
- * Name of Field			Bits
+ * Name of Field				Bits
  * ---------------------------------------------------------
  * Start Of Frame (SOF)				1
  * Arbitration field:
@@ -81,9 +81,9 @@
  *	IDentifier Extension bit (IDE)		1
  *	FD Format indicator (FDF)		1
  *	Reserved bit (res)			1
- * Bit Rate Switch (BRS)		1
- * Error Status Indicator (ESI)		1
- * Data length code (DLC)		4
+ *	Bit Rate Switch (BRS)			1
+ *	Error Status Indicator (ESI)		1
+ *	Data length code (DLC)			4
  *
  * including all fields preceding the data field, ignoring bitstuffing
  */
@@ -92,7 +92,7 @@
 /*
  * Size of a CAN-FD Extended Frame in bits
  *
- * Name of Field			Bits
+ * Name of Field				Bits
  * ---------------------------------------------------------
  * Start Of Frame (SOF)				1
  * Arbitration field:
@@ -104,9 +104,9 @@
  * Control field:
  *	FD Format indicator (FDF)		1
  *	Reserved bit (res)			1
- * Bit Rate Switch (BRS)		1
- * Error Status Indicator (ESI)		1
- * Data length code (DLC)		4
+ *	Bit Rate Switch (BRS)			1
+ *	Error Status Indicator (ESI)		1
+ *	Data length code (DLC)			4
  *
  * including all fields preceding the data field, ignoring bitstuffing
  */
