@@ -41,6 +41,6 @@
  * If the area you are trying to map is a PCI BAR you should have a
  * look at pci_iomap().
  */
-void __iomem* ioremap (uintptr_t offset, size_t size);
+void __iomem *ioremap (uintptr_t offset, size_t size);
 
 #endif /* _ASM_X86_IO_H */

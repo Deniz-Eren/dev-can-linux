@@ -111,15 +111,15 @@ struct ems_pci_card {
  */
 #define EMS_PCI_CDR             (CDR_CBP | CDR_CLKOUT_MASK)
 
-#define EMS_PCI_V1_BASE_BAR     1
+#define EMS_PCI_V1_BASE_BAR 1
 #define EMS_PCI_V1_CONF_BAR 0
-#define EMS_PCI_V1_CONF_SIZE    4096 /* size of PITA control area */
+#define EMS_PCI_V1_CONF_SIZE 4096 /* size of PITA control area */
 #define EMS_PCI_V1_CAN_BASE_OFFSET 0x400 /* offset where the controllers start */
 #define EMS_PCI_V1_CAN_CTRL_SIZE 0x200 /* memory size for each controller */
 
-#define EMS_PCI_V2_BASE_BAR     2
+#define EMS_PCI_V2_BASE_BAR 2
 #define EMS_PCI_V2_CONF_BAR 0
-#define EMS_PCI_V2_CONF_SIZE    128 /* size of PLX control area */
+#define EMS_PCI_V2_CONF_SIZE 128 /* size of PLX control area */
 #define EMS_PCI_V2_CAN_BASE_OFFSET 0x400 /* offset where the controllers start */
 #define EMS_PCI_V2_CAN_CTRL_SIZE 0x200 /* memory size for each controller */
 
@@ -428,7 +428,7 @@ static int ems_pci_add_card(struct pci_dev *pdev,
 			card->channels++;
 
 			dev_info(&pdev->dev, "Channel #%d at 0x%p, irq %d\n",
-					i + 1, priv->reg_base, dev->irq);
+				 i + 1, priv->reg_base, dev->irq);
 		} else {
 			free_sja1000dev(dev);
 		}

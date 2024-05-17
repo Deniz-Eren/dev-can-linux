@@ -179,12 +179,12 @@ int can_calc_bittiming(const struct net_device *dev, struct can_bittiming *bt,
 		if (bitrate_error > CAN_CALC_MAX_ERROR) {
 			NL_SET_ERR_MSG_FMT(extack,
 					   "bitrate error: %u.%u%% too high",
-				   bitrate_error / 10, bitrate_error % 10);
+					   bitrate_error / 10, bitrate_error % 10);
 			return -EINVAL;
 		}
 		NL_SET_ERR_MSG_FMT(extack,
 				   "bitrate error: %u.%u%%",
-			    bitrate_error / 10, bitrate_error % 10);
+				   bitrate_error / 10, bitrate_error % 10);
 	}
 
 	/* real sample point */
