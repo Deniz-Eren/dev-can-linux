@@ -564,12 +564,7 @@ IOFUNC_OCB_T* can_ocb_calloc (resmgr_context_t* ctp, IOFUNC_ATTR_T* attr) {
             return NULL;
         }
 
-        pthread_attr_init(&ocb->rx.thread_attr);
-        pthread_attr_setdetachstate(
-                &ocb->rx.thread_attr, PTHREAD_CREATE_DETACHED );
-
-        pthread_create( &ocb->rx.thread, &ocb->rx.thread_attr,
-                &rx_loop, ocb );
+        pthread_create(&ocb->rx.thread, NULL, &rx_loop, ocb);
     }
 
     return ocb;
@@ -658,7 +653,7 @@ void* rx_loop (void* arg) {
     {
         log_err("rx_loop exit: Unable to attach to channel.\n");
 
-        return NULL;
+        pthread_exit(NULL);
     }
 
     while (1) {
@@ -676,6 +671,7 @@ void* rx_loop (void* arg) {
         if (resmgr->shutdown || (ocb->rx.queue == NULL)) {
             log_trace("rx_loop exit\n");
 
+            ConnectDetach(coid);
             pthread_exit(NULL);
         }
 
