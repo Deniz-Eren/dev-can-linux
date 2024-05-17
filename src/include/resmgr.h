@@ -113,7 +113,6 @@ typedef struct can_ocb {
     client_session_t *session;
 
     struct rx_t {
-        pthread_attr_t thread_attr;
         pthread_t thread;
         pthread_mutex_t mutex;
         pthread_cond_t cond;
