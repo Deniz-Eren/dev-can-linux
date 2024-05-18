@@ -111,6 +111,9 @@ int process_driver_selection() {
             else if (check_driver_support(&plx_pci_driver, vid, did)) {
                 detected_driver_temp = &plx_pci_driver;
             }
+//            else if (check_driver_support(&f81601_pci_driver, vid, did)) {
+//                detected_driver_temp = &f81601_pci_driver;
+//            }
 
             if (detected_driver_temp) {
                 bool device_disabled = false;
@@ -373,6 +376,10 @@ void pci_disable_device (struct pci_dev* dev) {
     }
 }
 
+int __must_check pcim_enable_device(struct pci_dev *pdev) {
+    return 0;
+}
+
 void __iomem* pci_iomap (struct pci_dev* dev, int bar, unsigned long max) {
     log_trace("pci_iomap; bar: %d, addr: %p, max: %p\n", bar,
             (void*)(unsigned long)dev->ba[bar].addr, (void*)max);
@@ -428,6 +435,20 @@ uintptr_t pci_resource_start (struct pci_dev* dev, int bar) {
             (void*)(unsigned long)dev->ba[bar].addr);
 
     return dev->ba[bar].addr;
+}
+
+uintptr_t pci_resource_end (struct pci_dev* dev, int bar) {
+    log_trace("pci_resource_end; bar: %d, addr: %p\n", bar,
+            (void*)(unsigned long)dev->ba[bar].addr);
+
+    return dev->ba[bar].addr + dev->ba[bar].size;
+}
+
+uintptr_t pci_resource_len (struct pci_dev* dev, int bar) {
+    log_trace("pci_resource_len; bar: %d, addr: %p\n", bar,
+            (void*)(unsigned long)dev->ba[bar].addr);
+
+    return dev->ba[bar].size;
 }
 
 void __iomem* ioremap (uintptr_t offset, size_t size) {
@@ -518,6 +539,10 @@ void pci_iounmap (struct pci_dev* dev, void __iomem* addr) {
     free(block);
 }
 
+void __iomem *pcim_iomap(struct pci_dev *pdev, int bar, unsigned long maxlen) {
+    return NULL;
+}
+
 void pci_set_master (struct pci_dev *dev) {
     log_trace("pci_set_master\n");
 }
@@ -572,6 +597,24 @@ void pci_free_irq_vectors (struct pci_dev *dev) {
  */
 #define PCI_CFG_SPACE_OFFSET 0x40
 
+int pci_read_config_byte(const struct pci_dev *dev, int where, u8 *val) {
+    pci_bdf_t bdf = pci_bdf(dev->hdl);
+
+    if (bdf == PCI_BDF_NONE) {
+        return -1;
+    }
+
+    pci_err_t err = pci_device_cfg_rd8( bdf,
+            where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
+                             val );
+
+    if (err != PCI_ERR_OK) {
+        return -1;
+    }
+
+    return 0;
+}
+
 int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
     pci_bdf_t bdf = pci_bdf(dev->hdl);
 
@@ -590,8 +633,50 @@ int pci_read_config_word (const struct pci_dev* dev, int where, u16* val) {
     return 0;
 }
 
+int pci_read_config_dword(const struct pci_dev *dev, int where, u32 *val) {
+    pci_bdf_t bdf = pci_bdf(dev->hdl);
+
+    if (bdf == PCI_BDF_NONE) {
+        return -1;
+    }
+
+    pci_err_t err = pci_device_cfg_rd32( bdf,
+            where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
+                             val );
+
+    if (err != PCI_ERR_OK) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int pci_write_config_byte(const struct pci_dev *dev, int where, u8 val) {
+    pci_err_t err = pci_device_cfg_wr8( dev->hdl,
+            where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
+                             val, NULL );
+
+    if (err != PCI_ERR_OK) {
+        return -1;
+    }
+
+    return 0;
+}
+
 int pci_write_config_word (const struct pci_dev* dev, int where, u16 val) {
     pci_err_t err = pci_device_cfg_wr16( dev->hdl,
+            where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
+                             val, NULL );
+
+    if (err != PCI_ERR_OK) {
+        return -1;
+    }
+
+    return 0;
+}
+
+int pci_write_config_dword(const struct pci_dev *dev, int where, u32 val) {
+    pci_err_t err = pci_device_cfg_wr32( dev->hdl,
             where + PCI_CFG_SPACE_OFFSET /* See Important Note above */,
                              val, NULL );
 

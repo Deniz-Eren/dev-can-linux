@@ -67,6 +67,7 @@ struct pci_dev;
 
 extern void __iomem* pci_iomap(struct pci_dev *dev, int bar, unsigned long max);
 extern void pci_iounmap(struct pci_dev *dev, void __iomem* addr);
+extern void __iomem *pcim_iomap(struct pci_dev *pdev, int bar, unsigned long maxlen);
 
 
 /*
@@ -138,11 +139,29 @@ struct pci_driver {
 	void (*remove) (struct pci_dev *dev);	/* Device removed (NULL if not a hot-plug capable driver) */
 };
 
+/**
+ * PCI_DEVICE - macro used to describe a specific PCI device
+ * @vend: the 16 bit PCI Vendor ID
+ * @dev: the 16 bit PCI Device ID
+ *
+ * This macro is used to create a struct pci_device_id that matches a
+ * specific device.  The subvendor and subdevice fields will be set to
+ * PCI_ANY_ID.
+ */
+#define PCI_DEVICE(vend,dev) \
+	.vendor = (vend), .device = (dev), \
+	.subvendor = PCI_ANY_ID, .subdevice = PCI_ANY_ID
+
+extern int pci_read_config_byte(const struct pci_dev *dev, int where, u8 *val);
 extern int pci_read_config_word(const struct pci_dev *dev, int where, u16 *val);
+extern int pci_read_config_dword(const struct pci_dev *dev, int where, u32 *val);
+extern int pci_write_config_byte(const struct pci_dev *dev, int where, u8 val);
 extern int pci_write_config_word(const struct pci_dev *dev, int where, u16 val);
+extern int pci_write_config_dword(const struct pci_dev *dev, int where, u32 val);
 
 extern pci_err_t pci_enable_device (struct pci_dev* dev);
 extern void pci_disable_device(struct pci_dev *dev);
+extern int __must_check pcim_enable_device(struct pci_dev *pdev);
 
 #define PCI_IRQ_LEGACY		(1 << 0) /* Allow legacy interrupts */
 #define PCI_IRQ_MSI		(1 << 1) /* Allow MSI interrupts */
@@ -172,6 +191,12 @@ static inline void pci_set_drvdata(struct pci_dev *pdev, void *data)
 	dev_set_drvdata(&pdev->dev, data);
 }
 
+/*
+ * These helpers provide future and backwards compatibility
+ * for accessing popular PCI BAR info
+ */
 extern uintptr_t pci_resource_start (struct pci_dev* dev, int bar);
+extern uintptr_t pci_resource_end (struct pci_dev* dev, int bar);
+extern uintptr_t pci_resource_len (struct pci_dev* dev, int bar);
 
 #endif /* LINUX_PCI_H */
