@@ -40,6 +40,7 @@ extern struct pci_driver kvaser_pci_driver;
 extern struct pci_driver ems_pci_driver;
 extern struct pci_driver peak_pci_driver;
 extern struct pci_driver plx_pci_driver;
+extern struct pci_driver f81601_pci_driver;
 
 extern int process_driver_selection();
 extern void print_driver_selection_results();

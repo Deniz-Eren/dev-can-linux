@@ -156,6 +156,8 @@ typedef __u16       u16;
 typedef __u32       u32;
 typedef __u64       u64;
 
+#define ARRAY_SIZE(x) (sizeof(x) / sizeof((x)[0]))
+
 /*
  * IRQ Management
  */

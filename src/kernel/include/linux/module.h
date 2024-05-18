@@ -36,5 +36,7 @@
 #define module_pci_driver(pci_driver)
 #define EXPORT_SYMBOL_GPL(func)
 #define EXPORT_SYMBOL(func)
+#define module_param(name, type, perm) // TODO: Support module_param
+#define MODULE_PARM_DESC(_parm, desc)
 
 #endif /* _LINUX_MODULE_H */

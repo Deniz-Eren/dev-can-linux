@@ -80,6 +80,9 @@ void print_support (int detailed) {
         printf("\e[1mPLX90xx PCI-bridge cards (with the SJA1000 chips):\e[m\n");
         print_card(stdout, &plx_pci_driver);
 
+//        printf("\e[1mFintek F81601 PCIE to 2 CAN controller cards:\e[m\n");
+//        print_card(stdout, &f81601_pci_driver);
+
         return;
     }
 
