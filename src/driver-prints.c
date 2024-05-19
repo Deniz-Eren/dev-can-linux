@@ -80,8 +80,8 @@ void print_support (int detailed) {
         printf("\e[1mPLX90xx PCI-bridge cards (with the SJA1000 chips):\e[m\n");
         print_card(stdout, &plx_pci_driver);
 
-//        printf("\e[1mFintek F81601 PCIE to 2 CAN controller cards:\e[m\n");
-//        print_card(stdout, &f81601_pci_driver);
+        printf("\e[1mFintek F81601 PCIe to 2 CAN controller cards:\e[m\n");
+        print_card(stdout, &f81601_pci_driver);
 
         return;
     }
@@ -92,6 +92,7 @@ void print_support (int detailed) {
     printf("  - EMS CPC-PCI/PCIe/104P CAN cards\n");
     printf("  - PEAK PCAN PCI family cards\n");
     printf("  - PLX90xx PCI-bridge cards (with the SJA1000 chips)\n");
+    printf("  - Fintek F81601 PCIe to 2 CAN controller cards\n");
     printf("\n");
     printf("For more details use option `\e[1m-ii\e[m'\n");
 }

@@ -111,9 +111,9 @@ int process_driver_selection() {
             else if (check_driver_support(&plx_pci_driver, vid, did)) {
                 detected_driver_temp = &plx_pci_driver;
             }
-//            else if (check_driver_support(&f81601_pci_driver, vid, did)) {
-//                detected_driver_temp = &f81601_pci_driver;
-//            }
+            else if (check_driver_support(&f81601_pci_driver, vid, did)) {
+                detected_driver_temp = &f81601_pci_driver;
+            }
 
             if (detected_driver_temp) {
                 bool device_disabled = false;
@@ -146,6 +146,8 @@ int process_driver_selection() {
 pci_err_t pci_enable_device (struct pci_dev* dev) {
     log_trace("pci_enable_device: %04x:%04x\n",
             dev->vendor, dev->device);
+
+    dev->is_managed = false;
 
     uint_t idx = 0;
     pci_bdf_t bdf;
@@ -376,7 +378,16 @@ void pci_disable_device (struct pci_dev* dev) {
     }
 }
 
-int __must_check pcim_enable_device(struct pci_dev *pdev) {
+int __must_check pcim_enable_device (struct pci_dev *pdev) {
+    log_trace("pcim_enable_device: %04x:%04x\n",
+            pdev->vendor, pdev->device);
+
+    pci_err_t r = pci_enable_device(pdev);
+
+    if (r == PCI_ERR_OK) {
+        pdev->is_managed = true;
+    }
+
     return 0;
 }
 
@@ -426,6 +437,9 @@ void __iomem* pci_iomap (struct pci_dev* dev, int bar, unsigned long max) {
 
     dev->addr[bar] = memptr;
     store_block(dev->addr[bar], dev->ba[bar].size, dev->ba[bar]);
+
+    ioblock_t *block = get_block(dev->addr[bar]);
+    block->is_managed = false;
 
     return dev->addr[bar];
 }
@@ -501,6 +515,9 @@ void __iomem* ioremap (uintptr_t offset, size_t size) {
 
     store_block(memptr, size, bar->ba);
 
+    ioblock_t *block = get_block(memptr);
+    block->is_managed = false;
+
     return memptr;
 }
 
@@ -539,8 +556,19 @@ void pci_iounmap (struct pci_dev* dev, void __iomem* addr) {
     free(block);
 }
 
-void __iomem *pcim_iomap(struct pci_dev *pdev, int bar, unsigned long maxlen) {
-    return NULL;
+void __iomem *pcim_iomap (struct pci_dev *pdev, int bar, unsigned long maxlen) {
+    log_trace("pcim_iomap; bar: %d, addr: %p, max: %p\n", bar,
+            (void*)(unsigned long)pdev->ba[bar].addr, (void*)maxlen);
+
+    void __iomem *result = pci_iomap(pdev, bar, maxlen);
+
+    if (result) {
+        ioblock_t *block = get_block(pdev->addr[bar]);
+
+        block->is_managed = true;
+    }
+
+    return result;
 }
 
 void pci_set_master (struct pci_dev *dev) {

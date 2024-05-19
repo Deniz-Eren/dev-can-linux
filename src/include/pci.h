@@ -97,19 +97,6 @@ static inline int probe_all_driver_selections() {
     return 0;
 }
 
-static inline void remove_all_driver_selections() {
-    while (driver_selection_root != NULL) {
-        driver_selection_t* next = driver_selection_root->next;
-
-        log_info("Shutting down %s\n", driver_selection_root->driver->name);
-
-        driver_selection_root->driver->remove(&driver_selection_root->pdev);
-        free(driver_selection_root);
-
-        driver_selection_root = next;
-    }
-}
-
 /*
  * Helper structures and functions
  */
@@ -127,6 +114,8 @@ typedef struct ioblock {
 
     pci_ba_t ba; // The block is part of this bar, not necessarily the entire
                  // bar is dedicated to this block.
+
+    bool is_managed;
 } ioblock_t;
 
 extern bar_t* bar_list_root;
@@ -198,6 +187,40 @@ static inline void store_block (void __iomem* addr, size_t size, pci_ba_t ba) {
     pthread_mutex_unlock(&ioblock_mutex);
 }
 
+static inline ioblock_t* get_block (void __iomem* addr) {
+    pthread_mutex_lock(&ioblock_mutex);
+    ioblock_t* location = ioblock_root;
+
+    while (location != NULL) {
+        if (location->addr == addr) {
+            pthread_mutex_unlock(&ioblock_mutex);
+            return location;
+        }
+
+        location = location->next;
+    }
+
+    pthread_mutex_unlock(&ioblock_mutex);
+    return NULL;
+}
+
+static inline ioblock_t* get_managed_block (pci_ba_t* ba) {
+    pthread_mutex_lock(&ioblock_mutex);
+    ioblock_t* location = ioblock_root;
+
+    while (location != NULL) {
+        if (location->ba.addr == ba->addr && location->is_managed) {
+            pthread_mutex_unlock(&ioblock_mutex);
+            return location;
+        }
+
+        location = location->next;
+    }
+
+    pthread_mutex_unlock(&ioblock_mutex);
+    return NULL;
+}
+
 static inline ioblock_t* remove_block (void __iomem* addr) {
     pthread_mutex_lock(&ioblock_mutex);
     ioblock_t* location = ioblock_root;
@@ -235,6 +258,46 @@ static inline ioblock_t* remove_block (void __iomem* addr) {
 
     pthread_mutex_unlock(&ioblock_mutex);
     return NULL;
+}
+
+static inline void remove_all_driver_selections() {
+    while (driver_selection_root != NULL) {
+        driver_selection_t* next = driver_selection_root->next;
+
+        log_info("Shutting down %s\n", driver_selection_root->driver->name);
+
+        struct pci_dev *pdev = &driver_selection_root->pdev;
+
+        if (pdev != NULL) {
+            driver_selection_root->driver->remove(pdev);
+
+            for (int_t i = 0; i < pdev->nba; ++i) {
+                ioblock_t* block = NULL;
+
+                do {
+                    block = get_managed_block(&pdev->ba[i]);
+
+                    if (block) {
+                        log_info( "Managed pci_iounmap for %s\n",
+                            driver_selection_root->driver->name );
+
+                        pci_iounmap(pdev, block->addr);
+                    }
+                } while (block);
+            }
+
+            if (pdev->is_managed) {
+                log_info( "Managed pci_disable_device for %s\n",
+                    driver_selection_root->driver->name );
+
+                pci_disable_device(pdev);
+            }
+        }
+
+        free(driver_selection_root);
+
+        driver_selection_root = next;
+    }
 }
 
 #endif /* SRC_PCI_H_ */
