@@ -521,6 +521,7 @@ Current version output:
       - EMS CPC-PCI/PCIe/104P CAN cards
       - PEAK PCAN PCI family cards
       - PLX90xx PCI-bridge cards (with the SJA1000 chips)
+      - Fintek F81601 PCIe to 2 CAN controller cards
     
     For more details use option `-ii'
 
@@ -533,7 +534,24 @@ Current version output:
     Advantech PCI cards:
       Driver: adv_pci
       Supported devices (detailed):
+        { vendor: 13fe, device: 1680, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: 3680, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: 2052, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: 1681, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c001, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c002, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c004, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c101, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c102, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c104, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c201, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c202, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c204, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c301, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
         { vendor: 13fe, device: c302, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c304, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: c5, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
+        { vendor: 13fe, device: d7, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
     KVASER PCAN PCI cards:
       Driver: kvaser_pci
       Supported devices (detailed):
@@ -545,6 +563,7 @@ Current version output:
         { vendor: 110a, device: 2104, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
         { vendor: 10b5, device: 9030, subvendor: 10b5, subdevice: 4000, class: 0, class_mask: 0 }
         { vendor: 10b5, device: 9030, subvendor: 10b5, subdevice: 4002, class: 0, class_mask: 0 }
+        { vendor: 125b, device: 9110, subvendor: a000, subdevice: 4010, class: 0, class_mask: 0 }
     PEAK PCAN PCI family cards:
       Driver: peak_pci
       Supported devices (detailed):
@@ -576,6 +595,10 @@ Current version output:
         { vendor: 1393, device: 100, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
         { vendor: 10b5, device: 9030, subvendor: 3000, subdevice: 1001, class: 0, class_mask: 0 }
         { vendor: 10b5, device: 9030, subvendor: 3000, subdevice: 1002, class: 0, class_mask: 0 }
+    Fintek F81601 PCIe to 2 CAN controller cards:
+      Driver: f81601
+      Supported devices (detailed):
+        { vendor: 1c29, device: 1703, subvendor: ffffffff, subdevice: ffffffff, class: 0, class_mask: 0 }
 
 
 ## PCIe MSI and MSI-X Capability Devices
