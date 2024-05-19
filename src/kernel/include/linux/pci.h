@@ -97,6 +97,7 @@ struct pci_dev {
 	 * directly, use the values stored here. They might be different!
 	 */
 	unsigned int	irq;
+    bool            is_managed;
 };
 
 /* Error values that may be returned by PCI functions */
