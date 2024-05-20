@@ -29,6 +29,7 @@
 extern "C" {
     #include <timer.h>
     #include <dev-can-linux/commands.h>
+    #include <linux/units.h>
 }
 
 
@@ -36,11 +37,11 @@ extern "C" {
  * skip these */
 #if PROFILING_BUILD != 1
 
-#define FLOOD_TEST_SIZE         (1024)
+#define FLOOD_TEST_SIZE         (50000)
 #ifdef TESTING_REAL_HARDWARE
- #define FLOOT_TEST_SLEEP_US    (0)
+ #define FLOOD_TEST_SLEEP_US    (0)
 #else
- #define FLOOT_TEST_SLEEP_US    (100)
+ #define FLOOD_TEST_SLEEP_US    (10)
 #endif
 
 static volatile bool receive_loop0_started = false, receive_loop1_started = false;
@@ -68,10 +69,6 @@ void* receive_loop0 (void* arg) {
         }
     }
 
-    while (read_frame_raw_noblock(fd, &canmsg) != EAGAIN) {
-        record0[record0_size++] = canmsg;
-    }
-
     close(fd);
     pthread_exit(NULL);
 }
@@ -90,10 +87,6 @@ void* receive_loop1 (void* arg) {
         if (read_frame_raw_block(fd, &canmsg) == EOK) {
             record1[record1_size++] = canmsg;
         }
-    }
-
-    while (read_frame_raw_noblock(fd, &canmsg) != EAGAIN) {
-        record1[record1_size++] = canmsg;
     }
 
     close(fd);
@@ -216,13 +209,13 @@ TEST( Driver, FloodSend ) {
     // flood messages
     for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
         write_frame_raw(fd0_tx, &canmsg);
-        usleep(FLOOT_TEST_SLEEP_US);
+        usleep(FLOOD_TEST_SLEEP_US);
     }
 
     if (fd1_tx != -1) {
         for (int i = 0; i < FLOOD_TEST_SIZE-1; ++i) {
             write_frame_raw(fd1_tx, &canmsg);
-            usleep(FLOOT_TEST_SLEEP_US);
+            usleep(FLOOD_TEST_SLEEP_US);
         }
     }
 
@@ -236,12 +229,21 @@ TEST( Driver, FloodSend ) {
         write_frame_raw(fd1_tx, &canmsg);
     }
 
-    err = pthread_join(thread0, NULL);
+    struct timespec ts;
+    EXPECT_EQ(timespec_get(&ts, TIME_UTC), TIME_UTC);
+
+    uint64_t ts_ns = timespec2nsec(&ts);
+    ts_ns += 2*NANO; // 2 seconds
+    nsec2timespec(&ts, ts_ns);
+
+    err = pthread_timedjoin(thread0, NULL, &ts);
+    pthread_cancel(thread0);
 
     EXPECT_EQ(err, EOK);
 
     if (fd1_tx != -1) {
-        err = pthread_join(thread1, NULL);
+        err = pthread_timedjoin(thread1, NULL, &ts);
+        pthread_cancel(thread1);
 
         EXPECT_EQ(err, EOK);
     }

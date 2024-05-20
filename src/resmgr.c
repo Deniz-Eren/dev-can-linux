@@ -1098,7 +1098,9 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
      so let the system ones be handled first. See note 2.
     */
     if ((status = iofunc_devctl_default(ctp, msg, ocb)) !=
-         _RESMGR_DEFAULT) {
+         _RESMGR_DEFAULT)
+    {
+        log_trace("iofunc_devctl_default == %d\n", status);
         return(status);
     }
     status = nbytes = 0;
