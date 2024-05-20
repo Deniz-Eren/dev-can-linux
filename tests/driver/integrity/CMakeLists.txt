@@ -21,7 +21,8 @@
 
 add_executable( driver-integrity-tests ${C_SOURCE_FILES}
     driver-flood-tests.cpp
-    driver-latency-tests.cpp )
+    driver-latency-tests.cpp
+    driver-sync-tests.cpp )
 
 target_include_directories( driver-integrity-tests PUBLIC
     $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/>

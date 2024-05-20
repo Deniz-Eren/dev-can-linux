@@ -1,9 +1,8 @@
 /**
- * \file    driver-raw-tests.cpp
- * \brief   Driver RAW message integration tests definition file; basic single
- *          send and receive testing.
+ * \file    driver-sync-tests.cpp
+ * \brief   CMake listing file for driver sync tests.
  *
- * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
+ * Copyright (C) 2024 Deniz Eren <deniz.eren@outlook.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,49 +26,165 @@
 extern "C" {
     #include <timer.h>
     #include <dev-can-linux/commands.h>
+    #include <linux/units.h>
 }
 
-static bool raw_receive_loop0_started = false,
-            raw_receive_loop1_started = false;
+static volatile bool sync_receive_loop0_started = false,
+            sync_receive_loop1_started = false,
+            sync_receive_loop2_started = false,
+            sync_receive_loop3_started = false;
+static volatile size_t sync_record0_size = 0;
+static volatile size_t sync_record1_size = 0;
+static volatile size_t sync_record2_size = 0;
 
-static volatile size_t raw_record0_size = 0;
-static volatile size_t raw_record1_size = 0;
-
-void* raw_receive_loop0 (void* arg) {
-    struct can_msg* canmsg = (struct can_msg*)arg;
+void* sync_receive_loop0 (void* arg) {
+    char* msg = (char*)arg;
+    uint32_t mid = 0xABC;
 
     int fd = open(get_device0_rx0().c_str(), O_RDWR);
 
-    raw_receive_loop0_started = true;
+    set_mfilter(fd, mid);
 
-    if (read_frame_raw_block(fd, canmsg) == EOK) {
-        raw_record0_size++;
+    sync_receive_loop0_started = true;
 
+    if (read(fd, (void*)msg, 12) != -1) {
+        sync_record0_size++;
+
+        set_mfilter(fd, 0xFFFFFFFF);
         close(fd);
-        pthread_exit(canmsg);
+        pthread_exit(msg);
     }
 
+    set_mfilter(fd, 0xFFFFFFFF);
+    close(fd);
     pthread_exit(NULL);
 }
 
-void* raw_receive_loop1 (void* arg) {
-    struct can_msg* canmsg = (struct can_msg*)arg;
+void* sync_receive_loop1 (void* arg) {
+    char* msg = (char*)arg;
+    uint32_t mid = 0xABC;
 
     int fd = open(get_device1_rx0().c_str(), O_RDWR);
 
-    raw_receive_loop1_started = true;
+    set_mfilter(fd, mid);
 
-    if (read_frame_raw_block(fd, canmsg) == EOK) {
-        raw_record1_size++;
+    sync_receive_loop1_started = true;
 
+    if (read(fd, (void*)msg, 12) != -1) {
+        sync_record1_size++;
+
+        set_mfilter(fd, 0xFFFFFFFF);
         close(fd);
-        pthread_exit(canmsg);
+        pthread_exit(msg);
     }
 
+    set_mfilter(fd, 0xFFFFFFFF);
+    close(fd);
     pthread_exit(NULL);
 }
 
-TEST( Raw, SingleSendReceive ) {
+void* receive_loop2 (void* arg) {
+    char* msg = (char*)arg;
+    uint32_t mid = 0xABC;
+
+    int fd = open(get_device0_rx0().c_str(), O_RDWR);
+
+    set_mfilter(fd, mid);
+
+    sync_receive_loop2_started = true;
+
+    if (read(fd, (void*)msg, 12) != -1) {
+        sync_record2_size++;
+
+        set_mfilter(fd, 0xFFFFFFFF);
+        close(fd);
+        pthread_exit(msg);
+    }
+
+    set_mfilter(fd, 0xFFFFFFFF);
+    close(fd);
+    pthread_exit(NULL);
+}
+
+void* receive_block (void* arg) {
+    char msg;
+    int fd = *(int*)arg;
+
+    sync_receive_loop3_started = true;
+
+    if (read(fd, (void*)&msg, 1) != -1) {
+        set_mfilter(fd, 0xFFFFFFFF);
+        close(fd);
+        pthread_exit(NULL);
+    }
+
+    set_mfilter(fd, 0xFFFFFFFF);
+    close(fd);
+    pthread_exit(NULL);
+}
+
+TEST( SYNC, CloseReceiveBlock ) {
+    int fd = open(get_device0_rx0().c_str(), O_RDWR);
+
+    EXPECT_NE(fd, -1);
+
+    sync_receive_loop3_started = false;
+
+    pthread_t thread0;
+    pthread_create(&thread0, NULL, &receive_block, &fd);
+
+    while (!sync_receive_loop3_started) {
+        usleep(1000);
+    }
+
+    // blocking
+
+    close(fd);
+    pthread_cancel(thread0);
+}
+
+TEST( SYNC, SingleSendReceiveAfterManyOpenClose ) {
+    // First open and close the file descriptors many times
+    const int many = 100000;
+
+    for (int k = 0; k < many; ++k) {
+        // Open both tx and rx channels of both devices
+        int fd0rx = open(get_device0_rx0().c_str(), O_RDWR);
+        int fd0tx = open(get_device0_tx0().c_str(), O_RDWR);
+
+        EXPECT_NE(fd0rx, -1);
+        EXPECT_NE(fd0tx, -1);
+
+        int fd1tx = -1;
+        int fd1rx = -1;
+
+        if (get_device1_tx0() != std::string("")) {
+            fd1rx = open(get_device1_rx0().c_str(), O_RDWR);
+            fd1tx = open(get_device1_tx0().c_str(), O_RDWR);
+
+            EXPECT_NE(fd1rx, -1);
+            EXPECT_NE(fd1tx, -1);
+        }
+
+        // Close both tx and rx channels of both devices
+
+        if (fd0rx != -1) {
+            close(fd0rx);
+        }
+
+        if (fd0tx != -1) {
+            close(fd0tx);
+        }
+
+        if (fd1rx != -1) {
+            close(fd1rx);
+        }
+
+        if (fd1tx != -1) {
+            close(fd1tx);
+        }
+    }
+
     int fd0 = open(get_device0_tx0().c_str(), O_RDWR);
 
     EXPECT_NE(fd0, -1);
@@ -77,41 +192,36 @@ TEST( Raw, SingleSendReceive ) {
     int fd1 = -1;
 
     if (get_device1_tx0() != std::string("")) {
-        int fd1 = open(get_device1_tx0().c_str(), O_RDWR);
+        fd1 = open(get_device1_tx0().c_str(), O_RDWR);
 
         EXPECT_NE(fd1, -1);
     }
 
-    uint32_t start_ms = get_clock_time_us()/1000;
+    char msg[] = "test message";
+    char wrong_msg[] = "wrong message";
 
-    struct can_msg canmsg = {
-        .dat = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 },
-        .len = 8,
-        .mid = 0xABC,
-        .ext = {
-            .timestamp = start_ms,
-            .is_extended_mid = 1,
-            .is_remote_frame = 0
-        }
-    };
+    uint32_t mid = 0xABC;
+    uint32_t wrong_mid = 0xAB1;
 
-    struct can_msg canmsg0, canmsg1;
+    char msg0[16], msg1[16];
 
-    raw_receive_loop0_started = raw_receive_loop1_started = false;
+    sync_receive_loop0_started = sync_receive_loop1_started = false;
 
     pthread_t thread0;
-    pthread_create(&thread0, NULL, &raw_receive_loop0, &canmsg0);
-
-    while (!raw_receive_loop0_started) {
-        usleep(1000);
-    }
+    pthread_create(&thread0, NULL, &sync_receive_loop0, msg0);
 
     pthread_t thread1;
 
     if (fd1 != -1) {
-        pthread_create(&thread1, NULL, &raw_receive_loop1, &canmsg1);
+        pthread_create(&thread1, NULL, &sync_receive_loop1, msg1);
+    }
 
-        while (!raw_receive_loop1_started) {
+    while (!sync_receive_loop0_started) {
+        usleep(1000);
+    }
+
+    if (fd1 != -1) {
+        while (!sync_receive_loop1_started) {
             usleep(1000);
         }
     }
@@ -155,51 +265,54 @@ TEST( Raw, SingleSendReceive ) {
         initial_total_interrupts1 = stats1.total_interrupts;
     }
 
-    int write_ret = write_frame_raw(fd0, &canmsg);
+    int set_mid_ret = set_mid(fd0, wrong_mid);
 
-    EXPECT_EQ(write_ret, EOK);
+    EXPECT_EQ(set_mid_ret, EOK);
+
+    int n = write(fd0, wrong_msg, 12);
+
+    set_mid_ret = set_mid(fd0, mid);
+
+    EXPECT_EQ(set_mid_ret, EOK);
+
+    n = write(fd0, msg, 12);
+
+    EXPECT_EQ(n, 12);
 
     void* exit_ptr0;
     pthread_join(thread0, &exit_ptr0);
 
-    EXPECT_EQ(exit_ptr0, &canmsg0);
-    EXPECT_EQ(canmsg0.dat[0], 0x11);
-    EXPECT_EQ(canmsg0.dat[1], 0x22);
-    EXPECT_EQ(canmsg0.dat[2], 0x33);
-    EXPECT_EQ(canmsg0.dat[3], 0x44);
-    EXPECT_EQ(canmsg0.dat[4], 0x55);
-    EXPECT_EQ(canmsg0.dat[5], 0x66);
-    EXPECT_EQ(canmsg0.dat[6], 0x77);
-    EXPECT_EQ(canmsg0.dat[7], 0x88);
-    EXPECT_EQ(canmsg0.len, 8);
-    EXPECT_EQ(canmsg0.mid, 0xABC);
-    EXPECT_GE(canmsg0.ext.timestamp - start_ms, 1);
-    EXPECT_EQ(canmsg0.ext.is_extended_mid, 1);
-    EXPECT_EQ(canmsg0.ext.is_remote_frame, 0);
+    EXPECT_EQ(exit_ptr0, msg0);
+
+    msg0[n] = '\0';
+
+    EXPECT_EQ(std::string(msg0), std::string("test message"));
+
+    usleep(3000);
 
     if (fd1 != -1) {
-        usleep(3000);
-        write_ret = write_frame_raw(fd1, &canmsg);
+        set_mid_ret = set_mid(fd1, wrong_mid);
 
-        EXPECT_EQ(write_ret, EOK);
+        EXPECT_EQ(set_mid_ret, EOK);
+
+        n = write(fd1, wrong_msg, 12);
+
+        set_mid_ret = set_mid(fd1, mid);
+
+        EXPECT_EQ(set_mid_ret, EOK);
+
+        n = write(fd1, msg, 12);
+
+        EXPECT_EQ(n, 12);
 
         void* exit_ptr1;
         pthread_join(thread1, &exit_ptr1);
 
-        EXPECT_EQ(exit_ptr1, &canmsg1);
-        EXPECT_EQ(canmsg1.dat[0], 0x11);
-        EXPECT_EQ(canmsg1.dat[1], 0x22);
-        EXPECT_EQ(canmsg1.dat[2], 0x33);
-        EXPECT_EQ(canmsg1.dat[3], 0x44);
-        EXPECT_EQ(canmsg1.dat[4], 0x55);
-        EXPECT_EQ(canmsg1.dat[5], 0x66);
-        EXPECT_EQ(canmsg1.dat[6], 0x77);
-        EXPECT_EQ(canmsg1.dat[7], 0x88);
-        EXPECT_EQ(canmsg1.len, 8);
-        EXPECT_EQ(canmsg1.mid, 0xABC);
-        EXPECT_GE(canmsg1.ext.timestamp - start_ms, 4);
-        EXPECT_EQ(canmsg1.ext.is_extended_mid, 1);
-        EXPECT_EQ(canmsg1.ext.is_remote_frame, 0);
+        EXPECT_EQ(exit_ptr1, msg1);
+
+        msg1[n] = '\0';
+
+        EXPECT_EQ(std::string(msg1), std::string("test message"));
     }
 
     get_stats_ret = get_stats(fd0, &stats0);
@@ -212,7 +325,7 @@ TEST( Raw, SingleSendReceive ) {
         EXPECT_EQ(get_stats_ret, EOK);
     }
 
-    EXPECT_EQ(stats0.transmitted_frames - initial_tx_frames0, 1);
+    EXPECT_EQ(stats0.transmitted_frames - initial_tx_frames0, 4);
     EXPECT_EQ(stats0.received_frames - initial_rx_frames0, 0);
     EXPECT_EQ(stats0.missing_ack - initial_missing_ack0, 0);
     EXPECT_EQ(stats0.total_frame_errors - initial_total_frame_errors0, 0);
@@ -238,7 +351,7 @@ TEST( Raw, SingleSendReceive ) {
     close(fd0);
 
     if (fd1 != -1) {
-        EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, 1);
+        EXPECT_EQ(stats1.transmitted_frames - initial_tx_frames1, 4);
         EXPECT_EQ(stats1.received_frames - initial_rx_frames1, 0);
         EXPECT_EQ(stats1.missing_ack - initial_missing_ack1, 0);
         EXPECT_EQ(stats1.total_frame_errors - initial_total_frame_errors1, 0);
@@ -263,77 +376,4 @@ TEST( Raw, SingleSendReceive ) {
 
         close(fd1);
     }
-}
-
-TEST( Raw, SingleSendMultiReceive ) {
-    int fd = open(get_device0_tx0().c_str(), O_RDWR);
-
-    EXPECT_NE(fd, -1);
-
-    uint32_t start_ms = get_clock_time_us()/1000;
-
-    struct can_msg canmsg = {
-        .dat = { 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 },
-        .len = 8,
-        .mid = 0xABC,
-        .ext = {
-            .timestamp = start_ms,
-            .is_extended_mid = 1,
-            .is_remote_frame = 0
-        }
-    };
-
-    raw_receive_loop0_started = false;
-
-    struct can_msg canmsg0, canmsg1;
-
-    pthread_t thread0;
-    pthread_create(&thread0, NULL, &raw_receive_loop0, &canmsg0);
-
-    pthread_t thread1;
-    pthread_create(&thread1, NULL, &raw_receive_loop0, &canmsg1);
-
-    while (!raw_receive_loop0_started) {
-        usleep(2000);
-    }
-
-    int write_ret = write_frame_raw(fd, &canmsg);
-
-    EXPECT_EQ(write_ret, EOK);
-
-    void *exit_ptr0, *exit_ptr1;
-    pthread_join(thread0, &exit_ptr0);
-    pthread_join(thread1, &exit_ptr1);
-
-    EXPECT_EQ(exit_ptr0, &canmsg0);
-    EXPECT_EQ(canmsg0.dat[0], 0x11);
-    EXPECT_EQ(canmsg0.dat[1], 0x22);
-    EXPECT_EQ(canmsg0.dat[2], 0x33);
-    EXPECT_EQ(canmsg0.dat[3], 0x44);
-    EXPECT_EQ(canmsg0.dat[4], 0x55);
-    EXPECT_EQ(canmsg0.dat[5], 0x66);
-    EXPECT_EQ(canmsg0.dat[6], 0x77);
-    EXPECT_EQ(canmsg0.dat[7], 0x88);
-    EXPECT_EQ(canmsg0.len, 8);
-    EXPECT_EQ(canmsg0.mid, 0xABC);
-    EXPECT_GE(canmsg0.ext.timestamp - start_ms, 1);
-    EXPECT_EQ(canmsg0.ext.is_extended_mid, 1);
-    EXPECT_EQ(canmsg0.ext.is_remote_frame, 0);
-
-    EXPECT_EQ(exit_ptr1, &canmsg1);
-    EXPECT_EQ(canmsg1.dat[0], 0x11);
-    EXPECT_EQ(canmsg1.dat[1], 0x22);
-    EXPECT_EQ(canmsg1.dat[2], 0x33);
-    EXPECT_EQ(canmsg1.dat[3], 0x44);
-    EXPECT_EQ(canmsg1.dat[4], 0x55);
-    EXPECT_EQ(canmsg1.dat[5], 0x66);
-    EXPECT_EQ(canmsg1.dat[6], 0x77);
-    EXPECT_EQ(canmsg1.dat[7], 0x88);
-    EXPECT_EQ(canmsg1.len, 8);
-    EXPECT_EQ(canmsg1.mid, 0xABC);
-    EXPECT_GE(canmsg1.ext.timestamp - start_ms, 1);
-    EXPECT_EQ(canmsg1.ext.is_extended_mid, 1);
-    EXPECT_EQ(canmsg1.ext.is_remote_frame, 0);
-
-    close(fd);
 }
