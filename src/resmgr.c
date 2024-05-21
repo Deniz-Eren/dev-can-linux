@@ -657,6 +657,8 @@ void* rx_loop (void* arg) {
     }
 
     while (1) {
+        int status = -1;
+
         pthread_mutex_lock(&ocb->rx.mutex);
 
         while ((!resmgr->shutdown)
@@ -675,30 +677,23 @@ void* rx_loop (void* arg) {
             pthread_exit(NULL);
         }
 
-        if (ocb->rx.blocked_clients != NULL) {
-            struct can_msg* canmsg = dequeue_peek(ocb->rx.queue);
+        struct can_msg* canmsg = dequeue_peek(ocb->rx.queue);
 
-            if (canmsg == NULL) {
-                continue;
-            }
+        if (canmsg == NULL) {
+            continue;
+        }
 
-            blocked_client_t* client = ocb->rx.blocked_clients;
+        pthread_mutex_lock(&ocb->rx.mutex);
+        blocked_client_t* client = ocb->rx.blocked_clients;
 
-            while (client != NULL) {
-                pthread_mutex_lock(&ocb->rx.mutex);
-                msg_again.rcvid = client->rcvid;
-                pthread_mutex_unlock(&ocb->rx.mutex);
+        msg_again.rcvid = client->rcvid;
+        pthread_mutex_unlock(&ocb->rx.mutex);
 
-                if (ocb->rx.queue != NULL && msg_again.rcvid != -1) {
-                    if (MsgSend(coid, &msg_again, sizeof(msg_again_t), NULL, 0)
-                            == -1)
-                    {
-                        log_err("rx_loop MsgSend error: %s\n", strerror(errno));
-                    }
-                }
-
-                client = client->next;
-            }
+        if ((status = MsgSend(
+                coid, &msg_again, sizeof(msg_again_t), NULL, 0 )) == -1)
+        {
+            log_err( "rx_loop MsgSend status: %d, error: %s\n",
+                    status, strerror(errno) );
         }
     }
 
@@ -1222,6 +1217,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     case CAN_DEVCTL_READ_CANMSG_EXT: // e.g. canctl -u0,rx0 -r
     {
         if (_ocb->resmgr->channel_type == TX_CHANNEL) {
+            log_trace("CAN_DEVCTL_READ_CANMSG_EXT: Input/output error\n");
+
             return EIO; // Input/output error
         }
 
@@ -1266,6 +1263,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
             pthread_cond_signal(&_ocb->rx.cond);
             pthread_mutex_unlock(&_ocb->rx.mutex);
 
+            log_trace("CAN_DEVCTL_READ_CANMSG_EXT: _RESMGR_NOREPLY\n");
+
             return _RESMGR_NOREPLY;
         }
 
@@ -1274,6 +1273,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     case CAN_DEVCTL_WRITE_CANMSG_EXT: // e.g. canctl -u0,rx0 -w0x22,1,0x55
     {
         if (_ocb->resmgr->channel_type == RX_CHANNEL) {
+            log_trace("CAN_DEVCTL_WRITE_CANMSG_EXT: Input/output error\n");
+
             return EIO; // Input/output error
         }
 
@@ -1501,6 +1502,10 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     case CAN_DEVCTL_RX_FRAME_RAW_BLOCK: // e.g. candump -u0,rx0
     {
         if (_ocb->resmgr->channel_type == TX_CHANNEL) {
+            log_trace( "CAN_DEVCTL_RX_FRAME_RAW_%s: Input/output error\n",
+                    msg->i.dcmd == CAN_DEVCTL_RX_FRAME_RAW_BLOCK
+                        ? "BLOCK" : "NOBLOCK" );
+
             return EIO; // Input/output error
         }
 
@@ -1548,9 +1553,17 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
             pthread_cond_signal(&_ocb->rx.cond);
             pthread_mutex_unlock(&_ocb->rx.mutex);
 
+            log_trace( "CAN_DEVCTL_RX_FRAME_RAW_%s: _RESMGR_NOREPLY\n",
+                    msg->i.dcmd == CAN_DEVCTL_RX_FRAME_RAW_BLOCK
+                        ? "BLOCK" : "NOBLOCK" );
+
             return _RESMGR_NOREPLY; /* put the client in block state */
         }
         else { // CAN_DEVCTL_RX_FRAME_RAW_NOBLOCK
+            log_trace( "CAN_DEVCTL_RX_FRAME_RAW_%s: EAGAIN\n",
+                    msg->i.dcmd == CAN_DEVCTL_RX_FRAME_RAW_BLOCK
+                        ? "BLOCK" : "NOBLOCK" );
+
             return EAGAIN; /* There are no messages in the queue. */
         }
 
@@ -1559,6 +1572,8 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     case CAN_DEVCTL_TX_FRAME_RAW: // e.g. cansend -u0,tx0 -w0x1234,1,0xABCD
     {
         if (_ocb->resmgr->channel_type == RX_CHANNEL) {
+            log_trace("CAN_DEVCTL_TX_FRAME_RAW: Input/output error\n");
+
             return EIO; // Input/output error
         }
 
