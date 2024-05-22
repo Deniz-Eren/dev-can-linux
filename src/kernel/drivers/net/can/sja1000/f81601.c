@@ -10,21 +10,6 @@
  * Copyright (C) 2019 Linux Foundation
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
- * Parts of this software are based on (derived) the following:
- *
- * - Kvaser linux driver, version 4.72 BETA
- *   Copyright (C) 2002-2007 KVASER AB
- *
- * - Lincan driver, version 0.3.3, OCERA project
- *   Copyright (C) 2004 Pavel Pisa
- *   Copyright (C) 2001 Arnaud Westenberg
- *
- * - Socketcan SJA1000 drivers
- *   Copyright (C) 2007 Wolfgang Grandegger <wg@grandegger.com>
- *   Copyright (c) 2002-2007 Volkswagen Group Electronic Research
- *   Copyright (c) 2003 Matthias Brukner, Trajet Gmbh, Rebenring 33,
- *   38106 Braunschweig, GERMANY
- *
  * Please also check the "SPDX-License-Identifier" documentation from the Linux
  * Kernel source code repository: github.com/torvalds/linux.git for further
  * details.
