@@ -161,6 +161,14 @@ void print_help (char* program_name) {
     printf("                     # (Special cases only) Forced btr* baud-rate setting method:\n");
     printf("                     \e[1mdev-can-linux -b id=0,freq=125k,btr0=0x07,btr1=0x14\e[m\n");
     printf("\n");
+    printf("    \e[1m-m subopts\e[m - Kernel module parameters\n");
+    printf("\n");
+    printf("                 Suboptions (\e[1msubopts\e[m):\n");
+    printf("\n");
+    printf("                 \e[1mf81601_ex_clk=#\e[m    - Driver f81601 external clock\n");
+    printf("                                      If not specified the driver will use\n");
+    printf("                                      internal clock.\n");
+    printf("\n");
     printf("    \e[1m-E\e[m         - Enable internal loopback (echo TX to RX of each device)\n");
     printf("    \e[1m-w\e[m         - Print warranty message and exit.\n");
     printf("    \e[1m-c\e[m         - Print license details and exit.\n");

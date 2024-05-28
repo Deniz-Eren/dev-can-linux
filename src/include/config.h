@@ -57,6 +57,7 @@ extern int opts;
 extern int optt;
 extern int optu;
 extern int optb;
+extern int optm;
 extern int optx;
 extern int optE;
 
@@ -94,6 +95,12 @@ extern size_t num_disable_device_configs;
 extern device_config_t* disable_device_config;
 extern size_t num_enable_device_cap_configs;
 extern device_config_t* enable_device_cap_config;
+
+/*
+ * Kernel module_param() variables of various drivers
+ */
+extern bool internal_clk;           // drivers/net/can/sja1000/f81601.c
+extern unsigned int external_clk;   // "
 
 
 /*
