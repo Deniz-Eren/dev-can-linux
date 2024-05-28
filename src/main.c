@@ -231,14 +231,32 @@ int main (int argc, char* argv[]) {
             while (*options != '\0') {
                 switch (getsubopt(&options, sub_opts, &value)) {
                 case CHANNEL_ID:        /* process id option */
+                    if (value == NULL) {
+                        printf("error with channel id sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     new_channel_config.id = atoi(value);
                     break;
 
                 case READ_CHANNELS:     /* process rx option */
+                    if (value == NULL) {
+                        printf("error with read channels sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     new_channel_config.num_rx_channels = atoi(value);
                     break;
 
                 case WRITE_CHANNELS:    /* process tx option */
+                    if (value == NULL) {
+                        printf("error with write channels sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     new_channel_config.num_tx_channels = atoi(value);
                     break;
 
@@ -337,6 +355,12 @@ int main (int argc, char* argv[]) {
             while (*options != '\0') {
                 switch (getsubopt(&options, sub_opts, &value)) {
                 case CHANNEL_ID:        /* process id option */
+                    if (value == NULL) {
+                        printf("error with channel id sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     new_bitrate_config.id = atoi(value);
                     break;
 
@@ -344,6 +368,12 @@ int main (int argc, char* argv[]) {
                 {
                     int freq;
                     char units[16];
+
+                    if (value == NULL) {
+                        printf("error with frequency sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
 
                     sscanf(value, "%d%s", &freq, units);
 
@@ -359,24 +389,55 @@ int main (int argc, char* argv[]) {
                     break;
                 }
                 case BPRM:              /* process bprm option */
+                    if (value == NULL) {
+                        printf("error with bprm sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     new_bitrate_config.bprm = atoi(value);
                     break;
 
                 case TS1:               /* process ts1 option */
+                    if (value == NULL) {
+                        printf("error with ts1 sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     new_bitrate_config.phase_seg1 = atoi(value);
                     break;
 
                 case TS2:               /* process ts2 option */
+                    if (value == NULL) {
+                        printf("error with ts2 sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     new_bitrate_config.phase_seg2 = atoi(value);
                     break;
 
                 case SJW:               /* process sjw option */
+                    if (value == NULL) {
+                        printf("error with sjw sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     new_bitrate_config.sjw = atoi(value);
                     break;
 
                 case BTR0:              /* process btr0 option */
                 {
                     int btr0;
+
+                    if (value == NULL) {
+                        printf("error with btr0 sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     sscanf(value, "%x", &btr0);
                     new_bitrate_config.btr0 = btr0;
                     break;
@@ -384,6 +445,13 @@ int main (int argc, char* argv[]) {
                 case BTR1:              /* process btr1 option */
                 {
                     int btr1;
+
+                    if (value == NULL) {
+                        printf("error with btr1 sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     sscanf(value, "%x", &btr1);
                     new_bitrate_config.btr1 = btr1;
                     break;
@@ -449,6 +517,12 @@ int main (int argc, char* argv[]) {
                 case F81601_EX_CLK:         /* f81601 kernel module parameter
                                                for external clock */
                 {
+                    if (value == NULL) {
+                        printf("error with f81601 external clock sub-option\n");
+
+                        return EXIT_FAILURE;
+                    }
+
                     internal_clk = false;
                     external_clk = atoi(value);
 
