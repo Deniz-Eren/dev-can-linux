@@ -71,11 +71,11 @@ static const struct pci_device_id f81601_pci_tbl[] = {
 
 MODULE_DEVICE_TABLE(pci, f81601_pci_tbl);
 
-static bool internal_clk = true;
+/*static */bool internal_clk = true;
 module_param(internal_clk, bool, 0444);
 MODULE_PARM_DESC(internal_clk, "Use internal clock, default true (24MHz)");
 
-static unsigned int external_clk;
+/*static */unsigned int external_clk;
 module_param(external_clk, uint, 0444);
 MODULE_PARM_DESC(external_clk, "External clock when internal_clk disabled");
 

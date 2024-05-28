@@ -87,10 +87,41 @@ int main (int argc, char* argv[]) {
         "btr0",
 #define BTR1            11
         "btr1",
+#define F81601_EX_CLK   12
+        "f81601_ex_clk",
         NULL
     };
 
-    while ((opt = getopt(argc, argv, "r:d:e:U:u:b:viqstlVCEwcx?h")) != -1) {
+    // Backup getopt() globals
+    char *opt_bak_optarg = optarg;
+    int opt_bak_optind = optind,
+        opt_bak_opterr = opterr,
+        opt_bak_optopt = optopt;
+
+    // Need to parse -v and -l first so that log_*() functions work within the
+    // command-line parsing loop following this one.
+    while ((opt = getopt(argc, argv, "r:d:e:U:u:b:m:viqstlVCEwcx?h")) != -1) {
+        switch (opt) {
+        case 'v':
+            optv++;
+            break;
+
+        case 'l':
+            optl++;
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    // Reset getopt() globals
+    optarg = opt_bak_optarg;
+    optind = opt_bak_optind;
+    opterr = opt_bak_opterr;
+    optopt = opt_bak_optopt;
+
+    while ((opt = getopt(argc, argv, "r:d:e:U:u:b:m:viqstlVCEwcx?h")) != -1) {
         switch (opt) {
         case 'r':
             optr++;
@@ -237,7 +268,7 @@ int main (int argc, char* argv[]) {
 
                 default :
                     /* process unknown token */
-                    printf("unknown\n");
+                    printf("error: Unknown suboption for -u\n");
                     break;
                 }
             }
@@ -359,7 +390,7 @@ int main (int argc, char* argv[]) {
                 }
                 default :
                     /* process unknown token */
-                    printf("unknown\n");
+                    printf("error: Unknown suboption for -b\n");
                     break;
                 }
             }
@@ -403,8 +434,40 @@ int main (int argc, char* argv[]) {
             }
             break;
         }
+        case 'm':
+        {
+            optm++;
+            if ((optarg = strdup(optarg)) == NULL)  {
+                printf("strdup failure\n");
+
+                return EXIT_FAILURE;
+            }
+
+            options = optarg;
+            while (*options != '\0') {
+                switch (getsubopt(&options, sub_opts, &value)) {
+                case F81601_EX_CLK:         /* f81601 kernel module parameter
+                                               for external clock */
+                {
+                    internal_clk = false;
+                    external_clk = atoi(value);
+
+                    log_info( "driver f81601 set to external clock (%d)\n",
+                            external_clk );
+                    break;
+                }
+                default :
+                    /* process unknown token */
+                    printf("error: Unknown suboption for -m\n");
+                    break;
+                }
+            }
+
+            free(optarg);
+            break;
+        }
         case 'v':
-            optv++;
+            // Already handled in the first loop
             break;
 
         case 'q':
@@ -420,7 +483,7 @@ int main (int argc, char* argv[]) {
             break;
 
         case 'l':
-            optl++;
+            // Already handled in the first loop
             break;
 
         case 'i':

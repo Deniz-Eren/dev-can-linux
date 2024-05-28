@@ -60,6 +60,7 @@ int opts = 0;
 int optt = 0;
 int optu = 0;
 int optb = 0;
+int optm = 0;
 int optx = 0;
 int optE = 0;
 

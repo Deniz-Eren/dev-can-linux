@@ -99,6 +99,14 @@ Options:
                      # (Special cases only) Forced btr* baud-rate setting method:
                      dev-can-linux -b id=0,freq=125k,btr0=0x07,btr1=0x14
 
+    -m subopts - Kernel module parameters
+
+                 Suboptions (subopts):
+
+                 f81601_ex_clk=#    - Driver f81601 external clock
+                                      If not specified the driver will use
+                                      internal clock.
+
     -E         - Enable internal loopback (echo TX to RX of each device)
     -w         - Print warranty message and exit.
     -c         - Print license details and exit.
