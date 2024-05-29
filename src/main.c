@@ -674,6 +674,8 @@ int main (int argc, char* argv[]) {
     print_driver_selection_results();
 
     if (probe_all_driver_selections()) {
+        log_err("no devices detected\n");
+
         allow_driver_start = false;
     }
 
