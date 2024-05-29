@@ -78,6 +78,8 @@ static inline void store_driver_selection (
 }
 
 static inline int probe_all_driver_selections() {
+    bool any_probed = false;
+
     driver_selection_t* location = driver_selection_root;
 
     while (location != NULL) {
@@ -89,9 +91,15 @@ static inline int probe_all_driver_selections() {
             return -1;
         }
 
+        any_probed = true;
+
         probe_driver_selection = NULL;
 
         location = next;
+    }
+
+    if (!any_probed) {
+        return -1;
     }
 
     return 0;
