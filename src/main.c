@@ -121,11 +121,16 @@ int main (int argc, char* argv[]) {
     opterr = opt_bak_opterr;
     optopt = opt_bak_optopt;
 
-    while ((opt = getopt(argc, argv, "r:d:e:U:u:b:m:viqstlVCEwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "r:R:d:e:U:u:b:m:viqstlVCEwcx?h")) != -1) {
         switch (opt) {
         case 'r':
             optr++;
             optr_restart_ms = atoi(optarg);
+            break;
+
+        case 'R':
+            optR++;
+            optR_error_count = atoi(optarg);
             break;
 
         case 'd':

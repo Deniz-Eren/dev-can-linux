@@ -50,6 +50,8 @@
  */
 int optr = 0;
 int optr_restart_ms = DEFAULT_RESTART_MS;
+int optR = 0;
+int optR_error_count = DEFAULT_ERROR_COUNT;
 int optv = 0;
 int optl = 0;
 int opti = 0;

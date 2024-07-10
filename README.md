@@ -148,6 +148,20 @@ Options:
     -r delay   - Bus-off recovery delay timer duration (milliseconds).
                  If set to 0ms, then the bus-off recovery is disabled!
                  Default: 50ms
+    -R count   - Error state recovery error count value (trigger limit).
+                 Associated SJA1000 states:
+                    < 96   - CAN state error active
+                    < 128  - CAN state error warning
+                    < 256  - CAN state error passive (main reason for feature)
+                    >= 256 - CAN state error bus-off
+                 If enabled, CAN state stopped and sleeping will trigger the
+                 recovery also for any value.
+                 To prevent Error Passive State issues experienced with some
+                 hardware, recommended value to use is 128. This will reboot the
+                 chip if the chip gets overwhelmed with errors; if this
+                 behaviour is desired.
+                 If set to 0, then the error state recovery is disabled.
+                 Default: 0
     -x         - Start the driver with extended MIDs enabled.
                  Device suboptions take precedence over this option.
     -?/h       - Print help menu and exit.
