@@ -37,6 +37,7 @@
 #define DEFAULT_NUM_RX_CHANNELS 1
 #define DEFAULT_NUM_TX_CHANNELS 1
 #define DEFAULT_RESTART_MS      50 // Default bus-off restart delay
+#define DEFAULT_ERROR_COUNT     0  // default error state recovery count
 
 
 /*
@@ -47,6 +48,8 @@
 
 extern int optr;
 extern int optr_restart_ms;
+extern int optR;
+extern int optR_error_count;
 extern int optv;
 extern int optl;
 extern int opti;

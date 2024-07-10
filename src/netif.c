@@ -20,11 +20,7 @@
 
 #include <pci/pci.h>
 
-#include <linux/units.h>
-#include <linux/netdevice.h>
-#include <linux/can.h>
-#include <linux/can/error.h>
-#include <linux/can/skb.h>
+#include <drivers/net/can/sja1000/sja1000.h>
 #include <session.h>
 
 #include "netif.h"
@@ -104,6 +100,9 @@ int netif_rx (struct sk_buff* skb) {
 
     /* handle error message frame */
     if (msg->can_id & CAN_ERR_FLAG) {
+        struct sja1000_priv *priv = netdev_priv(skb->dev);
+        enum can_state state = priv->can.state;
+
         if (msg->can_id & CAN_ERR_TX_TIMEOUT) {
             log_warn("netif_rx: %s: TX timeout (by netdevice driver)\n",
                     skb->dev->name);
@@ -142,6 +141,70 @@ int netif_rx (struct sk_buff* skb) {
         if (msg->can_id & CAN_ERR_CNT) {
             log_warn("netif_rx: %s: TX error counter; tx:%x, rx:%x\n",
                     skb->dev->name, msg->data[6], msg->data[7]);
+        }
+
+        if (optR_error_count != 0) {
+            bool restart_trigger = false;
+
+            switch (state) {
+            case CAN_STATE_ERROR_ACTIVE:    /* RX/TX error count < 96 */
+                if (optR_error_count < 96) {
+                    restart_trigger = true;
+
+                    log_trace("netif_rx: can_restart_now (Error Active)\n");
+
+                }
+                break;
+            case CAN_STATE_ERROR_WARNING:   /* RX/TX error count < 128 */
+                if (optR_error_count < 128) {
+                    restart_trigger = true;
+
+                    log_trace("netif_rx: can_restart_now (Error Warning)\n");
+                }
+                break;
+            case CAN_STATE_ERROR_PASSIVE:   /* RX/TX error count < 256 */
+                if (optR_error_count < 256) {
+                    restart_trigger = true;
+
+                    log_trace("netif_rx: can_restart_now (Error Passive)\n");
+                }
+                break;
+            case CAN_STATE_BUS_OFF:         /* RX/TX error count >= 256 */
+                if (optR_error_count >= 256) {
+                    restart_trigger = true;
+
+                    log_trace("netif_rx: can_restart_now (Error Bus-Off)\n");
+                }
+                break;
+            case CAN_STATE_STOPPED:         /* Device is stopped */
+                restart_trigger = true;
+                log_trace("netif_rx: can_restart_now (State Stopped)\n");
+                break;
+            case CAN_STATE_SLEEPING:        /* Device is sleeping */
+                restart_trigger = true;
+                log_trace("netif_rx: can_restart_now (State Sleeping)\n");
+                break;
+            default:
+                break;
+            }
+
+            if (restart_trigger) {
+                struct can_priv *priv = netdev_priv(skb->dev);
+
+                // Save automatic restart
+                int backup_restart_ms = priv->restart_ms;
+
+                priv->restart_ms = 0;            // Force automatic restart off
+                priv->state = CAN_STATE_BUS_OFF; // Force CAN-bus state Bus-off
+
+                int err = can_restart_now(skb->dev);
+                if (err) {
+                    log_err("netif_rx: can_restart_now error (%d)\n", err);
+                }
+
+                // Restore automatic restart
+                priv->restart_ms = backup_restart_ms;
+            }
         }
 
         kfree_skb(skb);
@@ -285,8 +348,6 @@ void netif_wake_queue (struct net_device* dev) {
 
     device_session_t* ds = dev->device_session;
 
-    assert( ds->tx_thread != pthread_self() || shutdown_program );
-
     queue_wake_up(&ds->tx_queue);
 }
 
@@ -294,8 +355,6 @@ void netif_stop_queue (struct net_device* dev) {
     log_trace("netif_stop_queue\n");
 
     device_session_t* ds = dev->device_session;
-
-    assert( ds->tx_thread == pthread_self() || shutdown_program );
 
     queue_stop(&ds->tx_queue);
 }
