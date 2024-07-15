@@ -2,7 +2,7 @@
 /*
  * \file    uapi/linux/if.h
  * \brief   This file is originally from the Linux Kernel source-code and has
- *          been modified by removing contents until only the defitions for
+ *          been modified by removing contents until only the definitions for
  *          IFNAMSIZ macro and enum net_device_flags remains.
  *
  *		Global definitions for the INET interface module.
