@@ -26,8 +26,8 @@
 #ifndef _LINUX_MINMAX_H
 #define _LINUX_MINMAX_H
 
-#include <linux/const.h>
 #include <linux/build_bug.h>
+#include <linux/const.h>
 
 /*
  * min()/max()/clamp() macros must accomplish three things:
