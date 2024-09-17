@@ -139,6 +139,7 @@ extern unsigned int external_clk;   // "
 #define __must_check
 #define __attribute_const__
 #define __force
+#define compiletime_assert static_assert
 
 struct netlink_ext_ack {}; // Unused null declaration
 
