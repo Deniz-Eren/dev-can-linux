@@ -106,7 +106,7 @@ void usleep_range_state(unsigned long min, unsigned long max,
 
 static inline void usleep_range(unsigned long min, unsigned long max) {
 #ifdef __QNX__
-    udelay(min); /* TODO: check this; currently just using usleep min */
+    udelay(min); /* TODO: check this; currently just using udelay min */
 #else
 	usleep_range_state(min, max, TASK_UNINTERRUPTIBLE);
 #endif
