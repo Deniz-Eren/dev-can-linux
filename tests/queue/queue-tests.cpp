@@ -225,7 +225,10 @@ TEST( Queue, NonBlockZeroQueueSize ) {
 
 TEST( Queue, NullInput ) {
     queue_t queue;
-    queue_attr_t attr;
+
+    queue_attr_t attr = {
+        .size = 10
+    };
 
     int create_queue_code = create_queue(NULL, &attr);
 

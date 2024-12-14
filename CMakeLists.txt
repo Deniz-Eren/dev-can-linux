@@ -29,7 +29,7 @@ cmake_minimum_required( VERSION 3.22 )
 if( NOT DEFINED CMAKE_TOOLCHAIN_FILE )
     if( DEFINED ENV{QNX_HOST} )
         set( CMAKE_TOOLCHAIN_FILE
-            ${CMAKE_SOURCE_DIR}/workspace/cmake/Toolchain/qnx710-x86_64.toolchain.cmake )
+            ${CMAKE_SOURCE_DIR}/workspace/cmake/Toolchain/qnx800-x86_64.toolchain.cmake )
     endif()
 endif()
 

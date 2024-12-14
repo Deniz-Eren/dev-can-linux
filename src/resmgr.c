@@ -751,7 +751,7 @@ void* dispatch_receive_loop (void* arg) {
 int io_open (resmgr_context_t* ctp, io_open_t* msg,
         RESMGR_HANDLE_T* handle, void* extra)
 {
-    log_trace( "io_open -> (id: %d, rcvid: %d)\n",
+    log_trace( "io_open -> (id: %d, rcvid: %ld)\n",
             ctp->id, ctp->rcvid);
 
     return (iofunc_open_default (ctp, msg, handle, extra));
@@ -791,7 +791,7 @@ int io_read (resmgr_context_t* ctp, io_read_t* msg, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("io_read -> (id: %d, rcvid: %d)\n", ctp->id, ctp->rcvid);
+    log_trace("io_read -> (id: %d, rcvid: %ld)\n", ctp->id, ctp->rcvid);
 
     /* Verify the client has the access rights needed to read from our device */
     if ((status = iofunc_read_verify(ctp, msg, ocb, NULL)) != EOK) {
@@ -925,7 +925,7 @@ int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("io_write -> (id: %d, rcvid: %d)\n", ctp->id, ctp->rcvid);
+    log_trace("io_write -> (id: %d, rcvid: %ld)\n", ctp->id, ctp->rcvid);
 
     /* Check the access permissions of the client */
     if ((status = iofunc_write_verify(ctp, msg, ocb, NULL)) != EOK) {
@@ -1077,11 +1077,15 @@ int io_devctl (resmgr_context_t* ctp, io_devctl_t* msg, RESMGR_OCB_T* _ocb) {
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
     union data_t {
-        uint32_t    latency_limit;
-        uint32_t    bitrate;
-        uint32_t    info2;
+        uint32_t        latency_limit;
+        uint32_t        bitrate;
+        uint32_t        info2;
 
-        DCMD_DATA   dcmd;
+#if _NTO_VERSION >= 800
+        CAN_DCMD_DATA   dcmd;
+#else // i.e. _NTO_VERSION == 710
+        DCMD_DATA       dcmd;
+#endif
     } *data;
 
     log_trace("io_devctl -> id: %d\n", ctp->id);
