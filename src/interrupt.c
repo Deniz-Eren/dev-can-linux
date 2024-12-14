@@ -346,7 +346,7 @@ void* irq_loop (void* arg) {
                     irq_attach[k].irq, irq_attach[k].dev[i] );
 
             if (err == IRQ_WAKE_THREAD
-                && irq_attach[k].reset_interrupt != NULL)
+                && irq_attach[k].reset_interrupt[i] != NULL)
             {
                 err = irq_attach[k].reset_interrupt[i](
                         irq_attach[k].irq, irq_attach[k].dev[i] );

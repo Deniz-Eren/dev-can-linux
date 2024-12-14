@@ -34,12 +34,16 @@ target_include_directories( driver-raw-tests PUBLIC
 if( CMAKE_BUILD_TYPE MATCHES Profiling )
     target_link_libraries( driver-raw-tests PRIVATE
         -lpci
+        -lregex
         ${GTEST_LIBRARIES}
+        ${GTEST_MAIN_LIBRARIES}
         ${QNX_PROFILING_LIBRARY} )
 else()
     target_link_libraries( driver-raw-tests PRIVATE
         -lpci
-        ${GTEST_LIBRARIES} )
+        -lregex
+        ${GTEST_LIBRARIES}
+        ${GTEST_MAIN_LIBRARIES} )
 endif()
 
 add_custom_target( ssh-driver-raw-tests ALL
