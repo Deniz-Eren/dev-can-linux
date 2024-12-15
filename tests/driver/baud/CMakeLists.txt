@@ -58,7 +58,7 @@ add_custom_target( ssh-driver-baud-tests ALL
 add_test( NAME ssh-driver-baud-tests
     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-driver-baud-tests.sh )
 
-code_coverage_run( ssh-driver-baud-tests )
+code_coverage_run( driver-baud-tests )
 
 # TODO: implement profiling for unit tests
 #valgrind_profiling_run( ssh-driver-baud-tests )

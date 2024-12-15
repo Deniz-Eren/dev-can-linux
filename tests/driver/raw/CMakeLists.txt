@@ -59,7 +59,7 @@ add_custom_target( ssh-driver-raw-tests ALL
 add_test( NAME ssh-driver-raw-tests
     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-driver-raw-tests.sh )
 
-code_coverage_run( ssh-driver-raw-tests )
+code_coverage_run( driver-raw-tests )
 
 # TODO: implement profiling for unit tests
 #valgrind_profiling_run( ssh-driver-raw-tests )

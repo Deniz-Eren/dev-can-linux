@@ -61,7 +61,7 @@ add_custom_target( ssh-driver-integrity-tests ALL
 add_test( NAME ssh-driver-integrity-tests
     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-driver-integrity-tests.sh )
 
-code_coverage_run( ssh-driver-integrity-tests )
+code_coverage_run( driver-integrity-tests )
 
 # TODO: implement profiling for unit tests
 #valgrind_profiling_run( ssh-driver-integrity-tests )
