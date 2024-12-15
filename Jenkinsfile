@@ -53,9 +53,10 @@ node('jenkins-agent') {
 
                 mkdir -p /home/jenkins/Images
 
-                $projectpath/workspace/ci/scripts/setup-qnx710-qemu.sh \
+                $projectpath/workspace/ci/scripts/setup-qnx-qemu.sh \
                     -d $projectpath/workspace/emulation/qnx710/Dockerfile \
-                    -i /home/jenkins/Images/disk-raw
+                    -i /home/jenkins/Images/disk-raw \
+                    -q qnx710
 
                 docker cp /opt/project_repo dev-env:/root/
             """)
@@ -67,12 +68,13 @@ node('jenkins-agent') {
                     -i /home/jenkins/Images/disk-raw \
                     -p $sshport
 
-                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx.sh \
                     -v \
                     -b /data/home/root/build_coverage \
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Coverage \
+                    -T qnx710-x86_64.toolchain.cmake \
                     -p $sshport
 
                 docker exec --user root --workdir /root dev-env bash -c \
@@ -81,7 +83,7 @@ node('jenkins-agent') {
                     && cd /data/home/root/build_coverage \
                     && ctest --output-junit test_results.xml || (exit 0)"
 
-                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx.sh \
                     -b /data/home/root/build_coverage \
                     -k dev-can-linux \
                     -p $sshport
@@ -144,12 +146,13 @@ node('jenkins-agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-memcheck.xml"
 
-                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx.sh \
                     -v \
                     -b /data/home/root/build_memcheck \
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
+                    -T qnx710-x86_64.toolchain.cmake \
                     -s 1 \
                     -p $sshport
 
@@ -159,7 +162,7 @@ node('jenkins-agent') {
                     && cd /data/home/root/build_memcheck \
                     && ctest --verbose || (exit 0)"
 
-                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx.sh \
                     -b /data/home/root/build_memcheck \
                     -k memcheck-amd64-nto \
                     -p $sshport
@@ -180,12 +183,13 @@ node('jenkins-agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-helgrind.xml"
 
-                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx.sh \
                     -v \
                     -b /data/home/root/build_helgrind \
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
+                    -T qnx710-x86_64.toolchain.cmake \
                     -s 1 \
                     -p $sshport
 
@@ -195,7 +199,7 @@ node('jenkins-agent') {
                     && cd /data/home/root/build_helgrind \
                     && ctest --verbose || (exit 0)"
 
-                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx.sh \
                     -b /data/home/root/build_helgrind \
                     -k helgrind-amd64-nto \
                     -p $sshport
@@ -214,12 +218,13 @@ node('jenkins-agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-drd.xml"
 
-                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx.sh \
                     -v \
                     -b /data/home/root/build_drd \
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
+                    -T qnx710-x86_64.toolchain.cmake \
                     -s 1 \
                     -p $sshport
 
@@ -229,7 +234,7 @@ node('jenkins-agent') {
                     && cd /data/home/root/build_drd \
                     && ctest --verbose || (exit 0)"
 
-                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx.sh \
                     -b /data/home/root/build_drd \
                     -k drd-amd64-nto \
                     -p $sshport
@@ -248,12 +253,13 @@ node('jenkins-agent') {
                     --verbose \
                     --xml=yes --xml-file=valgrind-exp-sgcheck.xml"
 
-                $projectpath/workspace/ci/scripts/build-exec-qnx710.sh \
+                $projectpath/workspace/ci/scripts/build-exec-qnx.sh \
                     -v \
                     -b /data/home/root/build_exp-sgcheck \
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
+                    -T qnx710-x86_64.toolchain.cmake \
                     -s 1 \
                     -p $sshport
 
@@ -263,7 +269,7 @@ node('jenkins-agent') {
                     && cd /data/home/root/build_exp-sgcheck \
                     && ctest --verbose || (exit 0)"
 
-                $projectpath/workspace/ci/scripts/stop-qnx710.sh \
+                $projectpath/workspace/ci/scripts/stop-qnx.sh \
                     -b /data/home/root/build_exp-sgcheck \
                     -k exp-sgcheck-amd64-nto \
                     -p $sshport
@@ -294,6 +300,7 @@ node('jenkins-agent') {
                         && mkdir -p build_release_x86_64 \
                         && cd build_release_x86_64 \
                         && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
+                                -DCMAKE_TOOLCHAIN_FILE=../project_repo/workspace/cmake/Toolchain/qnx710-x86_64.toolchain.cmake \
                                 -DBUILD_TESTING=OFF ../project_repo \
                         && make -j8 \
                         && cpack \

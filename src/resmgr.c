@@ -752,7 +752,7 @@ int io_open (resmgr_context_t* ctp, io_open_t* msg,
         RESMGR_HANDLE_T* handle, void* extra)
 {
     log_trace( "io_open -> (id: %d, rcvid: %ld)\n",
-            ctp->id, ctp->rcvid);
+            ctp->id, (long int)ctp->rcvid );
 
     return (iofunc_open_default (ctp, msg, handle, extra));
 }
@@ -791,7 +791,8 @@ int io_read (resmgr_context_t* ctp, io_read_t* msg, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("io_read -> (id: %d, rcvid: %ld)\n", ctp->id, ctp->rcvid);
+    log_trace( "io_read -> (id: %d, rcvid: %ld)\n",
+            ctp->id, (long int)ctp->rcvid );
 
     /* Verify the client has the access rights needed to read from our device */
     if ((status = iofunc_read_verify(ctp, msg, ocb, NULL)) != EOK) {
@@ -925,7 +926,8 @@ int io_write (resmgr_context_t* ctp, io_write_t* msg, RESMGR_OCB_T* _ocb) {
 
     iofunc_ocb_t* ocb = (iofunc_ocb_t*)_ocb;
 
-    log_trace("io_write -> (id: %d, rcvid: %ld)\n", ctp->id, ctp->rcvid);
+    log_trace( "io_write -> (id: %d, rcvid: %ld)\n",
+            ctp->id, (long int)ctp->rcvid );
 
     /* Check the access permissions of the client */
     if ((status = iofunc_write_verify(ctp, msg, ocb, NULL)) != EOK) {
