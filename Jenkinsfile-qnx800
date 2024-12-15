@@ -1,6 +1,6 @@
 /**
  * \file    Jenkinsfile
- * \brief   Jenkinsfile Groovy script
+ * \brief   Jenkinsfile Groovy script for QNX 8.0
  *
  * Copyright (C) 2022 Deniz Eren <deniz.eren@outlook.com>
  *
@@ -54,9 +54,9 @@ node('jenkins-agent') {
                 mkdir -p /home/jenkins/Images
 
                 $projectpath/workspace/ci/scripts/setup-qnx-qemu.sh \
-                    -d $projectpath/workspace/emulation/qnx710/Dockerfile \
+                    -d $projectpath/workspace/emulation/qnx800/Dockerfile \
                     -i /home/jenkins/Images/disk-raw \
-                    -q qnx710
+                    -q qnx800
 
                 docker cp /opt/project_repo dev-env:/root/
             """)
@@ -74,7 +74,7 @@ node('jenkins-agent') {
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Coverage \
-                    -T qnx710-x86_64.toolchain.cmake \
+                    -T qnx800-x86_64.toolchain.cmake \
                     -p $sshport
 
                 docker exec --user root --workdir /root dev-env bash -c \
@@ -152,7 +152,7 @@ node('jenkins-agent') {
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
-                    -T qnx710-x86_64.toolchain.cmake \
+                    -T qnx800-x86_64.toolchain.cmake \
                     -s 1 \
                     -p $sshport
 
@@ -189,7 +189,7 @@ node('jenkins-agent') {
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
-                    -T qnx710-x86_64.toolchain.cmake \
+                    -T qnx800-x86_64.toolchain.cmake \
                     -s 1 \
                     -p $sshport
 
@@ -224,7 +224,7 @@ node('jenkins-agent') {
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
-                    -T qnx710-x86_64.toolchain.cmake \
+                    -T qnx800-x86_64.toolchain.cmake \
                     -s 1 \
                     -p $sshport
 
@@ -259,7 +259,7 @@ node('jenkins-agent') {
                     -c "dev-can-linux -Ex" \
                     -r /root/project_repo \
                     -t Profiling \
-                    -T qnx710-x86_64.toolchain.cmake \
+                    -T qnx800-x86_64.toolchain.cmake \
                     -s 1 \
                     -p $sshport
 
@@ -300,7 +300,7 @@ node('jenkins-agent') {
                         && mkdir -p build_release_x86_64 \
                         && cd build_release_x86_64 \
                         && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
-                                -DCMAKE_TOOLCHAIN_FILE=../project_repo/workspace/cmake/Toolchain/qnx710-x86_64.toolchain.cmake \
+                                -DCMAKE_TOOLCHAIN_FILE=../project_repo/workspace/cmake/Toolchain/qnx800-x86_64.toolchain.cmake \
                                 -DBUILD_TESTING=OFF ../project_repo \
                         && make -j8 \
                         && cpack \
@@ -309,16 +309,7 @@ node('jenkins-agent') {
                         && mkdir -p build_release_aarch64le \
                         && cd build_release_aarch64le \
                         && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
-                                -DCMAKE_TOOLCHAIN_FILE=../project_repo/workspace/cmake/Toolchain/qnx710-aarch64le.toolchain.cmake \
-                                -DBUILD_TESTING=OFF ../project_repo \
-                        && make -j8 \
-                        && cpack \
-                        && cp dev-can-linux-*.tar.gz \\\"../\\\$DIR\\\" \
-                        && cd .. \
-                        && mkdir -p build_release_armv7le \
-                        && cd build_release_armv7le \
-                        && cmake -DSSH_PORT=$sshport -DCMAKE_BUILD_TYPE=Release \
-                                -DCMAKE_TOOLCHAIN_FILE=../project_repo/workspace/cmake/Toolchain/qnx710-armv7le.toolchain.cmake \
+                                -DCMAKE_TOOLCHAIN_FILE=../project_repo/workspace/cmake/Toolchain/qnx800-aarch64le.toolchain.cmake \
                                 -DBUILD_TESTING=OFF ../project_repo \
                         && make -j8 \
                         && cpack \
