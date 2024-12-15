@@ -59,7 +59,7 @@ add_custom_target( ssh-driver-io-tests ALL
 add_test( NAME ssh-driver-io-tests
     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-driver-io-tests.sh )
 
-code_coverage_run( ssh-driver-io-tests )
+code_coverage_run( driver-io-tests )
 
 # TODO: implement profiling for unit tests
 #valgrind_profiling_run( ssh-driver-io-tests )

@@ -249,42 +249,6 @@ node('jenkins-agent') {
                     dev-env:/data/home/root/build_drd/valgrind-drd.xml \
                     $WORKSPACE/
 
-                #
-                # Run Valgrind with tool exp-sgcheck
-                #
-                rm -rf /data/home/root/build_exp-sgcheck
-
-                export QNX_PREFIX_CMD="valgrind \
-                    --tool=exp-sgcheck \
-                    --verbose \
-                    --xml=yes --xml-file=valgrind-exp-sgcheck.xml"
-
-                $projectpath/workspace/ci/scripts/build-exec-qnx.sh \
-                    -v \
-                    -b /data/home/root/build_exp-sgcheck \
-                    -c "dev-can-linux -Ex" \
-                    -r /root/project_repo \
-                    -t Profiling \
-                    -T qnx800-x86_64.toolchain.cmake \
-                    -s 1 \
-                    -p $sshport \
-                    -q qnx800
-
-                docker exec --user root --workdir /root dev-env bash -c \
-                    "source .profile \
-                    && source /root/workspace/dev/ubuntu-qnx800/setup-profile.sh \
-                    && cd /data/home/root/build_exp-sgcheck \
-                    && ctest --verbose || (exit 0)"
-
-                $projectpath/workspace/ci/scripts/stop-qnx.sh \
-                    -b /data/home/root/build_exp-sgcheck \
-                    -k exp-sgcheck-amd64-nto \
-                    -p $sshport
-
-                docker cp \
-                    dev-env:/data/home/root/build_exp-sgcheck/valgrind-exp-sgcheck.xml \
-                    $WORKSPACE/
-
                 $projectpath/workspace/ci/scripts/stop-emulation.sh
 
                 # Have a copy of the repository in the workspace so Valgrind

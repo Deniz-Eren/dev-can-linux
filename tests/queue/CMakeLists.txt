@@ -57,7 +57,7 @@ add_custom_target( ssh-queue-tests ALL
 add_test( NAME ssh-queue-tests
     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-queue-tests.sh )
 
-code_coverage_run( ssh-queue-tests )
+code_coverage_run( queue-tests )
 
 # TODO: implement profiling for unit tests
 #valgrind_profiling_run( ssh-queue-tests )

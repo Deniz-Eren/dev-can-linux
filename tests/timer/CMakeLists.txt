@@ -57,7 +57,7 @@ add_custom_target( ssh-timer-tests ALL
 add_test( NAME ssh-timer-tests
     COMMAND ${CMAKE_CURRENT_BINARY_DIR}/ssh-timer-tests.sh )
 
-code_coverage_run( ssh-timer-tests )
+code_coverage_run( timer-tests )
 
 # TODO: implement profiling for unit tests
 #valgrind_profiling_run( ssh-timer-tests )
