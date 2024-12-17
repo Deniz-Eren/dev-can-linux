@@ -29,6 +29,11 @@ extern "C" {
     #include <linux/units.h>
 }
 
+
+/* Flood tests are unreliable and time consuming during Profiling so we will
+ * skip these */
+#if PROFILING_BUILD != 1
+
 static volatile bool sync_receive_loop0_started = false,
             sync_receive_loop1_started = false,
             sync_receive_loop2_started = false,
@@ -377,3 +382,5 @@ TEST( SYNC, SingleSendReceiveAfterManyOpenClose ) {
         close(fd1);
     }
 }
+
+#endif
