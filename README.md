@@ -644,8 +644,9 @@ console, however for `pci-server` driver it is usually defined in the image.
 Furthermore, your environment must contain the PCIe module shared libraries
 `pci_cap-0x05.so*` and/or `pci_cap-0x11.so*` installed.
 
-As an example take a look at our QNX 7.1 and 8.0 emulation image setup scripts
-within the [workspace](https://github.com/Deniz-Eren/workspace) submodule.
+As an example take a look at our and 8.0 or QNX 7.1 emulation image setup
+scripts within the [workspace](https://github.com/Deniz-Eren/workspace)
+submodule.
 
 The scripts you should check are, firstly
 [workspace/emulation/qnx710/image/parts/ifs.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx710/image/parts/ifs.build)

@@ -25,7 +25,16 @@
 
 cmake_minimum_required( VERSION 3.22 )
 
-# Set the toolchain file to QNX 7.1
+# Default toolchain file is set to QNX 8.0 x86_64 platform.
+# Set "cmake -DCMAKE_TOOLCHAIN_FILE=<tool-chain-file>" to build for a different
+# platform as required.
+# QNX 8.0 options:
+#   workspace/cmake/Toolchain/qnx800-x86_64.toolchain.cmake
+#   workspace/cmake/Toolchain/qnx800-aarch64le.toolchain.cmake
+# QNX 7.1 options:
+#   workspace/cmake/Toolchain/qnx710-x86_64.toolchain.cmake
+#   workspace/cmake/Toolchain/qnx710-aarch64le.toolchain.cmake
+#   workspace/cmake/Toolchain/qnx710-armv7le.toolchain.cmake
 if( NOT DEFINED CMAKE_TOOLCHAIN_FILE )
     if( DEFINED ENV{QNX_HOST} )
         set( CMAKE_TOOLCHAIN_FILE

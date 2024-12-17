@@ -23,7 +23,7 @@ If applicable, add screenshots to help explain your problem.
  - Target QNX architecture, e.g. x86_64
  - CAN-bus hardware device, e.g. PCAN-miniPCIe card
  - Development environment, e.g. [workspace](https://github.com/Deniz-Eren/workspace)
- - Version, e.g. QNX 7.1
+ - Version, e.g. QNX 8.0, QNX 7.1, etc.
 
 # Driver (please complete the following information)
  - Driver loaded, e.g. adv_pci

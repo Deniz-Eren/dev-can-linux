@@ -12,7 +12,7 @@ assignees: Deniz-Eren
  - Target QNX architecture, e.g. x86_64
  - CAN-bus hardware device, e.g. PCAN-miniPCIe card
  - Development environment, e.g. [workspace](https://github.com/Deniz-Eren/workspace)
- - Version, e.g. QNX 7.1
+ - Version, e.g. QNX 8.0, QNX 7.1, etc.
 
 # Logs
 Run the driver in high logging mode and supply the output in the ticket:

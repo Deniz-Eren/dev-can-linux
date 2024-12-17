@@ -10,7 +10,9 @@ with, check config file
 
 ## Support
 
-Current version aims to support all Linux PCI SJA1000 drivers for QNX 7.1 RTOS.
+Current version aims to support all Linux PCI SJA1000 drivers for QNX 8.0 and
+QNX 7.1 RTOS, for x86_64 and aarch64le target platforms. Additionally QNX 7.1
+support exists for armv7le target platform.
 
 ## Aim
 
