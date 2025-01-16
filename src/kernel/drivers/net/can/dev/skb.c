@@ -239,7 +239,7 @@ struct sk_buff *alloc_can_err_skb(struct net_device *dev, struct can_frame **cf)
         return NULL;
 
     (*cf)->can_id = CAN_ERR_FLAG;
-    (*cf)->can_dlc = CAN_ERR_DLC;
+    (*cf)->len = CAN_ERR_DLC;
 
     return skb;
 }
