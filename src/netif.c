@@ -61,7 +61,7 @@ void* netif_tx (void* arg) {
 
         skb->len = CAN_MTU;
         cf->can_id = canmsg->mid;
-        cf->can_dlc = canmsg->len;
+        cf->len = canmsg->len;
 
         if (canmsg->ext.is_extended_mid) { // Extended MID
             cf->can_id |= CAN_EFF_FLAG;
