@@ -339,16 +339,19 @@ the echo from tx file descriptor doesn't count here.
 
 To install untar a release package directly to your desired install prefix:
 
-    tar -xf dev-can-linux-##-#.#.#-qnx710.tar.gz -C /opt/
+    tar -xf dev-can-linux-6.13-1.7.0-qnx800-x86_64.tar.gz -C /opt/
 
 This example command installs to the prefix "/opt/" but you can specify "/usr/"
-or "/usr/local/" or another location.
+or "/usr/local/" or another location. The example also is installing a
+particular version of the driver for the QNX 8.0 system for the x86_64 platform.
 
 
 ## Hardware Emulation for Testing
 
 To run QEmu VM with CAN-bus hardware emulation for testing see
-[Emulation (workspace/emulation/qnx710)](https://github.com/Deniz-Eren/workspace/tree/main/emulation/qnx710).
+[QNX 8.0 Emulation (workspace/emulation/qnx800)](https://github.com/Deniz-Eren/workspace/tree/main/emulation/qnx800)
+and
+[QNX 7.1 Emulation (workspace/emulation/qnx710)](https://github.com/Deniz-Eren/workspace/tree/main/emulation/qnx710).
 
 
 ## Building
@@ -357,7 +360,8 @@ Refer to the
 [Development (workspace/dev)](https://github.com/Deniz-Eren/workspace/tree/main/dev)
 documentation for details on how to setup the development container.
 
-Within the development container, to build (default is for x86_64 platform):
+Within the development container, to build (default is QNX 8.0 for x86_64
+platform):
 
     cd dev-can-linux
     mkdir build ; cd build
@@ -366,15 +370,15 @@ Within the development container, to build (default is for x86_64 platform):
 
 Other build types you can indicate are Debug, Coverage and Profiling.
 
-To build for aarch64le architecture:
+To build for aarch64le architecture for QNX 8.0 for example:
 
     cd dev-can-linux
     mkdir build ; cd build
-    cmake -DCMAKE_TOOLCHAIN_FILE=../workspace/cmake/Toolchain/qnx710-aarch64le.toolchain.cmake \
+    cmake -DCMAKE_TOOLCHAIN_FILE=../workspace/cmake/Toolchain/qnx800-aarch64le.toolchain.cmake \
           -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
     cpack
 
-To build for armle-v7 architecture:
+Another example, to build for QNX 7.1 and armle-v7 architecture:
 
     cd dev-can-linux
     mkdir build ; cd build
@@ -382,14 +386,19 @@ To build for armle-v7 architecture:
           -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTING=OFF ..
     cpack
 
+All the current supported platforms can be checked in the workspace QNX
+Toolchain path
+[workspace/cmake/Toolchain](https://github.com/Deniz-Eren/workspace/tree/main/cmake/Toolchain).
+
 The following installer files will be created:
 
-    dev-can-linux-[linux]-#.#.#-qnx710-[architecture][build type].tar.gz
-    dev-can-linux-[linux]-#.#.#-qnx710-dev.tar.gz
+    dev-can-linux-[linux]-#.#.#-qnx[qnx version]-[architecture][build type].tar.gz
+    dev-can-linux-[linux]-#.#.#-qnx[qnx version]-dev.tar.gz
 
 Where the "[linux]" is the Linux Kernel version, which the driver has been
-harmonized with, for example v6.6 is written as 66. Then "[architecture]" is the
-target architecture, for example x86_64 or aarch64le, "[build type]" is empty for
+harmonized with, for example v6.13 is written as 6.13. The "[qnx version]" is
+800 for QNX 8.0 and 710 for QNX 7.1. Then "[architecture]" is the target
+architecture, for example x86_64 or aarch64le, "[build type]" is empty for
 Release, "-g" for Debug, "-cov" for Coverage and "-pro" for Profiling.
 
 The '-dev' variant contains the application development headers used to develope
@@ -409,7 +418,9 @@ Because we are cross-compiling in CMake, we can only run the tests on a QNX
 target. The CMake project is configured to talk to our QEmu hardware emulation
 over SSH. You must make sure this emulator has been started up before running
 ctest. To start the emulator check documentation
-[Emulation (workspace/emulation/qnx710)](https://github.com/Deniz-Eren/workspace/tree/main/emulation/qnx710).
+[QNX 8.0 Emulation (workspace/emulation/qnx800)](https://github.com/Deniz-Eren/workspace/tree/main/emulation/qnx800)
+and
+[QNX 7.1 Emulation (workspace/emulation/qnx710)](https://github.com/Deniz-Eren/workspace/tree/main/emulation/qnx710).
 
 
 ## Example Applications
@@ -649,7 +660,10 @@ scripts within the [workspace](https://github.com/Deniz-Eren/workspace)
 submodule.
 
 The scripts you should check are, firstly
+[workspace/emulation/qnx800/image/parts/ifs.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx800/image/parts/ifs.build)
+for QNX 8.0 or
 [workspace/emulation/qnx710/image/parts/ifs.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx710/image/parts/ifs.build)
+for QNX 7.1.
 defines file `/proc/boot/pci_server.cfg` embedded in the image contains the
 environment variable `PCI_CAP_MODULE_DIR`, specifying where the capability
 modules are located for `pci-server` driver to find them:
@@ -674,7 +688,10 @@ which mounts to `/proc/boot/lib/dll/pci/`
     lib/dll/pci/pci_cap-0x11.so.2.2.sym=lib/dll/pci/pci_cap-0x11.so.2.2.sym
 
 Next in file
+[workspace/emulation/qnx800/image/parts/system.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx800/image/parts/system.build)
+for QNX 8.0 or
 [workspace/emulation/qnx710/image/parts/system.build](https://github.com/Deniz-Eren/workspace/blob/main/emulation/qnx710/image/parts/system.build)
+for QNX 7.1,
 we define the same environment variable for dev-can-linux to find the PCI
 modules:
 
