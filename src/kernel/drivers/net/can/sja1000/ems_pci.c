@@ -37,7 +37,6 @@
 #include <linux/pci.h>
 #include <linux/can/dev.h>
 #include <linux/io.h>
-#include <linux/err.h>
 
 #include "sja1000.h"
 

@@ -32,6 +32,7 @@
 #ifndef _LINUX_IO_H
 #define _LINUX_IO_H
 
+#include <linux/err.h>
 #include <sys/mman.h>
 #include <hw/inout.h> /* QNX header */
 
