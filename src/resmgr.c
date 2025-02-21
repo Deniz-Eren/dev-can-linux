@@ -242,7 +242,7 @@ int register_netdev (struct net_device* dev) {
             num_channels[1] = optu_config[id].num_tx_channels;
 
             if (optu_config[id].is_extended_mid != -1) {
-                // Override driver option if individual device option is giben
+                // Override driver option if individual device option is given
                 is_extended_mid = optu_config[id].is_extended_mid;
             }
         }
