@@ -140,6 +140,10 @@ int process_driver_selection() {
         ++idx;
     }
 
+    if (optL) {
+        store_driver_selection(0x0, 0x0, &vcan_driver);
+    }
+
     return 0;
 }
 

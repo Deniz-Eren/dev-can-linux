@@ -38,7 +38,7 @@
 #define DEFAULT_NUM_TX_CHANNELS 1
 #define DEFAULT_RESTART_MS      50 // Default bus-off restart delay
 #define DEFAULT_ERROR_COUNT     0  // default error state recovery count
-
+#define MAX_NO_OF_VCAN_CHANNELS 16 // maximum number of vcan devices allowed
 
 /*
  * Program options
@@ -60,6 +60,8 @@ extern int opts;
 extern int optt;
 extern int optu;
 extern int optb;
+extern int optL;
+extern int optL_num;
 extern int optm;
 extern int optx;
 extern int optE;

@@ -100,7 +100,7 @@ int main (int argc, char* argv[]) {
 
     // Need to parse -v and -l first so that log_*() functions work within the
     // command-line parsing loop following this one.
-    while ((opt = getopt(argc, argv, "r:R:d:e:U:u:b:m:viqstlVCEwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "r:R:d:e:U:u:b:L:m:viqstlVCEwcx?h")) != -1) {
         switch (opt) {
         case 'v':
             optv++;
@@ -121,7 +121,7 @@ int main (int argc, char* argv[]) {
     opterr = opt_bak_opterr;
     optopt = opt_bak_optopt;
 
-    while ((opt = getopt(argc, argv, "r:R:d:e:U:u:b:m:viqstlVCEwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "r:R:d:e:U:u:b:L:m:viqstlVCEwcx?h")) != -1) {
         switch (opt) {
         case 'r':
             optr++;
@@ -505,6 +505,20 @@ int main (int argc, char* argv[]) {
 
                 return EXIT_FAILURE;
             }
+            break;
+        }
+        case 'L':
+        {
+            optL = 1;
+            optL_num = atoi(optarg);
+
+            if (optL_num > MAX_NO_OF_VCAN_CHANNELS) {
+                printf( "option -L %d > max allowed %d !\n",
+                    optL_num, MAX_NO_OF_VCAN_CHANNELS );
+
+                return EXIT_FAILURE;
+            }
+
             break;
         }
         case 'm':
