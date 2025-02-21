@@ -236,6 +236,7 @@ static int kvaser_pci_add_chan(struct pci_dev *pdev, int channel,
 
 	board->pci_dev = pdev;
 	board->channel = channel;
+	board->no_channels = channel + 1;
 
 	/* S5920 */
 	board->conf_addr = conf_addr;
