@@ -47,6 +47,23 @@ void* netif_tx (void* arg) {
             return NULL;
         }
 
+        if (!dev->irq) {
+            // Only Virtual CAN (vcan) driver can have irq=0
+            // For vcan, we just broadcast to all client sessions
+
+            client_session_t* it = ds->root_client_session;
+            while (it != NULL) {
+                if ((canmsg->mid & *it->mfilter) == canmsg->mid) {
+                    if (enqueue(&it->rx_queue, canmsg) != EOK) {
+                    }
+                }
+
+                it = it->next;
+            }
+
+            continue;
+        }
+
         struct sk_buff *skb;
         struct can_frame *cf;
 

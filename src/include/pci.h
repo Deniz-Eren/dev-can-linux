@@ -41,6 +41,7 @@ extern struct pci_driver ems_pci_driver;
 extern struct pci_driver peak_pci_driver;
 extern struct pci_driver plx_pci_driver;
 extern struct pci_driver f81601_pci_driver;
+extern struct pci_driver vcan_driver;
 
 extern int process_driver_selection();
 extern void print_driver_selection_results();
@@ -279,26 +280,30 @@ static inline void remove_all_driver_selections() {
         if (pdev != NULL) {
             driver_selection_root->driver->remove(pdev);
 
-            for (int_t i = 0; i < pdev->nba; ++i) {
-                ioblock_t* block = NULL;
+            if (pdev->vendor && pdev->device) {
+                // Only Virtual CAN (vcan) driver can have vendor=0 or device=0
 
-                do {
-                    block = get_managed_block(&pdev->ba[i]);
+                for (int_t i = 0; i < pdev->nba; ++i) {
+                    ioblock_t* block = NULL;
 
-                    if (block) {
-                        log_info( "Managed pci_iounmap for %s\n",
-                            driver_selection_root->driver->name );
+                    do {
+                        block = get_managed_block(&pdev->ba[i]);
 
-                        pci_iounmap(pdev, block->addr);
-                    }
-                } while (block);
-            }
+                        if (block) {
+                            log_info( "Managed pci_iounmap for %s\n",
+                                driver_selection_root->driver->name );
 
-            if (pdev->is_managed) {
-                log_info( "Managed pci_disable_device for %s\n",
-                    driver_selection_root->driver->name );
+                            pci_iounmap(pdev, block->addr);
+                        }
+                    } while (block);
+                }
 
-                pci_disable_device(pdev);
+                if (pdev->is_managed) {
+                    log_info( "Managed pci_disable_device for %s\n",
+                        driver_selection_root->driver->name );
+
+                    pci_disable_device(pdev);
+                }
             }
         }
 

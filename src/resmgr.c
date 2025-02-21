@@ -242,7 +242,7 @@ int register_netdev (struct net_device* dev) {
             num_channels[1] = optu_config[id].num_tx_channels;
 
             if (optu_config[id].is_extended_mid != -1) {
-                // Override driver option if individual device option is giben
+                // Override driver option if individual device option is given
                 is_extended_mid = optu_config[id].is_extended_mid;
             }
         }
@@ -304,6 +304,8 @@ int register_netdev (struct net_device* dev) {
 
                 resmgr->channel_type = TX_CHANNEL;
             }
+
+            log_info("%s -> %s\n", dev->name, resmgr->name);
 
             iofunc_attr_init(&resmgr->iofunc_attr, S_IFCHR | 0666, NULL, NULL);
 
