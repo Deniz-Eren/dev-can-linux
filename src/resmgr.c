@@ -305,6 +305,8 @@ int register_netdev (struct net_device* dev) {
                 resmgr->channel_type = TX_CHANNEL;
             }
 
+            log_info("%s -> %s\n", dev->name, resmgr->name);
+
             iofunc_attr_init(&resmgr->iofunc_attr, S_IFCHR | 0666, NULL, NULL);
 
             // set up the mount functions structure

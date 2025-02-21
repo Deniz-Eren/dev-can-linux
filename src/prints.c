@@ -161,6 +161,11 @@ void print_help (char* program_name) {
     printf("                     # (Special cases only) Forced btr* baud-rate setting method:\n");
     printf("                     \e[1mdev-can-linux -b id=0,freq=125k,btr0=0x07,btr1=0x14\e[m\n");
     printf("\n");
+    printf("    \e[1m-L num\e[m       Create num virtual CAN (vcan) devices\n");
+    printf("                 These devices will loop-back transmitted messages to all\n");
+    printf("                 listening clients; no real CAN hardware involved.\n");
+    printf("                 Max num: %d\n", MAX_NO_OF_VCAN_CHANNELS);
+    printf("\n");
     printf("    \e[1m-m subopts\e[m - Kernel module parameters\n");
     printf("\n");
     printf("                 Suboptions (\e[1msubopts\e[m):\n");

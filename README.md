@@ -99,6 +99,11 @@ Options:
                      # (Special cases only) Forced btr* baud-rate setting method:
                      dev-can-linux -b id=0,freq=125k,btr0=0x07,btr1=0x14
 
+    -L num       Create num virtual CAN (vcan) devices
+                 These devices will loop-back transmitted messages to all
+                 listening clients; no real CAN hardware involved.
+                 Max num: 16
+
     -m subopts - Kernel module parameters
 
                  Suboptions (subopts):
