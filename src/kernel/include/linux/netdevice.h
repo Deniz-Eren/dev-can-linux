@@ -483,8 +483,8 @@ enum netdev_state_t {
 struct net_device_ops {
 	int			(*ndo_open)(struct net_device *dev);
 	int			(*ndo_stop)(struct net_device *dev);
-	netdev_tx_t		(*ndo_start_xmit) (struct sk_buff *skb,
-						   struct net_device *dev);
+	netdev_tx_t		(*ndo_start_xmit)(struct sk_buff *skb,
+						  struct net_device *dev);
 	int			(*ndo_change_mtu)(struct net_device *dev,
 						  int new_mtu);
 };
@@ -884,8 +884,7 @@ void netif_tx_unlock(struct net_device *dev);
 /* Set the sysfs physical device reference for the network logical device
  * if set prior to registration will cause a symlink during initialization.
  */
-//#define SET_NETDEV_DEV(net, pdev)   ((net)->dev.parent = (pdev))
-#define SET_NETDEV_DEV(net, pdev) // Undefine this since we don't use it
+#define SET_NETDEV_DEV(net, pdev) // Define empty to do nothing, unneeded
 
 int register_netdev(struct net_device *dev);
 void unregister_netdev(struct net_device *dev);
