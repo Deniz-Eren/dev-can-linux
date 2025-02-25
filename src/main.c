@@ -100,7 +100,7 @@ int main (int argc, char* argv[]) {
 
     // Need to parse -v and -l first so that log_*() functions work within the
     // command-line parsing loop following this one.
-    while ((opt = getopt(argc, argv, "r:d:e:U:u:b:m:viqstlVCEwcx?h")) != -1) {
+    while ((opt = getopt(argc, argv, "r:R:d:e:U:u:b:m:viqstlVCEwcx?h")) != -1) {
         switch (opt) {
         case 'v':
             optv++;
