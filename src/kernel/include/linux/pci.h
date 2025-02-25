@@ -70,25 +70,29 @@ extern void pci_iounmap(struct pci_dev *dev, void __iomem* addr);
 extern void __iomem *pcim_iomap(struct pci_dev *pdev, int bar, unsigned long maxlen);
 
 
-/*
- * The pci_dev structure is used to describe PCI devices.
+/* struct pci_dev - describes a PCI device
+ *
+ * @supported_speeds:	PCIe Supported Link Speeds Vector (+ reserved 0 at
+ *			LSB). 0 when the supported speeds cannot be
+ *			determined (e.g., for Root Complex Integrated
+ *			Endpoints without the relevant Capability
+ *			Registers).
  */
 struct pci_dev {
-    pci_devhdl_t hdl;           /* QNX type */
-    pci_ba_t* ba;               /* QNX type */
-    int_t nba;                  /* QNX type */
-    pci_cap_t msi_cap;          /* QNX type */
-    pci_cap_t pcie_cap;         /* QNX type */
-    bool is_msi;
-    bool is_msix;
-    void __iomem** addr;
+    pci_devhdl_t    hdl;        /* QNX type; PCI device handle */
+    pci_ba_t*       ba;         /* QNX type; Base address registers */
+    int_t           nba;        /* QNX type; Number of base addresses */
+    pci_cap_t       msi_cap;    /* QNX type; MSI capability structure */
+    pci_cap_t       pcie_cap;   /* QNX type; PCIe capability structure */
+    bool            is_msi;     /* MSI support flag */
+    bool            is_msix;    /* MSIX support flag */
+    void __iomem**  addr;       /* Memory-mapped I/O addresses */
 
-	unsigned int	devfn;		/* encoded device & function index */
+	unsigned int	devfn;		/* Encoded device & function index */
 	unsigned short	vendor;
 	unsigned short	device;
 	unsigned short	subsystem_vendor;
 	unsigned short	subsystem_device;
-//	unsigned int	class;		/* 3 bytes: (base,sub,prog-if) */
 
 	struct	device	dev;		/* Generic device interface */
 
