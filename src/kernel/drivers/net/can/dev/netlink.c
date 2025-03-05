@@ -187,13 +187,6 @@ static int can_changelink(struct net_device *dev,
 
 		memset(&priv->tdc, 0, sizeof(priv->tdc));
 	    if (user->set_tdc) {
-//			/* TDC parameters are provided: use them */
-//			err = can_tdc_changelink(priv, user->tdc,
-//						 extack);
-//			if (err) {
-//				priv->ctrlmode &= ~CAN_CTRLMODE_TDC_MASK;
-//				return err;
-//			}
 		} else if (!tdc_mask) {
 			/* Neither of TDC parameters nor TDC flags are
 			 * provided: do calculation
