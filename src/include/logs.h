@@ -22,6 +22,7 @@
 #define SRC_LOGS_H_
 
 #include <stdio.h>
+#include <stdarg.h>
 #include <syslog.h>
 
 #include "config.h"
@@ -44,65 +45,41 @@
  */
 extern volatile unsigned log_enabled;
 
-#define log_cus(fmt, arg...) { \
-        if (log_enabled) { \
-            syslog(LOG_INFO, fmt, ##arg); \
-            fprintf(stderr, fmt, ##arg); \
-        } \
-    }
+extern int optl;
+extern int optq;
+extern int optv;
 
-#define log_err(fmt, arg...) { \
-        if (log_enabled) { \
-            syslog(LOG_ERR, fmt, ##arg); \
-            \
-            if (!optq) { \
-                fprintf(stderr, fmt, ##arg); \
-            } \
-        } \
-    }
+/**
+ * @brief Logs debug messages to syslog and/or stdout based on configuration.
+ *
+ * @param priority The syslog priority (e.g., LOG_DEBUG, LOG_INFO, LOG_WARNING, etc.).
+ * @param v The minimum verbosity level required for logging to occur.
+ * @param fmt The format string, followed by variable arguments.
+ */
+static inline void log_generic (int priority, int v, const char *fmt, ...) {
+    if (log_enabled) {
+        va_list args;
 
-#define log_warn(fmt, arg...) { \
-        if (log_enabled) { \
-            syslog(LOG_WARNING, fmt, ##arg); \
-            \
-            if (!optq) { \
-                fprintf(stderr, fmt, ##arg); \
-            } \
-        } \
-    }
+        if (optl >= v) {
+            va_start(args, fmt);
+            vsyslog(priority, fmt, args);
+            va_end(args);
+        }
 
-#define log_info(fmt, arg...) { \
-        if (log_enabled) { \
-            if (optl >= 1) { \
-                syslog(LOG_INFO, fmt, ##arg); \
-            } \
-            if (!optq && optv >= 1) { \
-                fprintf(stdout, fmt, ##arg); \
-            } \
-        } \
+        if (!optq && optv >= v) {
+            va_start(args, fmt); // Re-initialize args
+            vfprintf(stdout, fmt, args);
+            va_end(args);
+        }
     }
+}
 
-#define log_dbg(fmt, arg...) { \
-        if (log_enabled) { \
-            if (optl >= 2) { \
-                syslog(LOG_DEBUG, fmt, ##arg); \
-            } \
-            if (!optq && optv >= 2) { \
-                fprintf(stdout, fmt, ##arg); \
-            } \
-        } \
-    }
-
-#define log_trace(fmt, arg...) { \
-        if (log_enabled) { \
-            if (optl >= 3) { \
-                syslog(LOG_DEBUG, fmt, ##arg); \
-            } \
-            if (!optq && optv >= 3) { \
-                fprintf(stdout, fmt, ##arg); \
-            } \
-        } \
-    }
+#define log_cus(fmt, arg...)    log_generic(LOG_INFO, -1, fmt, ##arg)
+#define log_err(fmt, arg...)    log_generic(LOG_ERR, -1, fmt, ##arg)
+#define log_warn(fmt, arg...)   log_generic(LOG_WARNING, -1, fmt, ##arg)
+#define log_info(fmt, arg...)   log_generic(LOG_INFO, 1, fmt, ##arg)
+#define log_dbg(fmt, arg...)    log_generic(LOG_DEBUG, 2, fmt, ##arg)
+#define log_trace(fmt, arg...)  log_generic(LOG_DEBUG, 3, fmt, ##arg)
 
 /* Mapping of dev_*() calls to log_(*) */
 #define dev_err(dev, fmt, arg...) log_err(fmt, ##arg)
