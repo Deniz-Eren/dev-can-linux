@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xmi:XMI xmi:version="20131001" xmlns:xmi="http://www.omg.org/spec/XMI/20131001" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:cmake="http:///schemas/cmake/_VRg5YIT8Ee6niNytq2xdLA/3" xmlns:ecore="http://www.eclipse.org/emf/2002/Ecore" xmlns:license="http:///schemas/license/_nIeDkH-8Ee6YwMNR3Mjsiw/1" xmlns:uml="http://www.eclipse.org/uml2/5.0.0/UML" xsi:schemaLocation="http:///schemas/cmake/_VRg5YIT8Ee6niNytq2xdLA/3 ../cmake/cmake.profile.uml#_VRjVoIT8Ee6niNytq2xdLA http:///schemas/license/_nIeDkH-8Ee6YwMNR3Mjsiw/1 ../license/license.profile.uml#_nIeDkX-8Ee6YwMNR3Mjsiw">
+  <uml:Model xmi:id="_1FRJwHnWEe635pD1_1TTxg" name="dev-can-linux-model">
+    <packageImport xmi:type="uml:PackageImport" xmi:id="_1HPfsHnWEe635pD1_1TTxg">
+      <importedPackage xmi:type="uml:Model" href="pathmap://UML_LIBRARIES/UMLPrimitiveTypes.library.uml#_0"/>
+    </packageImport>
+    <packageImport xmi:type="uml:PackageImport" xmi:id="_ZkxLsHniEe635pD1_1TTxg">
+      <importedPackage xmi:type="uml:Model" href="../CMake/CMake.uml#_I9KgQHniEe635pD1_1TTxg"/>
+    </packageImport>
+    <packagedElement xmi:type="uml:Package" xmi:id="_3pVB8HnWEe635pD1_1TTxg" name="config">
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="_QNXy8HnsEe635pD1_1TTxg" name="PROGRAM_VERSION">
+        <classifier xmi:type="uml:Class" href="../CMake/CMake.uml#_MMJkwHniEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="_uIxVoH9QEe6zWbGI81vhQw" name="HARMONIZED_LINUX_VERSION"/>
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="__m0yEHnYEe635pD1_1TTxg" name="CONFIG_HZ">
+        <classifier xmi:type="uml:Class" href="../CMake/CMake.uml#_MMJkwHniEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="_yNC9cHnsEe635pD1_1TTxg" name="CONFIG_QNX_INTERRUPT_ATTACH">
+        <classifier xmi:type="uml:Class" href="../CMake/CMake.uml#_MMJkwHniEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="_1lMlAHnsEe635pD1_1TTxg" name="CONFIG_QNX_INTERRUPT_ATTACH_EVENT">
+        <classifier xmi:type="uml:Class" href="../CMake/CMake.uml#_MMJkwHniEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="_JdzCgH9QEe6zWbGI81vhQw" name="CONFIG_QNX_INTERRUPT_MASK_ISR"/>
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="_hNw3wH9QEe6zWbGI81vhQw" name="CONFIG_QNX_INTERRUPT_MASK_PULSE"/>
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="_3WCQgHnsEe635pD1_1TTxg" name="CONFIG_QNX_RESMGR_SINGLE_THREAD">
+        <classifier xmi:type="uml:Class" href="../CMake/CMake.uml#_MMJkwHniEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:InstanceSpecification" xmi:id="_41QAgHnsEe635pD1_1TTxg" name="CONFIG_QNX_RESMGR_THREAD_POOL">
+        <classifier xmi:type="uml:Class" href="../CMake/CMake.uml#_MMJkwHniEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_G1SCMHnsEe635pD1_1TTxg" name="PROGRAM_VERSION" fileName="PROGRAM_VERSION">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="_k9J0sHnsEe635pD1_1TTxg" client="_G1SCMHnsEe635pD1_1TTxg" supplier="_QNXy8HnsEe635pD1_1TTxg" utilizedElement="_QNXy8HnsEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_z5ySAH9QEe6zWbGI81vhQw" name="HARMONIZED_LINUX_VERSION" fileName="HARMONIZED_LINUX_VERSION">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="_6ypAMH9QEe6zWbGI81vhQw" client="_z5ySAH9QEe6zWbGI81vhQw" supplier="_uIxVoH9QEe6zWbGI81vhQw" utilizedElement="_uIxVoH9QEe6zWbGI81vhQw"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_-pUS4HnWEe635pD1_1TTxg" name="CONFIG_HZ" fileName="CONFIG_HZ">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="_ljHBcHnsEe635pD1_1TTxg" client="_-pUS4HnWEe635pD1_1TTxg" supplier="__m0yEHnYEe635pD1_1TTxg" utilizedElement="__m0yEHnYEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_7MTXcHnsEe635pD1_1TTxg" name="CONFIG_QNX_INTERRUPT_ATTACH" fileName="CONFIG_QNX_INTERRUPT_ATTACH">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="__rKIYHnsEe635pD1_1TTxg" client="_7MTXcHnsEe635pD1_1TTxg" supplier="_yNC9cHnsEe635pD1_1TTxg" utilizedElement="_yNC9cHnsEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_D4RCAHntEe635pD1_1TTxg" name="CONFIG_QNX_INTERRUPT_ATTACH_EVENT" fileName="CONFIG_QNX_INTERRUPT_ATTACH_EVENT">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="_LIRE4HntEe635pD1_1TTxg" client="_D4RCAHntEe635pD1_1TTxg" supplier="_1lMlAHnsEe635pD1_1TTxg" utilizedElement="_1lMlAHnsEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_ETXvkH9REe6zWbGI81vhQw" name="CONFIG_QNX_INTERRUPT_MASK_ISR" fileName="CONFIG_QNX_INTERRUPT_MASK_ISR">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="_MUBzUH9REe6zWbGI81vhQw" client="_ETXvkH9REe6zWbGI81vhQw" supplier="_JdzCgH9QEe6zWbGI81vhQw" utilizedElement="_JdzCgH9QEe6zWbGI81vhQw"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_IFJYEH9REe6zWbGI81vhQw" name="CONFIG_QNX_INTERRUPT_MASK_PULSE" fileName="CONFIG_QNX_INTERRUPT_MASK_PULSE">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="_LsLJIH9REe6zWbGI81vhQw" client="_IFJYEH9REe6zWbGI81vhQw" supplier="_hNw3wH9QEe6zWbGI81vhQw" utilizedElement="_hNw3wH9QEe6zWbGI81vhQw"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_OT3eMHntEe635pD1_1TTxg" name="CONFIG_QNX_RESMGR_SINGLE_THREAD" fileName="CONFIG_QNX_RESMGR_SINGLE_THREAD">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="_SxDbMHntEe635pD1_1TTxg" client="_OT3eMHntEe635pD1_1TTxg" supplier="_3WCQgHnsEe635pD1_1TTxg" utilizedElement="_3WCQgHnsEe635pD1_1TTxg"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Artifact" xmi:id="_VVDpAHntEe635pD1_1TTxg" name="CONFIG_QNX_RESMGR_THREAD_POOL" fileName="CONFIG_QNX_RESMGR_THREAD_POOL">
+        <manifestation xmi:type="uml:Manifestation" xmi:id="_ZbmAkHntEe635pD1_1TTxg" client="_VVDpAHntEe635pD1_1TTxg" supplier="_41QAgHnsEe635pD1_1TTxg" utilizedElement="_41QAgHnsEe635pD1_1TTxg"/>
+      </packagedElement>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Artifact" xmi:id="_CdfIEHnXEe635pD1_1TTxg" fileName="CMakeLists.txt">
+      <ownedComment xmi:type="uml:Comment" xmi:id="_eFGw0IRKEe6Vjv-l-igUHg">
+        <body>This file is the main CMake file for the project.</body>
+      </ownedComment>
+      <ownedComment xmi:type="uml:Comment" xmi:id="_nmNToIRKEe6Vjv-l-igUHg">
+        <body>IMPORTANT! Macro configurations must be handled with configuration files in config/ directory, not here directly! Both CMake and the QNX Momentics compatible Makefile refer to the same configuration settings.</body>
+      </ownedComment>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_S3qEYHnrEe635pD1_1TTxg" client="_CdfIEHnXEe635pD1_1TTxg" supplier="__m0yEHnYEe635pD1_1TTxg" utilizedElement="__m0yEHnYEe635pD1_1TTxg"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_VIbXsHnsEe635pD1_1TTxg" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_QNXy8HnsEe635pD1_1TTxg" utilizedElement="_QNXy8HnsEe635pD1_1TTxg"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_AtWlMHntEe635pD1_1TTxg" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_yNC9cHnsEe635pD1_1TTxg" utilizedElement="_yNC9cHnsEe635pD1_1TTxg"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_L1PfoHntEe635pD1_1TTxg" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_1lMlAHnsEe635pD1_1TTxg" utilizedElement="_1lMlAHnsEe635pD1_1TTxg"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_Tq-s0HntEe635pD1_1TTxg" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_3WCQgHnsEe635pD1_1TTxg" utilizedElement="_3WCQgHnsEe635pD1_1TTxg"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_ahjjEHntEe635pD1_1TTxg" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_41QAgHnsEe635pD1_1TTxg" utilizedElement="_41QAgHnsEe635pD1_1TTxg"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_7oAh8H9QEe6zWbGI81vhQw" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_uIxVoH9QEe6zWbGI81vhQw" utilizedElement="_uIxVoH9QEe6zWbGI81vhQw"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_Nue_IH9REe6zWbGI81vhQw" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_hNw3wH9QEe6zWbGI81vhQw" utilizedElement="_hNw3wH9QEe6zWbGI81vhQw"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_OcgiwH9REe6zWbGI81vhQw" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_JdzCgH9QEe6zWbGI81vhQw" utilizedElement="_JdzCgH9QEe6zWbGI81vhQw"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_uwU2EIT8Ee6niNytq2xdLA" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_jPkvsIT8Ee6niNytq2xdLA" utilizedElement="_jPkvsIT8Ee6niNytq2xdLA"/>
+      <manifestation xmi:type="uml:Manifestation" xmi:id="_1R9-IIT8Ee6niNytq2xdLA" client="_CdfIEHnXEe635pD1_1TTxg" supplier="_fM49YIT8Ee6niNytq2xdLA" utilizedElement="_fM49YIT8Ee6niNytq2xdLA"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Artifact" xmi:id="_s9MqAH-2Ee6YwMNR3Mjsiw" fileName="LICENSE"/>
+    <packagedElement xmi:type="uml:Package" xmi:id="_aYn9IIT8Ee6niNytq2xdLA" name="workspace">
+      <packagedElement xmi:type="uml:Package" xmi:id="_dIQMIIT8Ee6niNytq2xdLA" name="cmake">
+        <packagedElement xmi:type="uml:Package" xmi:id="_fM49YIT8Ee6niNytq2xdLA" name="Modules"/>
+        <packagedElement xmi:type="uml:Package" xmi:id="_gwGckIT8Ee6niNytq2xdLA" name="Toolchain">
+          <packagedElement xmi:type="uml:Artifact" xmi:id="_jPkvsIT8Ee6niNytq2xdLA" name="qnx710-x86_64 toolchain" fileName="qnx710-x86_64.toolchain.cmake"/>
+        </packagedElement>
+      </packagedElement>
+    </packagedElement>
+    <profileApplication xmi:type="uml:ProfileApplication" xmi:id="_i_Zi8H-cEe6TCtecRo_HiQ">
+      <eAnnotations xmi:type="ecore:EAnnotation" xmi:id="_WdxRIIT8Ee6niNytq2xdLA" source="PapyrusVersion">
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_WdxRIYT8Ee6niNytq2xdLA" key="Version" value="0.0.4"/>
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_WdxRIoT8Ee6niNytq2xdLA" key="Comment" value=""/>
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_WdxRI4T8Ee6niNytq2xdLA" key="Copyright" value=""/>
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_WdxRJIT8Ee6niNytq2xdLA" key="Date" value="2023-11-17"/>
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_WdxRJYT8Ee6niNytq2xdLA" key="Author" value=""/>
+      </eAnnotations>
+      <eAnnotations xmi:type="ecore:EAnnotation" xmi:id="_i_aKAH-cEe6TCtecRo_HiQ" source="http://www.eclipse.org/uml2/2.0.0/UML">
+        <references xmi:type="ecore:EPackage" href="../cmake/cmake.profile.uml#_VRjVoIT8Ee6niNytq2xdLA"/>
+      </eAnnotations>
+      <appliedProfile xmi:type="uml:Profile" href="../cmake/cmake.profile.uml#_aWcp0HnuEe635pD1_1TTxg"/>
+    </profileApplication>
+    <profileApplication xmi:type="uml:ProfileApplication" xmi:id="_zZR8oH-2Ee6YwMNR3Mjsiw">
+      <eAnnotations xmi:type="ecore:EAnnotation" xmi:id="_o9XIoX-8Ee6YwMNR3Mjsiw" source="PapyrusVersion">
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_o9XIon-8Ee6YwMNR3Mjsiw" key="Version" value="0.0.2"/>
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_o9XIo3-8Ee6YwMNR3Mjsiw" key="Comment" value=""/>
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_o9XIpH-8Ee6YwMNR3Mjsiw" key="Copyright" value=""/>
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_o9XIpX-8Ee6YwMNR3Mjsiw" key="Date" value="2023-11-10"/>
+        <details xmi:type="ecore:EStringToStringMapEntry" xmi:id="_o9XIpn-8Ee6YwMNR3Mjsiw" key="Author" value=""/>
+      </eAnnotations>
+      <eAnnotations xmi:type="ecore:EAnnotation" xmi:id="_zZUY4H-2Ee6YwMNR3Mjsiw" source="http://www.eclipse.org/uml2/2.0.0/UML">
+        <references xmi:type="ecore:EPackage" href="../license/license.profile.uml#_nIeDkX-8Ee6YwMNR3Mjsiw"/>
+      </eAnnotations>
+      <appliedProfile xmi:type="uml:Profile" href="../license/license.profile.uml#_YhN_8H-0Ee6YwMNR3Mjsiw"/>
+    </profileApplication>
+  </uml:Model>
+  <cmake:CMakeLists xmi:id="_kEUjoH-cEe6TCtecRo_HiQ" base_Classifier="_CdfIEHnXEe635pD1_1TTxg" base_Artifact="_CdfIEHnXEe635pD1_1TTxg" minimum_required="3.22"/>
+  <cmake:ConfigVariableFile xmi:id="_t-aYwH-dEe6TCtecRo_HiQ" base_Artifact="_G1SCMHnsEe635pD1_1TTxg"/>
+  <cmake:ConfigVariableFile xmi:id="_u1jcIH-dEe6TCtecRo_HiQ" base_Artifact="_z5ySAH9QEe6zWbGI81vhQw"/>
+  <cmake:ConfigVariableFile xmi:id="_w_N3UH-dEe6TCtecRo_HiQ" base_Artifact="_-pUS4HnWEe635pD1_1TTxg"/>
+  <cmake:ConfigVariableFile xmi:id="_xt8lkH-dEe6TCtecRo_HiQ" base_Artifact="_7MTXcHnsEe635pD1_1TTxg"/>
+  <cmake:ConfigVariableFile xmi:id="_yZL68H-dEe6TCtecRo_HiQ" base_Artifact="_D4RCAHntEe635pD1_1TTxg"/>
+  <cmake:ConfigVariableFile xmi:id="_zMhcYH-dEe6TCtecRo_HiQ" base_Artifact="_ETXvkH9REe6zWbGI81vhQw"/>
+  <cmake:ConfigVariableFile xmi:id="_0GXOcH-dEe6TCtecRo_HiQ" base_Artifact="_IFJYEH9REe6zWbGI81vhQw"/>
+  <cmake:ConfigVariableFile xmi:id="_02XvEH-dEe6TCtecRo_HiQ" base_Artifact="_OT3eMHntEe635pD1_1TTxg"/>
+  <cmake:ConfigVariableFile xmi:id="_1pFlcH-dEe6TCtecRo_HiQ" base_Artifact="_VVDpAHntEe635pD1_1TTxg"/>
+  <license:License xmi:id="_0UoxoH-2Ee6YwMNR3Mjsiw" base_Artifact="_s9MqAH-2Ee6YwMNR3Mjsiw" kind="GNU2"/>
+  <license:DefaultCopyright xmi:id="_6HsVYH-2Ee6YwMNR3Mjsiw" base_Package="_1FRJwHnWEe635pD1_1TTxg" year="2023" author="Deniz Eren" email="deniz.eren@outlook.com"/>
+  <cmake:CMakeToolchainFile xmi:id="_ooTH4IT8Ee6niNytq2xdLA" base_Artifact="_jPkvsIT8Ee6niNytq2xdLA"/>
+  <cmake:CMakeModulePath xmi:id="_zpBDUIT8Ee6niNytq2xdLA" base_Package="_fM49YIT8Ee6niNytq2xdLA"/>
+</xmi:XMI>
