@@ -699,9 +699,9 @@ struct net_device *alloc_sja1000dev(int sizeof_priv)
 	priv->dev = dev;
 	priv->can.bittiming_const = &sja1000_bittiming_const;
 	priv->can.do_set_bittiming = sja1000_set_bittiming;
-    priv->can.do_set_btr = sja1000_set_btr; /* Special feature to force btr0 and
-                                             * btr1 to specific values needed
-                                             * for some applications. */
+	priv->can.do_set_btr = sja1000_set_btr; /* Special feature to force btr0 and
+											 * btr1 to specific values needed
+											 * for some applications. */
 	priv->can.do_set_mode = sja1000_set_mode;
 	priv->can.do_get_berr_counter = sja1000_get_berr_counter;
 	priv->can.ctrlmode_supported = CAN_CTRLMODE_LOOPBACK |

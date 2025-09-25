@@ -867,6 +867,60 @@ void netif_stop_queue(struct net_device *dev);
  */
 int netif_queue_stopped(const struct net_device *dev);
 
+static inline void dev_kfree_skb_irq_reason(struct sk_buff *skb, enum skb_drop_reason reason)
+{
+    // QNX: We can simply kfree_skb().
+    kfree_skb(skb);
+}
+
+static inline void dev_kfree_skb_any_reason(struct sk_buff *skb, enum skb_drop_reason reason)
+{
+    // QNX: We can simply kfree_skb().
+    kfree_skb(skb);
+}
+
+/*
+ * LINUX ONLY:
+ * It is not allowed to call kfree_skb() or consume_skb() from hardware
+ * interrupt context or with hardware interrupts being disabled.
+ * (in_hardirq() || irqs_disabled())
+ *
+ * QNX: We can simply kfree_skb().
+ *
+ * We provide four helpers that can be used in following contexts :
+ *
+ * dev_kfree_skb_irq(skb) when caller drops a packet from irq context,
+ *  replacing kfree_skb(skb)
+ *
+ * dev_consume_skb_irq(skb) when caller consumes a packet from irq context.
+ *  Typically used in place of consume_skb(skb) in TX completion path
+ *
+ * dev_kfree_skb_any(skb) when caller doesn't know its current irq context,
+ *  replacing kfree_skb(skb)
+ *
+ * dev_consume_skb_any(skb) when caller doesn't know its current irq context,
+ *  and consumed a packet. Used in place of consume_skb(skb)
+ */
+static inline void dev_kfree_skb_irq(struct sk_buff *skb)
+{
+	dev_kfree_skb_irq_reason(skb, SKB_DROP_REASON_NOT_SPECIFIED);
+}
+
+static inline void dev_consume_skb_irq(struct sk_buff *skb)
+{
+	dev_kfree_skb_irq_reason(skb, SKB_CONSUMED);
+}
+
+static inline void dev_kfree_skb_any(struct sk_buff *skb)
+{
+	dev_kfree_skb_any_reason(skb, SKB_DROP_REASON_NOT_SPECIFIED);
+}
+
+static inline void dev_consume_skb_any(struct sk_buff *skb)
+{
+	dev_kfree_skb_any_reason(skb, SKB_CONSUMED);
+}
+
 int netif_rx(struct sk_buff *skb);
 
 /**
