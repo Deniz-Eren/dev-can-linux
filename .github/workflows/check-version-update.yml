@@ -1,0 +1,33 @@
+name: Enforce Version Update Policy
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-for-log-update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # Fetch enough history for the diff
+
+      - name: Get list of changed files
+        id: changed-files
+        run: |
+          # The git diff command compares the head of the PR with its base branch
+          # and outputs a list of modified files.
+          CHANGED_FILES=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.event.pull_request.head.sha }})
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          echo "changed_files=$CHANGED_FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Verify config/PROGRAM_VERSION was updated
+        run: |
+          if ! echo "${{ steps.changed-files.outputs.changed_files }}" | grep -q "config/PROGRAM_VERSION"; then
+            echo "::error file=config/PROGRAM_VERSION::Error: 'config/PROGRAM_VERSION' must be updated in this pull request."
+            echo "Please update the file with a new version number."
+            exit 1
+          fi
