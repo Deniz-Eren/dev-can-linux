@@ -31,6 +31,8 @@
 #include <linux/kernel.h>
 #include <linux/compiler.h>
 
+#include <net/dropreason-core.h>
+
 
 /** 
  * struct sk_buff
