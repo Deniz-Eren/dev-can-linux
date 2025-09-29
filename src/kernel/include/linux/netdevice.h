@@ -501,6 +501,7 @@ struct net_device_ops {
  *	@lltx:		device supports lockless Tx. Deprecated for real HW
  *			drivers. Mainly used by logical interfaces, such as
  *			bonding and tunnels
+ *	@netmem_tx:	device support netmem_tx.
  *
  *	@name:	This is the first field of the "visible" part of this structure
  *		(i.e. as seen by users in the "Space.c" file).  It is the name
@@ -594,6 +595,7 @@ struct net_device_ops {
  * 	@addr_len:		Hardware address length
  *	@upper_level:		Maximum depth level of upper devices.
  *	@lower_level:		Maximum depth level of lower devices.
+ *	@threaded:		napi threaded state.
  *	@neigh_priv_len:	Used in neigh_alloc()
  * 	@dev_id:		Used to differentiate devices that share
  * 				the same link layer address
@@ -675,13 +677,11 @@ struct net_device_ops {
  *
  *	@reg_state:		Register/unregister state machine
  *	@dismantle:		Device is going to be freed
- *	@rtnl_link_state:	This enum represents the phases of creating
- *				a new link
- *
  *	@needs_free_netdev:	Should unregister perform free_netdev?
  *	@priv_destructor:	Called from unregister
  *	@npinfo:		XXX: need comments on this one
  * 	@nd_net:		Network namespace this network device is inside
+ *				protected by @lock
  *
  * 	@ml_priv:	Mid-layer private
  *	@ml_priv_type:  Mid-layer private type
@@ -734,8 +734,6 @@ struct net_device_ops {
  *	@proto_down:	protocol port state information can be sent to the
  *			switch driver and used to set the phys state of the
  *			switch port.
- *
- *	@threaded:	napi threaded mode is enabled
  *
  *	@irq_affinity_auto: driver wants the core to store and re-assign the IRQ
  *			    affinity. Set by netif_enable_irq_affinity(), then
@@ -795,6 +793,8 @@ struct net_device_ops {
  *	@max_pacing_offload_horizon: max EDT offload horizon in nsec.
  *	@napi_config: An array of napi_config structures containing per-NAPI
  *		      settings.
+ *	@num_napi_configs:	number of allocated NAPI config structs,
+ *		always >= max(num_rx_queues, num_tx_queues).
  *	@gro_flush_timeout:	timeout for GRO layer in NAPI
  *	@napi_defer_hard_irqs:	If not zero, provides a counter that would
  *				allow to avoid NIC hard IRQ, on busy queues.
@@ -867,6 +867,60 @@ void netif_stop_queue(struct net_device *dev);
  */
 int netif_queue_stopped(const struct net_device *dev);
 
+static inline void dev_kfree_skb_irq_reason(struct sk_buff *skb, enum skb_drop_reason reason)
+{
+    // QNX: We can simply kfree_skb().
+    kfree_skb(skb);
+}
+
+static inline void dev_kfree_skb_any_reason(struct sk_buff *skb, enum skb_drop_reason reason)
+{
+    // QNX: We can simply kfree_skb().
+    kfree_skb(skb);
+}
+
+/*
+ * LINUX ONLY:
+ * It is not allowed to call kfree_skb() or consume_skb() from hardware
+ * interrupt context or with hardware interrupts being disabled.
+ * (in_hardirq() || irqs_disabled())
+ *
+ * QNX: We can simply kfree_skb().
+ *
+ * We provide four helpers that can be used in following contexts :
+ *
+ * dev_kfree_skb_irq(skb) when caller drops a packet from irq context,
+ *  replacing kfree_skb(skb)
+ *
+ * dev_consume_skb_irq(skb) when caller consumes a packet from irq context.
+ *  Typically used in place of consume_skb(skb) in TX completion path
+ *
+ * dev_kfree_skb_any(skb) when caller doesn't know its current irq context,
+ *  replacing kfree_skb(skb)
+ *
+ * dev_consume_skb_any(skb) when caller doesn't know its current irq context,
+ *  and consumed a packet. Used in place of consume_skb(skb)
+ */
+static inline void dev_kfree_skb_irq(struct sk_buff *skb)
+{
+	dev_kfree_skb_irq_reason(skb, SKB_DROP_REASON_NOT_SPECIFIED);
+}
+
+static inline void dev_consume_skb_irq(struct sk_buff *skb)
+{
+	dev_kfree_skb_irq_reason(skb, SKB_CONSUMED);
+}
+
+static inline void dev_kfree_skb_any(struct sk_buff *skb)
+{
+	dev_kfree_skb_any_reason(skb, SKB_DROP_REASON_NOT_SPECIFIED);
+}
+
+static inline void dev_consume_skb_any(struct sk_buff *skb)
+{
+	dev_kfree_skb_any_reason(skb, SKB_CONSUMED);
+}
+
 int netif_rx(struct sk_buff *skb);
 
 /**
@@ -878,7 +932,6 @@ int netif_rx(struct sk_buff *skb);
 bool netif_carrier_ok(const struct net_device *dev);
 
 void netif_carrier_on(struct net_device *dev);
-
 void netif_carrier_off(struct net_device *dev);
 
 /**

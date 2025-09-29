@@ -168,9 +168,10 @@ unsigned int can_get_echo_skb(struct net_device *dev, unsigned int idx,
 	if (!skb)
 		return 0;
 
-	netif_rx(skb);
-
-    kfree_skb(skb);
+	if (netif_rx(skb) == NET_RX_SUCCESS)
+		dev_consume_skb_any(skb);
+	else
+		dev_kfree_skb_any(skb);
 
 	return len;
 }
@@ -198,7 +199,7 @@ void can_free_echo_skb(struct net_device *dev, unsigned int idx,
 		if (frame_len_ptr)
 			*frame_len_ptr = can_skb_priv->frame_len;
 
-		kfree_skb(skb);
+		dev_kfree_skb_any(skb);
 		priv->echo_skb[idx] = NULL;
 	}
 }
