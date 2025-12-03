@@ -76,16 +76,11 @@ struct can_priv {
 	struct net_device *dev;
 	struct can_device_stats can_stats;
 
-	const struct can_bittiming_const *bittiming_const,
-		*data_bittiming_const;
-	struct can_bittiming bittiming, data_bittiming;
-	const struct can_tdc_const *tdc_const;
-	struct can_tdc tdc;
-
+	const struct can_bittiming_const *bittiming_const;
+	struct can_bittiming bittiming;
+	struct data_bittiming_params fd;
 	unsigned int bitrate_const_cnt;
 	const u32 *bitrate_const;
-	const u32 *data_bitrate_const;
-	unsigned int data_bitrate_const_cnt;
 	u32 bitrate_max;
 	struct can_clock clock;
 

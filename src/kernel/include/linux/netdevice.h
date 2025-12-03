@@ -808,17 +808,19 @@ struct net_device_ops {
  */
 
 struct net_device {
-    char      	name[IFNAMSIZ];
-    unsigned int         irq;
+	const struct net_device_ops *netdev_ops;
+	unsigned int		mtu;
 	unsigned long		state;
-    struct net_device_stats stats;
-    unsigned int        flags;
-    unsigned int        mtu;
-    const struct net_device_ops *netdev_ops;
-	const struct resmgr_ops *resmgr_ops;
-    unsigned short          dev_id;
-    unsigned long       tx_queue_len;
+	unsigned int		flags;
+	char			name[IFNAMSIZ];
+	unsigned int		min_mtu;
+	unsigned int		max_mtu;
+	struct net_device_stats	stats; /* not used by modern drivers */
+	unsigned short          dev_id;
+	int			irq;
+	unsigned int		tx_queue_len;
     void* priv;
+	const struct resmgr_ops *resmgr_ops;
     struct device_session* device_session;
 };
 
