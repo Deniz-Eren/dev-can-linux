@@ -124,10 +124,10 @@ static int can_changelink(struct net_device *dev,
 			dev->mtu = CANFD_MTU;
 		} else {
 			dev->mtu = CAN_MTU;
-			memset(&priv->data_bittiming, 0,
-			       sizeof(priv->data_bittiming));
+			memset(&priv->fd.data_bittiming, 0,
+			       sizeof(priv->fd.data_bittiming));
 			priv->ctrlmode &= ~CAN_CTRLMODE_FD_TDC_MASK;
-			memset(&priv->tdc, 0, sizeof(priv->tdc));
+			memset(&priv->fd.tdc, 0, sizeof(priv->fd.tdc));
 		}
 
 		tdc_mask = cm->mask & CAN_CTRLMODE_FD_TDC_MASK;
@@ -166,15 +166,15 @@ static int can_changelink(struct net_device *dev,
 		 * directly via do_set_bitrate(). Bail out if neither
 		 * is given.
 		 */
-		if (!priv->data_bittiming_const && !priv->do_set_data_bittiming &&
-		    !priv->data_bitrate_const)
+		if (!priv->fd.data_bittiming_const && !priv->do_set_data_bittiming &&
+		    !priv->fd.data_bitrate_const)
 			return -EOPNOTSUPP;
 
         memcpy(&dbt, &user->data_bittiming, sizeof(dbt));
 		err = can_get_bittiming(dev, &dbt,
-					priv->data_bittiming_const,
-					priv->data_bitrate_const,
-					priv->data_bitrate_const_cnt,
+					priv->fd.data_bittiming_const,
+					priv->fd.data_bitrate_const,
+					priv->fd.data_bitrate_const_cnt,
 					extack);
 		if (err)
 			return err;
@@ -185,19 +185,19 @@ static int can_changelink(struct net_device *dev,
 			return -EINVAL;
 		}
 
-		memset(&priv->tdc, 0, sizeof(priv->tdc));
+		memset(&priv->fd.tdc, 0, sizeof(priv->fd.tdc));
 	    if (user->set_tdc) {
 		} else if (!tdc_mask) {
 			/* Neither of TDC parameters nor TDC flags are
 			 * provided: do calculation
 			 */
-			can_calc_tdco(&priv->tdc, priv->tdc_const, &priv->data_bittiming,
-				      &priv->ctrlmode, priv->ctrlmode_supported);
+		    can_calc_tdco(&priv->fd.tdc, priv->fd.tdc_const, &dbt,
+			          tdc_mask, &priv->ctrlmode, priv->ctrlmode_supported);
 		} /* else: both CAN_CTRLMODE_TDC_{AUTO,MANUAL} are explicitly
 		   * turned off. TDC is disabled: do nothing
 		   */
 
-		memcpy(&priv->data_bittiming, &dbt, sizeof(dbt));
+		memcpy(&priv->fd.data_bittiming, &dbt, sizeof(dbt));
 
 		if (priv->do_set_data_bittiming) {
 			/* Finally, set the bit-timing registers */
